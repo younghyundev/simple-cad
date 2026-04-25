@@ -9,15 +9,17 @@ import {
   Redo2,
   Save,
   Square,
+  Trash2,
   Type,
   Undo2,
+  Waypoints,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { sampleDocument } from '../cad/sampleDocument';
-import type { CadPoint, ToolId, Viewport } from '../cad/types';
+import type { CadDocument, CadPoint, ToolId, Viewport } from '../cad/types';
 import { CadCanvas } from './CadCanvas';
 
 const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: number }> }> = [
@@ -26,16 +28,18 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
   { id: 'line', label: '선', icon: Move },
   { id: 'rect', label: '사각형', icon: Square },
   { id: 'circle', label: '원', icon: Circle },
+  { id: 'polyline', label: '폴리라인', icon: Waypoints },
   { id: 'text', label: '텍스트', icon: Type },
+  { id: 'erase', label: '삭제', icon: Trash2 },
 ];
 
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
+  const [document, setDocument] = useState<CadDocument>(sampleDocument);
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
   const [gridVisible, setGridVisible] = useState(true);
-  const document = sampleDocument;
   const selectedEntity = useMemo(
     () => document.entities.find((entity) => entity.id === selectedEntityId) ?? null,
     [document.entities, selectedEntityId],
@@ -45,6 +49,26 @@ export function App() {
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
     canvasApiRef.current = api;
   }, []);
+
+  const deleteSelectedEntity = useCallback(() => {
+    if (!selectedEntityId) return;
+    setDocument((current) => ({
+      ...current,
+      entities: current.entities.filter((entity) => entity.id !== selectedEntityId),
+    }));
+    setSelectedEntityId(null);
+  }, [selectedEntityId]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        deleteSelectedEntity();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [deleteSelectedEntity]);
 
   return (
     <main className="app-shell">
@@ -126,6 +150,7 @@ export function App() {
           gridVisible={gridVisible}
           onViewportChange={setViewport}
           onCursorChange={setCursor}
+          onDocumentChange={setDocument}
           onSelectedEntityChange={setSelectedEntityId}
           onReady={setCanvasApi}
         />
