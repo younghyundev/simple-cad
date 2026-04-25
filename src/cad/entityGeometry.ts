@@ -71,6 +71,17 @@ export function createEntity(
     };
   }
 
+  if (tool === 'dimension') {
+    return {
+      ...base,
+      type: 'dimension',
+      fillColor: '#1f2937',
+      startPoint: start,
+      endPoint: end,
+      label: formatDistance(start, end),
+    };
+  }
+
   return null;
 }
 
@@ -182,6 +193,13 @@ export function getResizeHandles(entity: CadEntity): ResizeHandle[] {
     }));
   }
 
+  if (entity.type === 'dimension') {
+    return [
+      { id: 'start', point: entity.startPoint, cursor: 'nwse-resize' },
+      { id: 'end', point: entity.endPoint, cursor: 'nwse-resize' },
+    ];
+  }
+
   return [];
 }
 
@@ -258,7 +276,24 @@ export function resizeEntity(
     };
   }
 
+  if (entity.type === 'dimension') {
+    if (handleId === 'start') {
+      return updateDimensionLabel({ ...entity, startPoint: point });
+    }
+    if (handleId === 'end') {
+      return updateDimensionLabel({ ...entity, endPoint: point });
+    }
+  }
+
   return entity;
+}
+
+export function updateDimensionLabel(entity: CadEntity): CadEntity {
+  if (entity.type !== 'dimension') return entity;
+  return {
+    ...entity,
+    label: formatDistance(entity.startPoint, entity.endPoint),
+  };
 }
 
 export function insertPolylinePoint(entity: CadEntity, point: CadPoint): CadEntity {
@@ -359,6 +394,10 @@ export function isMeaningfulEntity(entity: CadEntity): boolean {
 
 function distance(a: CadPoint, b: CadPoint): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function formatDistance(a: CadPoint, b: CadPoint): string {
+  return distance(a, b).toFixed(1);
 }
 
 function pointToSegmentDistance(point: CadPoint, start: CadPoint, end: CadPoint): number {

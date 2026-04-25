@@ -11,6 +11,7 @@ import {
   resizeEntity,
   type ResizeHandleId,
   translateEntity,
+  updateDimensionLabel,
 } from '../cad/entityGeometry';
 import { renderDocument } from '../cad/render';
 import { snapPoint, type SnapResult } from '../cad/snap';
@@ -316,7 +317,8 @@ export function CadCanvas({
             activeTool === 'line' ||
             activeTool === 'rect' ||
             activeTool === 'circle' ||
-            activeTool === 'polyline'
+            activeTool === 'polyline' ||
+            activeTool === 'dimension'
           ) {
             const entity = createEntity(activeTool, worldPoint, worldPoint, currentLayerId);
             updateDraftEntity(entity);
@@ -349,7 +351,9 @@ export function CadCanvas({
               onDocumentChange((current) => ({
                 ...current,
                 entities: current.entities.map((entity) =>
-                  entity.id === selectedEntityId ? resizeEntity(entity, handleId, worldPoint) : entity,
+                  entity.id === selectedEntityId
+                    ? updateDimensionLabel(resizeEntity(entity, handleId, worldPoint))
+                    : entity,
                 ),
               }), { trackHistory: false });
               setDragStart(localPoint);
@@ -381,7 +385,8 @@ export function CadCanvas({
             (activeTool === 'line' ||
               activeTool === 'rect' ||
               activeTool === 'circle' ||
-              activeTool === 'polyline') &&
+              activeTool === 'polyline' ||
+              activeTool === 'dimension') &&
             drawingStart
           ) {
             updateDraftEntity(createEntity(activeTool, drawingStart, worldPoint, currentLayerId));

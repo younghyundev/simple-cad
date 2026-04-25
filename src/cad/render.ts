@@ -145,8 +145,60 @@ function drawEntity(
     context.fillText(entity.content, point.x, point.y);
   }
 
+  if (entity.type === 'dimension') {
+    drawDimension(context, entity, viewport);
+  }
+
   if (selected) drawSelection(context, entity, viewport);
   context.restore();
+}
+
+function drawDimension(
+  context: CanvasRenderingContext2D,
+  entity: Extract<CadEntity, { type: 'dimension' }>,
+  viewport: Viewport,
+): void {
+  const start = worldToScreen(entity.startPoint, viewport);
+  const end = worldToScreen(entity.endPoint, viewport);
+  const mid = {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  };
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  const arrowSize = 8;
+
+  context.save();
+  context.setLineDash([]);
+  context.strokeStyle = entity.strokeColor;
+  context.fillStyle = entity.fillColor;
+  context.lineWidth = Math.max(1, entity.strokeWidth * viewport.scale);
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
+
+  drawArrowHead(context, start, angle + Math.PI, arrowSize);
+  drawArrowHead(context, end, angle, arrowSize);
+
+  context.font = `${13 * Math.max(1, Math.min(1.25, viewport.scale))}px Inter, system-ui, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'bottom';
+  context.fillText(entity.label, mid.x, mid.y - 6);
+  context.restore();
+}
+
+function drawArrowHead(
+  context: CanvasRenderingContext2D,
+  point: { x: number; y: number },
+  angle: number,
+  size: number,
+): void {
+  context.beginPath();
+  context.moveTo(point.x, point.y);
+  context.lineTo(point.x - size * Math.cos(angle - Math.PI / 7), point.y - size * Math.sin(angle - Math.PI / 7));
+  context.lineTo(point.x - size * Math.cos(angle + Math.PI / 7), point.y - size * Math.sin(angle + Math.PI / 7));
+  context.closePath();
+  context.fill();
 }
 
 function drawSelection(

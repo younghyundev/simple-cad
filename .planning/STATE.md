@@ -23,6 +23,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Polyline editing improved: double-click a polyline segment to insert a point, select a point handle and press Delete/Backspace to remove it.
 - Snap support added: toolbar toggle, grid snap, endpoint snap, center snap, and visible snap marker during drawing/resizing.
 - Intersection snap added for line, rectangle, polyline, and dimension segments.
+- Dimension tool added: users can drag dimension lines, see automatic length labels, resize endpoints, and export dimensions to SVG/DXF as line + text.
 
 ## Decisions
 
@@ -33,4 +34,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add dimension creation/editing.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add dimension offset/label editing.

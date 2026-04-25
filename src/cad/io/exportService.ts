@@ -86,6 +86,17 @@ function entityToSvg(entity: CadEntity): string {
     return `<text x="${entity.x}" y="${entity.y}" font-size="${entity.fontSize}" fill="${escapeXml(entity.fillColor)}">${escapeXml(entity.content)}</text>`;
   }
 
+  if (entity.type === 'dimension') {
+    const mid = {
+      x: (entity.startPoint.x + entity.endPoint.x) / 2,
+      y: (entity.startPoint.y + entity.endPoint.y) / 2,
+    };
+    return `<g stroke="${escapeXml(entity.strokeColor)}" fill="${escapeXml(entity.fillColor)}" stroke-width="${entity.strokeWidth}">
+    <line x1="${entity.startPoint.x}" y1="${entity.startPoint.y}" x2="${entity.endPoint.x}" y2="${entity.endPoint.y}"/>
+    <text x="${mid.x}" y="${mid.y - 6}" font-size="13" text-anchor="middle">${escapeXml(entity.label)}</text>
+  </g>`;
+  }
+
   return '';
 }
 
@@ -181,6 +192,39 @@ function entityToDxf(entity: CadEntity): string[] {
     ];
   }
 
+  if (entity.type === 'dimension') {
+    const mid = {
+      x: (entity.startPoint.x + entity.endPoint.x) / 2,
+      y: (entity.startPoint.y + entity.endPoint.y) / 2,
+    };
+    return [
+      '0',
+      'LINE',
+      '8',
+      layer,
+      '10',
+      `${entity.startPoint.x}`,
+      '20',
+      `${-entity.startPoint.y}`,
+      '11',
+      `${entity.endPoint.x}`,
+      '21',
+      `${-entity.endPoint.y}`,
+      '0',
+      'TEXT',
+      '8',
+      layer,
+      '10',
+      `${mid.x}`,
+      '20',
+      `${-mid.y}`,
+      '40',
+      '13',
+      '1',
+      entity.label,
+    ];
+  }
+
   return [];
 }
 
@@ -192,7 +236,8 @@ function getDocumentBounds(document: CadDocument) {
     if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'polyline') return entity.points;
     if (entity.type === 'text') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.content.length * entity.fontSize * 0.6, y: entity.y - entity.fontSize }];
-    return [entity.startPoint, entity.endPoint];
+    if (entity.type === 'dimension') return [entity.startPoint, entity.endPoint];
+    return [];
   });
 
   if (points.length === 0) return { minX: -200, minY: -150, maxX: 200, maxY: 150 };

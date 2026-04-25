@@ -1,5 +1,6 @@
 import {
   Circle,
+  DraftingCompass,
   FileDown,
   FileUp,
   Grid3X3,
@@ -32,6 +33,7 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
   { id: 'rect', label: '사각형', icon: Square },
   { id: 'circle', label: '원', icon: Circle },
   { id: 'polyline', label: '폴리라인', icon: Waypoints },
+  { id: 'dimension', label: '치수', icon: DraftingCompass },
   { id: 'text', label: '텍스트', icon: Type },
   { id: 'erase', label: '삭제', icon: Trash2 },
 ];
