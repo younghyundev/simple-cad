@@ -322,6 +322,74 @@ function dimensionOffset(pairs: DxfPair[]): number {
   return Number.isFinite(offset) && Math.abs(offset) > 0.1 ? offset : -24;
 }
 
+function lwPolylinePoints(pairs: DxfPair[]): { points: CadPoint[]; hasBulge: boolean } {
+  const vertices: Array<CadPoint & { bulge: number }> = [];
+  let current: (CadPoint & { bulge: number }) | null = null;
+
+  for (const pair of pairs) {
+    if (pair.code === '10') {
+      current = { x: Number(pair.value), y: 0, bulge: 0 };
+      vertices.push(current);
+    } else if (pair.code === '20' && current) {
+      current.y = -Number(pair.value);
+    } else if (pair.code === '42' && current) {
+      current.bulge = Number(pair.value);
+    }
+  }
+
+  if (vertices.length < 2) return { points: vertices, hasBulge: false };
+
+  const closed = (Number(valueFor(pairs, '70') ?? 0) & 1) === 1;
+  const points: CadPoint[] = [stripBulge(vertices[0])];
+  let hasBulge = false;
+  const segmentCount = closed ? vertices.length : vertices.length - 1;
+
+  for (let index = 0; index < segmentCount; index += 1) {
+    const start = vertices[index];
+    const end = vertices[(index + 1) % vertices.length];
+    if (Math.abs(start.bulge) > 0.000001) {
+      hasBulge = true;
+      points.push(...bulgeSegmentPoints(start, end, start.bulge));
+    } else {
+      points.push(stripBulge(end));
+    }
+  }
+
+  return { points, hasBulge };
+}
+
+function stripBulge(point: CadPoint & { bulge: number }): CadPoint {
+  return { x: point.x, y: point.y };
+}
+
+function bulgeSegmentPoints(start: CadPoint, end: CadPoint, bulge: number): CadPoint[] {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const chordLength = Math.hypot(dx, dy);
+  if (!chordLength) return [end];
+
+  const sweep = 4 * Math.atan(bulge);
+  const radius = (chordLength * (1 + bulge * bulge)) / (4 * Math.abs(bulge));
+  const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  const normal = { x: -dy / chordLength, y: dx / chordLength };
+  const centerOffset = (chordLength * (1 - bulge * bulge)) / (4 * bulge);
+  const center = {
+    x: midpoint.x + normal.x * centerOffset,
+    y: midpoint.y + normal.y * centerOffset,
+  };
+  const startAngle = Math.atan2(start.y - center.y, start.x - center.x);
+  const segments = Math.max(8, Math.ceil(Math.abs(sweep) / (Math.PI / 18)));
+
+  return Array.from({ length: segments }, (_, index) => {
+    const t = (index + 1) / segments;
+    const angle = startAngle + sweep * t;
+    return {
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius,
+    };
+  });
+}
+
 function importDxfEntity(
   entityType: string,
   chunk: DxfPair[],
@@ -416,18 +484,25 @@ function importDxfEntity(
       ),
     );
   } else if (entityType === 'LWPOLYLINE') {
-    const xs = valuesFor(chunk, '10').map(Number);
-    const ys = valuesFor(chunk, '20').map((value) => -Number(value));
-    result.entities.push(
-      transformEntity(
-        {
-          ...baseEntity(layerId, entityBase),
-          type: 'polyline',
-          points: xs.map((x, pointIndex) => ({ x, y: ys[pointIndex] ?? 0 })),
-        },
-        transform,
-      ),
+    const polyline = lwPolylinePoints(chunk);
+    const entity = transformEntity(
+      {
+        ...baseEntity(layerId, entityBase),
+        type: 'polyline',
+        points: polyline.points,
+      },
+      transform,
     );
+    result.entities.push(
+      entity,
+    );
+    if (polyline.hasBulge) {
+      result.importWarnings.push({
+        code: 'DXF_POLYLINE_BULGE_APPROXIMATED',
+        message: 'LWPOLYLINE bulge 곡선을 편집 가능한 폴리라인으로 근사했습니다.',
+        entityId: entity.id,
+      });
+    }
   } else if (entityType === 'ELLIPSE') {
     const entity = transformEntity(
       {

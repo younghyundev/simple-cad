@@ -31,6 +31,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - DXF entity coverage improved: ELLIPSE and SPLINE import are preserved as editable polyline approximations with conversion warnings.
 - DXF block/reference coverage improved: BLOCK definitions are parsed and INSERT references are exploded into editable entities with insertion transform support.
 - DXF native annotation coverage improved: DIMENSION entities import as editable Web CAD dimension objects using definition points, label text, and dimension-line offset.
+- DXF curve fidelity improved: LWPOLYLINE bulge values now import as sampled arc segments instead of straight chords.
 
 ## Decisions
 
@@ -41,4 +42,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve annotation export fidelity, and add richer CAD annotation/edit tools.
+Continue hardening: replace mock CAD API with a real conversion backend, improve spline fidelity, and add richer CAD annotation/edit tools.
