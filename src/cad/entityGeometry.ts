@@ -118,7 +118,10 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
   const tolerance = hitTolerance / scale;
 
   if (entity.type === 'line') {
-    return pointToSegmentDistance(point, { x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }) <= tolerance;
+    return (
+      pointToSegmentDistance(point, { x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }) <=
+      tolerance
+    );
   }
 
   if (entity.type === 'rect') {
@@ -131,7 +134,7 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
   }
 
   if (entity.type === 'circle') {
-    return Math.abs(distance(point, { x: entity.cx, y: entity.cy }) - entity.radius) <= tolerance;
+    return distance(point, { x: entity.cx, y: entity.cy }) <= entity.radius + tolerance;
   }
 
   if (entity.type === 'polyline') {
@@ -176,6 +179,9 @@ function pointToSegmentDistance(point: CadPoint, start: CadPoint, end: CadPoint)
 
   if (lengthSquared === 0) return distance(point, start);
 
-  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
+  const t = Math.max(
+    0,
+    Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared),
+  );
   return distance(point, { x: start.x + t * dx, y: start.y + t * dy });
 }

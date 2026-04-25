@@ -9,7 +9,7 @@ import {
 } from '../cad/entityGeometry';
 import { renderDocument } from '../cad/render';
 import type { CadDocument, CadEntity, CadPoint, ToolId, Viewport } from '../cad/types';
-import { clampScale, screenToWorld, zoomAt } from '../cad/viewport';
+import { clampScale, screenToWorld, worldToScreen, zoomAt } from '../cad/viewport';
 
 type CadCanvasProps = {
   document: CadDocument;
@@ -22,6 +22,13 @@ type CadCanvasProps = {
   onDocumentChange: (document: CadDocument | ((current: CadDocument) => CadDocument)) => void;
   onSelectedEntityChange: (entityId: string | null) => void;
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
+};
+
+type TextDraft = {
+  entityId?: string;
+  screenPoint: CadPoint;
+  worldPoint: CadPoint;
+  value: string;
 };
 
 export function CadCanvas({
@@ -37,9 +44,13 @@ export function CadCanvas({
   onReady,
 }: CadCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const draftEntityRef = useRef<CadEntity | null>(null);
+  const textDraftRef = useRef<TextDraft | null>(null);
   const [dragStart, setDragStart] = useState<CadPoint | null>(null);
+  const [drawingStart, setDrawingStart] = useState<CadPoint | null>(null);
   const [lastWorldPoint, setLastWorldPoint] = useState<CadPoint | null>(null);
   const [draftEntity, setDraftEntity] = useState<CadEntity | null>(null);
+  const [textDraft, setTextDraftState] = useState<TextDraft | null>(null);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -104,6 +115,56 @@ export function CadCanvas({
 
   const currentLayerId = document.layers[0]?.id ?? 'layer-0';
 
+  const updateDraftEntity = (entity: CadEntity | null) => {
+    draftEntityRef.current = entity;
+    setDraftEntity(entity);
+  };
+
+  const updateTextDraft = (draft: TextDraft | null) => {
+    textDraftRef.current = draft;
+    setTextDraftState(draft);
+  };
+
+  const commitTextDraft = () => {
+    const draft = textDraftRef.current;
+    updateTextDraft(null);
+
+    if (!draft || !draft.value.trim()) {
+      return;
+    }
+
+    if (draft.entityId) {
+      onDocumentChange((current) => ({
+        ...current,
+        entities: current.entities.map((entity) =>
+          entity.id === draft.entityId && entity.type === 'text'
+            ? { ...entity, content: draft.value.trim() }
+            : entity,
+        ),
+      }));
+      onSelectedEntityChange(draft.entityId);
+      return;
+    }
+
+    const entity = createTextEntity(draft.worldPoint, draft.value.trim(), currentLayerId);
+    onDocumentChange((current) => ({
+      ...current,
+      entities: [...current.entities, entity],
+    }));
+    onSelectedEntityChange(entity.id);
+  };
+
+  const openTextEditor = (entity: CadEntity) => {
+    if (entity.type !== 'text') return;
+    const worldPoint = { x: entity.x, y: entity.y };
+    updateTextDraft({
+      entityId: entity.id,
+      screenPoint: worldToScreen(worldPoint, viewport),
+      worldPoint,
+      value: entity.content,
+    });
+  };
+
   return (
     <section className="canvas-stage">
       <canvas
@@ -120,6 +181,7 @@ export function CadCanvas({
           const localPoint = getLocalPoint(event);
           const worldPoint = screenToWorld(localPoint, viewport);
           setDragStart(localPoint);
+          setDrawingStart(worldPoint);
           setLastWorldPoint(worldPoint);
 
           if (activeTool === 'select') {
@@ -137,14 +199,12 @@ export function CadCanvas({
           }
 
           if (activeTool === 'text') {
-            const content = window.prompt('텍스트 내용을 입력하세요.', '텍스트');
-            if (!content) return;
-            const entity = createTextEntity(worldPoint, content, currentLayerId);
-            onDocumentChange((current) => ({
-              ...current,
-              entities: [...current.entities, entity],
-            }));
-            onSelectedEntityChange(entity.id);
+            updateTextDraft({
+              screenPoint: localPoint,
+              worldPoint,
+              value: '',
+            });
+            onSelectedEntityChange(null);
           }
 
           if (
@@ -154,7 +214,7 @@ export function CadCanvas({
             activeTool === 'polyline'
           ) {
             const entity = createEntity(activeTool, worldPoint, worldPoint, currentLayerId);
-            setDraftEntity(entity);
+            updateDraftEntity(entity);
           }
         }}
         onPointerMove={(event) => {
@@ -192,28 +252,68 @@ export function CadCanvas({
               activeTool === 'rect' ||
               activeTool === 'circle' ||
               activeTool === 'polyline') &&
-            lastWorldPoint
+            drawingStart
           ) {
-            setDraftEntity(createEntity(activeTool, lastWorldPoint, worldPoint, currentLayerId));
+            updateDraftEntity(createEntity(activeTool, drawingStart, worldPoint, currentLayerId));
           }
 
           setDragStart(localPoint);
           setLastWorldPoint(worldPoint);
         }}
         onPointerUp={() => {
-          if (draftEntity && isMeaningfulEntity(draftEntity)) {
+          const entity = draftEntityRef.current;
+          if (entity && isMeaningfulEntity(entity)) {
             onDocumentChange((current) => ({
               ...current,
-              entities: [...current.entities, draftEntity],
+              entities: [...current.entities, entity],
             }));
-            onSelectedEntityChange(draftEntity.id);
+            onSelectedEntityChange(entity.id);
           }
 
-          setDraftEntity(null);
+          updateDraftEntity(null);
           setDragStart(null);
+          setDrawingStart(null);
           setLastWorldPoint(null);
         }}
+        onDoubleClick={(event) => {
+          const worldPoint = screenToWorld(getLocalPoint(event), viewport);
+          const entityId = findEntityAt(worldPoint);
+          const entity = document.entities.find((item) => item.id === entityId);
+          if (entity?.type === 'text') openTextEditor(entity);
+        }}
       />
+      {textDraft ? (
+        <input
+          className="canvas-text-input"
+          style={{
+            left: textDraft.screenPoint.x,
+            top: textDraft.screenPoint.y,
+          }}
+          value={textDraft.value}
+          autoFocus
+          onChange={(event) =>
+            updateTextDraft(
+              textDraftRef.current
+                ? { ...textDraftRef.current, value: event.currentTarget.value }
+                : null,
+            )
+          }
+          onFocus={(event) => {
+            event.currentTarget.select();
+          }}
+          onBlur={commitTextDraft}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commitTextDraft();
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              updateTextDraft(null);
+            }
+          }}
+        />
+      ) : null}
     </section>
   );
 }

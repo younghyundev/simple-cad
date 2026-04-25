@@ -142,6 +142,22 @@ button {
   cursor: grab;
 }
 
+.canvas-text-input {
+  position: absolute;
+  z-index: 2;
+  min-width: 180px;
+  height: 30px;
+  padding: 4px 8px;
+  border: 1px solid #0f766e;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  font: 18px Inter, system-ui, sans-serif;
+  outline: none;
+  transform: translateY(-24px);
+}
+
 .properties-panel {
   min-width: 0;
   border-left: 1px solid #d1d5db;

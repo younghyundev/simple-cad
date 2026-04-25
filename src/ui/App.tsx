@@ -61,6 +61,11 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditingText =
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (isEditingText) return;
+
       if (event.key === 'Delete' || event.key === 'Backspace') {
         deleteSelectedEntity();
       }
