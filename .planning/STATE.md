@@ -38,6 +38,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Selection workflow improved: select tool now supports drag marquee multi-selection, multi-entity move, multi-delete, and selection count display.
 - Large drawing performance improved: snap candidate/intersection work is capped for dense drawings, render lookup paths use maps/sets, canvas resizing is avoided when dimensions are unchanged, large autosave is skipped, and repeated import warnings are grouped.
 - Workspace UX started: app now has a start page with new drawing/file open/recent open actions, recent document persistence, and multi-document tabs with tab switching/closing.
+- Workspace tab history improved: each tab now preserves its own selection, viewport, and undo/redo history.
 
 ## Decisions
 
@@ -47,6 +48,12 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Treat DWG as server-converted, not browser-parsed.
 - Add workspace-level UX as a planned phase: first-run/start guide, recent files, explicit file open entry point, and multi-document tabs.
 
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 7 added: Cross-tab reference copy and paste with right-click context menu, standard copy/paste, and reference-point copy/paste across tabs.
+
 ## Next Action
 
-Continue hardening and UX completion: add multi-selection property editing, implement Workspace UX with start guide/recent open/file open/tabs, replace mock CAD API with a real conversion backend, and improve DXF/export fidelity.
+Continue hardening and UX completion: add multi-selection property editing, finish Workspace UX polish, implement cross-tab reference copy/paste, replace mock CAD API with a real conversion backend, and improve DXF/export fidelity.
