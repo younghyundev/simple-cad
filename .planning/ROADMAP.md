@@ -12,6 +12,7 @@
 | 3 | Properties, History, Layers | 속성 편집, undo/redo, 레이어 관리를 구현한다. | ENTY-06, ENTY-07, LAYR-01, LAYR-02, LAYR-03, LAYR-04 |
 | 4 | JSON, SVG, DXF | 저장/불러오기, 자동 저장, SVG 내보내기, DXF 입출력 구조를 구현한다. | FILE-01, FILE-02, FILE-03, FILE-04, FILE-07, ARCH-02 |
 | 5 | DWG Conversion Workflow | DWG 서버 변환 API, 변환 경고, 어댑터 구조를 구현한다. | FILE-05, FILE-06, ARCH-03 |
+| 6 | Workspace UX | 시작 안내 페이지, 최근 열기, 파일 열기, 다중 도면 탭 작업공간을 구현한다. | FILE-01, FILE-02, FILE-03, EDIT-01 |
 
 ## Phase Details
 
@@ -84,6 +85,21 @@
 2. 변환 실패, 미지원 DWG 버전, 라이선스 제한이 사용자에게 명확히 표시된다.
 3. 지원하지 않는 엔티티와 변환 경고가 CadDocument에 보존된다.
 4. 변환 엔진 어댑터를 교체할 수 있는 인터페이스가 있다.
+
+### Phase 6: Workspace UX
+
+**Goal:** 사용자가 앱 진입 직후 최근 도면을 빠르게 열고, 여러 도면을 탭으로 오가며 작업할 수 있게 한다.
+
+**UI hint:** yes
+
+**Requirements:** FILE-01, FILE-02, FILE-03, EDIT-01
+
+**Success criteria:**
+1. 첫 진입 시 안내 페이지가 표시되고 새 도면, 파일 열기, 최근 열기를 제공한다.
+2. 최근 열기 목록에는 최근에 연 JSON/DXF/DWG 파일의 이름, 형식, 마지막 작업 시간이 표시된다.
+3. 여러 도면을 탭으로 열 수 있고 탭 전환, 닫기, 현재 탭 저장/내보내기가 동작한다.
+4. 탭별 선택 상태, viewport, undo/redo 히스토리가 서로 섞이지 않는다.
+5. 파일 import 실패나 변환 경고가 해당 탭에만 표시된다.
 
 ## Coverage
 

@@ -44,7 +44,8 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Use Canvas as the initial rendering surface.
 - Keep CadDocument as the internal source of truth.
 - Treat DWG as server-converted, not browser-parsed.
+- Add workspace-level UX as a planned phase: first-run/start guide, recent files, explicit file open entry point, and multi-document tabs.
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, group repeated conversion warnings, and add richer CAD annotation/edit tools.
+Continue hardening and UX completion: add multi-selection property editing, implement Workspace UX with start guide/recent open/file open/tabs, replace mock CAD API with a real conversion backend, and improve DXF/export fidelity.
