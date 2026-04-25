@@ -27,6 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Dimension editing improved: labels can be manually edited or reset to automatic distance labels, and dimensions now render/export with offset extension lines.
 - DXF layer/color fidelity improved: import reads LAYER table colors and entity ACI color code 62, and export writes a LAYER table plus entity colors.
 - DXF line style fidelity improved: import maps line type code 6 and lineweight code 370 into stroke style/width, and export writes LTYPE, line type, and lineweight data.
+- DXF text coverage improved: MTEXT import is supported, multiline text renders/selects correctly, and multiline text exports as MTEXT while SVG uses tspans.
 
 ## Decisions
 
@@ -37,4 +38,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF text/entity coverage, and add richer CAD annotation/edit tools.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF entity coverage, and add richer CAD annotation/edit tools.

@@ -1,6 +1,7 @@
 import type { CadDocument, CadEntity } from '../types';
 import { hexToDxfAci } from './dxfColor';
 import { strokeStyleToDxfLineType, strokeWidthToDxfLineWeight } from './dxfStyle';
+import { encodeDxfText } from './dxfText';
 
 export class ExportService {
   toJson(document: CadDocument): Blob {
@@ -86,7 +87,18 @@ function entityToSvg(entity: CadEntity): string {
   }
 
   if (entity.type === 'text') {
-    return `<text x="${entity.x}" y="${entity.y}" font-size="${entity.fontSize}" fill="${escapeXml(entity.fillColor)}">${escapeXml(entity.content)}</text>`;
+    const lines = getTextLines(entity.content);
+    if (lines.length === 1) {
+      return `<text x="${entity.x}" y="${entity.y}" font-size="${entity.fontSize}" fill="${escapeXml(entity.fillColor)}">${escapeXml(entity.content)}</text>`;
+    }
+
+    const tspans = lines
+      .map(
+        (line, index) =>
+          `<tspan x="${entity.x}" dy="${index === 0 ? 0 : entity.fontSize * 1.25}">${escapeXml(line)}</tspan>`,
+      )
+      .join('');
+    return `<text x="${entity.x}" y="${entity.y}" font-size="${entity.fontSize}" fill="${escapeXml(entity.fillColor)}">${tspans}</text>`;
   }
 
   if (entity.type === 'dimension') {
@@ -197,6 +209,22 @@ function entityToDxf(entity: CadEntity): string[] {
   }
 
   if (entity.type === 'text') {
+    if (getTextLines(entity.content).length > 1) {
+      return [
+        '0',
+        'MTEXT',
+        ...header,
+        '10',
+        `${entity.x}`,
+        '20',
+        `${-entity.y}`,
+        '40',
+        `${entity.fontSize}`,
+        '1',
+        encodeDxfText(entity.content),
+      ];
+    }
+
     return [
       '0',
       'TEXT',
@@ -208,7 +236,7 @@ function entityToDxf(entity: CadEntity): string[] {
       '40',
       `${entity.fontSize}`,
       '1',
-      entity.content,
+      encodeDxfText(entity.content),
     ];
   }
 
@@ -258,7 +286,7 @@ function entityToDxf(entity: CadEntity): string[] {
       '40',
       '13',
       '1',
-      entity.label,
+      encodeDxfText(entity.label),
     ];
   }
 
@@ -411,7 +439,17 @@ function getDocumentBounds(document: CadDocument) {
     if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'polyline') return entity.points;
-    if (entity.type === 'text') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.content.length * entity.fontSize * 0.6, y: entity.y - entity.fontSize }];
+    if (entity.type === 'text') {
+      const lines = getTextLines(entity.content);
+      const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
+      return [
+        { x: entity.x, y: entity.y - entity.fontSize },
+        {
+          x: entity.x + maxLineLength * entity.fontSize * 0.6,
+          y: entity.y + entity.fontSize * (lines.length - 1) * 1.25,
+        },
+      ];
+    }
     if (entity.type === 'dimension') return entityBoundsPoints(entity) ?? [];
     return [];
   });
@@ -440,4 +478,8 @@ function escapeXml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function getTextLines(value: string): string[] {
+  return value.split(/\r\n|\r|\n/);
 }

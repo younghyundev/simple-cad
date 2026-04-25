@@ -140,9 +140,13 @@ function drawEntity(
 
   if (entity.type === 'text') {
     const point = worldToScreen({ x: entity.x, y: entity.y }, viewport);
+    const fontSize = entity.fontSize * viewport.scale;
+    const lineHeight = fontSize * 1.25;
     context.fillStyle = entity.fillColor;
-    context.font = `${entity.fontSize * viewport.scale}px Inter, system-ui, sans-serif`;
-    context.fillText(entity.content, point.x, point.y);
+    context.font = `${fontSize}px Inter, system-ui, sans-serif`;
+    getTextLines(entity.content).forEach((line, index) => {
+      context.fillText(line, point.x, point.y + index * lineHeight);
+    });
   }
 
   if (entity.type === 'dimension') {
@@ -318,11 +322,13 @@ function getEntityBounds(entity: CadEntity): {
   }
 
   if (entity.type === 'text') {
+    const lines = getTextLines(entity.content);
+    const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
     return {
       x: entity.x,
       y: entity.y - entity.fontSize,
-      width: entity.content.length * entity.fontSize * 0.6,
-      height: entity.fontSize * 1.2,
+      width: maxLineLength * entity.fontSize * 0.6,
+      height: entity.fontSize * (lines.length + 0.2),
     };
   }
 
@@ -355,4 +361,8 @@ function modulo(value: number, size: number): number {
 
 function degreesToRadians(value: number): number {
   return (value * Math.PI) / 180;
+}
+
+function getTextLines(value: string): string[] {
+  return value.split(/\r\n|\r|\n/);
 }

@@ -375,12 +375,15 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
   }
 
   if (entity.type === 'text') {
-    const width = entity.content.length * entity.fontSize * 0.6;
+    const lines = getTextLines(entity.content);
+    const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
+    const width = maxLineLength * entity.fontSize * 0.6;
+    const height = entity.fontSize * lines.length * 1.25;
     return (
       point.x >= entity.x - tolerance &&
       point.x <= entity.x + width + tolerance &&
       point.y >= entity.y - entity.fontSize - tolerance &&
-      point.y <= entity.y + tolerance
+      point.y <= entity.y + height - entity.fontSize + tolerance
     );
   }
 
@@ -408,6 +411,10 @@ function distance(a: CadPoint, b: CadPoint): number {
 
 function formatDistance(a: CadPoint, b: CadPoint): string {
   return distance(a, b).toFixed(1);
+}
+
+function getTextLines(value: string): string[] {
+  return value.split(/\r\n|\r|\n/);
 }
 
 function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {

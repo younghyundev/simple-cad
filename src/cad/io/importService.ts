@@ -1,6 +1,7 @@
 import type { CadDocument, CadEntity, CadEntityBase, CadLayer } from '../types';
 import { dxfAciToHex } from './dxfColor';
 import { dxfLineTypeToStrokeStyle, dxfLineWeightToStrokeWidth } from './dxfStyle';
+import { decodeDxfText } from './dxfText';
 
 export class ImportService {
   async fromJson(text: string): Promise<CadDocument> {
@@ -58,7 +59,16 @@ export class ImportService {
           type: 'text',
           x: numberFor(chunk, '10'),
           y: -numberFor(chunk, '20'),
-          content: valueFor(chunk, '1') || 'TEXT',
+          content: decodeDxfText(valueFor(chunk, '1') || 'TEXT'),
+          fontSize: numberFor(chunk, '40') || 16,
+        });
+      } else if (entityType === 'MTEXT') {
+        entities.push({
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth, fillColor: strokeColor }),
+          type: 'text',
+          x: numberFor(chunk, '10'),
+          y: -numberFor(chunk, '20'),
+          content: decodeDxfText([...valuesFor(chunk, '3'), valueFor(chunk, '1') ?? 'MTEXT'].join('')),
           fontSize: numberFor(chunk, '40') || 16,
         });
       } else if (entityType === 'LWPOLYLINE') {
