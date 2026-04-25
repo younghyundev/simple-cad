@@ -33,6 +33,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - DXF native annotation coverage improved: DIMENSION entities import as editable Web CAD dimension objects using definition points, label text, and dimension-line offset.
 - DXF curve fidelity improved: LWPOLYLINE bulge values now import as sampled arc segments instead of straight chords.
 - DXF spline fidelity improved: SPLINE import now prefers fit points and uses Catmull-Rom interpolation instead of connecting raw control points.
+- DXF spline and lineweight fidelity improved: SPLINE import now evaluates knot/degree/weight data when present, and lineweight import uses thinner screen stroke mapping.
 
 ## Decisions
 

@@ -607,12 +607,104 @@ function normalizeSweep(startParameter: number, endParameter: number): number {
 }
 
 function splineSamplePoints(pairs: DxfPair[]) {
+  const nurbsPoints = splineNurbsPoints(pairs);
+  if (nurbsPoints.length >= 2) return nurbsPoints;
+
   const fitPoints = splineFitPoints(pairs);
   const controlPoints = splineControlPoints(pairs);
   const sourcePoints = fitPoints.length >= 2 ? fitPoints : controlPoints;
 
   if (sourcePoints.length < 3) return sourcePoints;
   return catmullRomPoints(sourcePoints, 16);
+}
+
+function splineNurbsPoints(pairs: DxfPair[]) {
+  const controlPoints = splineControlPoints(pairs);
+  const degree = Number(valueFor(pairs, '71') ?? Math.min(3, controlPoints.length - 1));
+  const knots = valuesFor(pairs, '40').map(Number).filter(Number.isFinite);
+  const weights = valuesFor(pairs, '41').map(Number).filter(Number.isFinite);
+  const pointCount = controlPoints.length;
+
+  if (
+    pointCount < 2 ||
+    degree < 1 ||
+    knots.length < pointCount + degree + 1 ||
+    !Number.isFinite(knots[degree]) ||
+    !Number.isFinite(knots[pointCount])
+  ) {
+    return [];
+  }
+
+  const start = knots[degree];
+  const end = knots[pointCount];
+  if (start === end) return [];
+
+  const samples = Math.max(48, Math.min(240, pointCount * 24));
+  const result: CadPoint[] = [];
+
+  for (let sample = 0; sample <= samples; sample += 1) {
+    const u = start + ((end - start) * sample) / samples;
+    const point = evaluateRationalBSpline(controlPoints, knots, weights, degree, u, sample === samples);
+    if (point) result.push(point);
+  }
+
+  return dedupePoints(result);
+}
+
+function evaluateRationalBSpline(
+  controlPoints: CadPoint[],
+  knots: number[],
+  weights: number[],
+  degree: number,
+  u: number,
+  isLastSample: boolean,
+): CadPoint | null {
+  let weightedX = 0;
+  let weightedY = 0;
+  let denominator = 0;
+  const lastControlIndex = controlPoints.length - 1;
+
+  for (let index = 0; index < controlPoints.length; index += 1) {
+    const basis =
+      isLastSample && index === lastControlIndex ? 1 : bsplineBasis(index, degree, u, knots);
+    if (basis === 0) continue;
+
+    const weight = weights[index] ?? 1;
+    const weightedBasis = basis * weight;
+    weightedX += controlPoints[index].x * weightedBasis;
+    weightedY += controlPoints[index].y * weightedBasis;
+    denominator += weightedBasis;
+  }
+
+  if (!denominator) return null;
+  return { x: weightedX / denominator, y: weightedY / denominator };
+}
+
+function bsplineBasis(index: number, degree: number, u: number, knots: number[]): number {
+  if (degree === 0) {
+    return knots[index] <= u && u < knots[index + 1] ? 1 : 0;
+  }
+
+  const leftDenominator = knots[index + degree] - knots[index];
+  const rightDenominator = knots[index + degree + 1] - knots[index + 1];
+  const left =
+    leftDenominator === 0
+      ? 0
+      : ((u - knots[index]) / leftDenominator) * bsplineBasis(index, degree - 1, u, knots);
+  const right =
+    rightDenominator === 0
+      ? 0
+      : ((knots[index + degree + 1] - u) / rightDenominator) *
+        bsplineBasis(index + 1, degree - 1, u, knots);
+
+  return left + right;
+}
+
+function dedupePoints(points: CadPoint[]): CadPoint[] {
+  return points.filter((point, index) => {
+    const previous = points[index - 1];
+    return !previous || Math.hypot(point.x - previous.x, point.y - previous.y) > 0.001;
+  });
 }
 
 function splineControlPoints(pairs: DxfPair[]) {

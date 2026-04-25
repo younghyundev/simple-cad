@@ -13,11 +13,11 @@ export function strokeStyleToDxfLineType(value: 'solid' | 'dashed' | undefined):
 
 export function dxfLineWeightToStrokeWidth(value: string | undefined): number {
   const lineWeight = Number(value);
-  if (!Number.isFinite(lineWeight) || lineWeight <= 0) return 2;
+  if (!Number.isFinite(lineWeight) || lineWeight <= 0) return 1;
 
-  return Math.max(1, Math.min(12, Math.round(lineWeight / 25)));
+  return Math.max(1, Math.min(4, Math.round(lineWeight / 100)));
 }
 
 export function strokeWidthToDxfLineWeight(value: number): number {
-  return Math.max(25, Math.min(300, Math.round(value * 25)));
+  return Math.max(25, Math.min(400, Math.round(value * 100)));
 }
