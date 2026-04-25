@@ -261,6 +261,43 @@ export function resizeEntity(
   return entity;
 }
 
+export function insertPolylinePoint(entity: CadEntity, point: CadPoint): CadEntity {
+  if (entity.type !== 'polyline') return entity;
+  if (entity.points.length < 2) {
+    return { ...entity, points: [...entity.points, point] };
+  }
+
+  let insertAfterIndex = 0;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < entity.points.length - 1; index += 1) {
+    const currentDistance = pointToSegmentDistance(point, entity.points[index], entity.points[index + 1]);
+    if (currentDistance < nearestDistance) {
+      nearestDistance = currentDistance;
+      insertAfterIndex = index;
+    }
+  }
+
+  return {
+    ...entity,
+    points: [
+      ...entity.points.slice(0, insertAfterIndex + 1),
+      point,
+      ...entity.points.slice(insertAfterIndex + 1),
+    ],
+  };
+}
+
+export function removePolylinePoint(entity: CadEntity, pointIndex: number): CadEntity {
+  if (entity.type !== 'polyline') return entity;
+  if (entity.points.length <= 2) return entity;
+
+  return {
+    ...entity,
+    points: entity.points.filter((_, index) => index !== pointIndex),
+  };
+}
+
 export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number): boolean {
   const tolerance = hitTolerance / scale;
 

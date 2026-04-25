@@ -5,7 +5,9 @@ import {
   createTextEntity,
   hitTestEntity,
   hitTestResizeHandle,
+  insertPolylinePoint,
   isMeaningfulEntity,
+  removePolylinePoint,
   resizeEntity,
   type ResizeHandleId,
   translateEntity,
@@ -66,6 +68,10 @@ export function CadCanvas({
   const [lastWorldPoint, setLastWorldPoint] = useState<CadPoint | null>(null);
   const [draftEntity, setDraftEntity] = useState<CadEntity | null>(null);
   const [textDraft, setTextDraftState] = useState<TextDraft | null>(null);
+  const [selectedPolylinePoint, setSelectedPolylinePoint] = useState<{
+    entityId: string;
+    pointIndex: number;
+  } | null>(null);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -199,6 +205,32 @@ export function CadCanvas({
     });
   };
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isEditingText =
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+      if (isEditingText) return;
+      if ((event.key !== 'Delete' && event.key !== 'Backspace') || !selectedPolylinePoint) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      onDocumentChange((current) => ({
+        ...current,
+        entities: current.entities.map((entity) =>
+          entity.id === selectedPolylinePoint.entityId
+            ? removePolylinePoint(entity, selectedPolylinePoint.pointIndex)
+            : entity,
+        ),
+      }));
+      setSelectedPolylinePoint(null);
+    };
+
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [onDocumentChange, selectedPolylinePoint]);
+
   return (
     <section className="canvas-stage">
       <canvas
@@ -221,6 +253,14 @@ export function CadCanvas({
           if (activeTool === 'select') {
             const handleId = findResizeHandleAt(worldPoint);
             if (handleId && selectedEntityId) {
+              if (handleId.startsWith('point-')) {
+                setSelectedPolylinePoint({
+                  entityId: selectedEntityId,
+                  pointIndex: Number(handleId.replace('point-', '')),
+                });
+              } else {
+                setSelectedPolylinePoint(null);
+              }
               resizingHandleRef.current = handleId;
               resizingEntityRef.current = true;
               resizedEntityRef.current = false;
@@ -230,6 +270,7 @@ export function CadCanvas({
 
             const entityId = findEntityAt(worldPoint);
             onSelectedEntityChange(entityId);
+            setSelectedPolylinePoint(null);
             if (entityId) {
               movingEntityRef.current = true;
               movedEntityRef.current = false;
@@ -357,6 +398,15 @@ export function CadCanvas({
           const entityId = findEntityAt(worldPoint);
           const entity = document.entities.find((item) => item.id === entityId);
           if (entity?.type === 'text') openTextEditor(entity);
+          if (entity?.type === 'polyline') {
+            onDocumentChange((current) => ({
+              ...current,
+              entities: current.entities.map((item) =>
+                item.id === entity.id ? insertPolylinePoint(item, worldPoint) : item,
+              ),
+            }));
+            onSelectedEntityChange(entity.id);
+          }
         }}
       />
       {textDraft ? (
