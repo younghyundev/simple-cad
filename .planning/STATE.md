@@ -15,6 +15,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Implementation started with the Phase 1 foundation scaffold.
 - Phase 2 basic entity interaction started: line, rectangle, circle, polyline, text creation; selection; drag movement; erase/delete.
 - Phase 3 basic controls added: undo/redo history, selected entity stroke color/width/style editing, layer assignment, layer add/rename/color/visibility/lock toggles.
+- Phase 4 file flow started: JSON open/save, autosave to localStorage, SVG export, and basic ASCII DXF import/export for LINE/CIRCLE/TEXT/LWPOLYLINE.
 
 ## Decisions
 
@@ -25,4 +26,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue Phase 3 hardening: coalesce drag history into single undo steps, add resize handles, and then move into JSON/SVG/DXF file flows.
+Continue Phase 4 hardening: improve DXF layer/color fidelity, add conversion warnings UI, and prepare DWG conversion API wiring.

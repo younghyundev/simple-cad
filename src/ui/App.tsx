@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
+import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
 import type { CadEntity, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
 import { useDocumentHistory } from '../cad/useDocumentHistory';
@@ -34,14 +35,18 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
   { id: 'erase', label: '삭제', icon: Trash2 },
 ];
 
+const fileManager = new FileManager();
+
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
-  const { document, updateDocument, undo, redo, canUndo, canRedo } =
+  const { document, updateDocument, replaceDocument, undo, redo, canUndo, canRedo } =
     useDocumentHistory(sampleDocument);
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
   const [gridVisible, setGridVisible] = useState(true);
+  const [fileMessage, setFileMessage] = useState('자동 저장 준비됨');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedEntity = useMemo(
     () => document.entities.find((entity) => entity.id === selectedEntityId) ?? null,
     [document.entities, selectedEntityId],
@@ -51,6 +56,47 @@ export function App() {
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
     canvasApiRef.current = api;
   }, []);
+
+  const downloadBlob = useCallback((blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const saveAs = useCallback(
+    async (type: 'json' | 'svg' | 'dxf') => {
+      const blob = await fileManager.save(document, {
+        fileName: document.name,
+        type,
+      });
+      downloadBlob(blob, `${document.name.replace(/\s+/g, '-')}.${type}`);
+      setFileMessage(`${type.toUpperCase()} 파일을 내보냈습니다.`);
+    },
+    [document, downloadBlob],
+  );
+
+  const openFile = useCallback(async (file: File) => {
+    try {
+      const nextDocument = await fileManager.open(file);
+      replaceDocument({
+        ...nextDocument,
+        name: nextDocument.name || file.name,
+        sourceFile: {
+          name: file.name,
+          type: file.name.endsWith('.dxf') ? 'dxf' : file.name.endsWith('.dwg') ? 'dwg' : 'json',
+          lastSavedAt: new Date().toISOString(),
+          fileHandleAvailable: false,
+        },
+      });
+      setSelectedEntityId(null);
+      setFileMessage(`${file.name} 파일을 열었습니다.`);
+    } catch (error) {
+      setFileMessage(error instanceof Error ? error.message : '파일을 열 수 없습니다.');
+    }
+  }, [replaceDocument]);
 
   const deleteSelectedEntity = useCallback(() => {
     if (!selectedEntityId) return;
@@ -104,6 +150,15 @@ export function App() {
   }, [document.layers.length, updateDocument]);
 
   useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      localStorage.setItem('webcad.autosave', JSON.stringify(document));
+      setFileMessage(`자동 저장됨 ${new Date().toLocaleTimeString()}`);
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [document]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isEditingText =
@@ -140,22 +195,41 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
+        <input
+          ref={fileInputRef}
+          className="hidden-input"
+          type="file"
+          accept=".json,.dxf,.dwg"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) void openFile(file);
+            event.currentTarget.value = '';
+          }}
+        />
         <div className="brand">
           <span className="brand-mark">WC</span>
           <span>Web CAD</span>
         </div>
         <div className="toolbar-group">
-          <button className="tool-button wide" title="열기">
+          <button
+            className="tool-button wide"
+            title="열기"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <FileUp size={17} />
             열기
           </button>
-          <button className="tool-button wide" title="저장">
+          <button className="tool-button wide" title="JSON 저장" onClick={() => void saveAs('json')}>
             <Save size={17} />
             저장
           </button>
-          <button className="tool-button wide" title="내보내기">
+          <button className="tool-button wide" title="SVG 내보내기" onClick={() => void saveAs('svg')}>
             <FileDown size={17} />
-            내보내기
+            SVG
+          </button>
+          <button className="tool-button wide" title="DXF 내보내기" onClick={() => void saveAs('dxf')}>
+            <FileDown size={17} />
+            DXF
           </button>
         </div>
         <div className="toolbar-group">
@@ -352,6 +426,7 @@ export function App() {
         <span>줌 {(viewport.scale * 100).toFixed(0)}%</span>
         <span>{selectedEntity ? `선택: ${selectedEntity.id}` : '선택 없음'}</span>
         <span>도구: {tools.find((tool) => tool.id === activeTool)?.label}</span>
+        <span>{fileMessage}</span>
       </footer>
     </main>
   );

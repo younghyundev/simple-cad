@@ -19,6 +19,10 @@ button {
   font: inherit;
 }
 
+.hidden-input {
+  display: none;
+}
+
 .app-shell {
   display: grid;
   grid-template-rows: 52px 1fr 30px;

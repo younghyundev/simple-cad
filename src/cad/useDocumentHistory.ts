@@ -19,6 +19,12 @@ export function useDocumentHistory(initialDocument: CadDocument) {
     });
   }, []);
 
+  const replaceDocument = useCallback((next: CadDocument) => {
+    setPast([]);
+    setFuture([]);
+    setDocument(next);
+  }, []);
+
   const undo = useCallback(() => {
     setPast((items) => {
       if (items.length === 0) return items;
@@ -46,6 +52,7 @@ export function useDocumentHistory(initialDocument: CadDocument) {
   return {
     document,
     updateDocument,
+    replaceDocument,
     undo,
     redo,
     canUndo: past.length > 0,
