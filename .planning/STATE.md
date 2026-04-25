@@ -39,6 +39,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Large drawing performance improved: snap candidate/intersection work is capped for dense drawings, render lookup paths use maps/sets, canvas resizing is avoided when dimensions are unchanged, large autosave is skipped, and repeated import warnings are grouped.
 - Workspace UX started: app now has a start page with new drawing/file open/recent open actions, recent document persistence, and multi-document tabs with tab switching/closing.
 - Workspace tab history improved: each tab now preserves its own selection, viewport, and undo/redo history.
+- Phase 7 context captured: cross-tab copy/paste, right-click context menu, standard clipboard shortcuts, and reference-point copy/paste decisions are ready for planning.
 
 ## Decisions
 
@@ -56,4 +57,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening and UX completion: add multi-selection property editing, finish Workspace UX polish, implement cross-tab reference copy/paste, replace mock CAD API with a real conversion backend, and improve DXF/export fidelity.
+Plan Phase 7: break cross-tab reference copy/paste into implementation tasks for clipboard state, context menu UI, keyboard shortcuts, reference point picking, paste translation, and undo/redo coverage.
