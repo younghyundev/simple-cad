@@ -1,5 +1,6 @@
 import type { CadDocument, CadEntity } from '../types';
 import { hexToDxfAci } from './dxfColor';
+import { strokeStyleToDxfLineType, strokeWidthToDxfLineWeight } from './dxfStyle';
 
 export class ExportService {
   toJson(document: CadDocument): Blob {
@@ -39,7 +40,7 @@ export class ExportService {
       'HEADER',
       '0',
       'ENDSEC',
-      ...layersToDxf(document),
+      ...tablesToDxf(document),
       '0',
       'SECTION',
       '2',
@@ -264,12 +265,70 @@ function entityToDxf(entity: CadEntity): string[] {
   return [];
 }
 
-function layersToDxf(document: CadDocument): string[] {
+function tablesToDxf(document: CadDocument): string[] {
   return [
     '0',
     'SECTION',
     '2',
     'TABLES',
+    ...lineTypesToDxf(),
+    ...layersToDxf(document),
+    '0',
+    'ENDSEC',
+  ];
+}
+
+function lineTypesToDxf(): string[] {
+  return [
+    '0',
+    'TABLE',
+    '2',
+    'LTYPE',
+    '70',
+    '2',
+    '0',
+    'LTYPE',
+    '2',
+    'CONTINUOUS',
+    '70',
+    '0',
+    '3',
+    'Solid line',
+    '72',
+    '65',
+    '73',
+    '0',
+    '40',
+    '0',
+    '0',
+    'LTYPE',
+    '2',
+    'DASHED',
+    '70',
+    '0',
+    '3',
+    'Dashed line',
+    '72',
+    '65',
+    '73',
+    '2',
+    '40',
+    '12',
+    '49',
+    '6',
+    '74',
+    '0',
+    '49',
+    '-6',
+    '74',
+    '0',
+    '0',
+    'ENDTAB',
+  ];
+}
+
+function layersToDxf(document: CadDocument): string[] {
+  return [
     '0',
     'TABLE',
     '2',
@@ -287,16 +346,25 @@ function layersToDxf(document: CadDocument): string[] {
       `${hexToDxfAci(layer.color)}`,
       '6',
       'CONTINUOUS',
+      '370',
+      '50',
     ]),
     '0',
     'ENDTAB',
-    '0',
-    'ENDSEC',
   ];
 }
 
 function entityHeader(entity: CadEntity): string[] {
-  return ['8', entity.layerId, '62', `${hexToDxfAci(entity.strokeColor)}`];
+  return [
+    '8',
+    entity.layerId,
+    '62',
+    `${hexToDxfAci(entity.strokeColor)}`,
+    '6',
+    strokeStyleToDxfLineType(entity.strokeStyle),
+    '370',
+    `${strokeWidthToDxfLineWeight(entity.strokeWidth)}`,
+  ];
 }
 
 function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {

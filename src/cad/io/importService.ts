@@ -1,5 +1,6 @@
 import type { CadDocument, CadEntity, CadEntityBase, CadLayer } from '../types';
 import { dxfAciToHex } from './dxfColor';
+import { dxfLineTypeToStrokeStyle, dxfLineWeightToStrokeWidth } from './dxfStyle';
 
 export class ImportService {
   async fromJson(text: string): Promise<CadDocument> {
@@ -16,12 +17,17 @@ export class ImportService {
 
     for (const { entityType, chunk } of entityChunks) {
       const layerId = valueFor(chunk, '8') || '0';
-      const strokeColor = dxfAciToHex(valueFor(chunk, '62')) ?? layerDefinitions.get(layerId) ?? '#1f2937';
+      const layerDefinition = layerDefinitions.get(layerId);
+      const strokeColor = dxfAciToHex(valueFor(chunk, '62')) ?? layerDefinition?.color ?? '#1f2937';
+      const strokeStyle = dxfLineTypeToStrokeStyle(valueFor(chunk, '6') ?? layerDefinition?.lineType);
+      const strokeWidth = dxfLineWeightToStrokeWidth(
+        valueFor(chunk, '370') ?? layerDefinition?.lineWeight,
+      );
       layerNames.add(layerId);
 
       if (entityType === 'LINE') {
         entities.push({
-          ...baseEntity(layerId, { strokeColor }),
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth }),
           type: 'line',
           x1: numberFor(chunk, '10'),
           y1: -numberFor(chunk, '20'),
@@ -30,7 +36,7 @@ export class ImportService {
         });
       } else if (entityType === 'CIRCLE') {
         entities.push({
-          ...baseEntity(layerId, { strokeColor, visualType: 'circle' }),
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth, visualType: 'circle' }),
           type: 'circle',
           cx: numberFor(chunk, '10'),
           cy: -numberFor(chunk, '20'),
@@ -38,7 +44,7 @@ export class ImportService {
         });
       } else if (entityType === 'ARC') {
         entities.push({
-          ...baseEntity(layerId, { strokeColor }),
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth }),
           type: 'arc',
           cx: numberFor(chunk, '10'),
           cy: -numberFor(chunk, '20'),
@@ -48,7 +54,7 @@ export class ImportService {
         });
       } else if (entityType === 'TEXT') {
         entities.push({
-          ...baseEntity(layerId, { strokeColor, fillColor: strokeColor }),
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth, fillColor: strokeColor }),
           type: 'text',
           x: numberFor(chunk, '10'),
           y: -numberFor(chunk, '20'),
@@ -59,7 +65,7 @@ export class ImportService {
         const xs = valuesFor(chunk, '10').map(Number);
         const ys = valuesFor(chunk, '20').map((value) => -Number(value));
         entities.push({
-          ...baseEntity(layerId, { strokeColor }),
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth }),
           type: 'polyline',
           points: xs.map((x, pointIndex) => ({ x, y: ys[pointIndex] ?? 0 })),
         });
@@ -74,7 +80,7 @@ export class ImportService {
     const layers: CadLayer[] = [...layerNames].map((name, index) => ({
       id: name,
       name,
-      color: layerDefinitions.get(name) ?? (index === 0 ? '#2563eb' : '#7c3aed'),
+      color: layerDefinitions.get(name)?.color ?? (index === 0 ? '#2563eb' : '#7c3aed'),
       visible: true,
       locked: false,
     }));
@@ -155,8 +161,10 @@ function collectEntityChunks(pairs: DxfPair[]): DxfEntityChunk[] {
   return chunks;
 }
 
-function parseLayerDefinitions(pairs: DxfPair[]): Map<string, string> {
-  const layers = new Map<string, string>();
+function parseLayerDefinitions(
+  pairs: DxfPair[],
+): Map<string, { color?: string; lineType?: string; lineWeight?: string }> {
+  const layers = new Map<string, { color?: string; lineType?: string; lineWeight?: string }>();
 
   for (let index = 0; index < pairs.length; index += 1) {
     if (pairs[index].code !== '0' || pairs[index].value !== 'LAYER') continue;
@@ -164,7 +172,9 @@ function parseLayerDefinitions(pairs: DxfPair[]): Map<string, string> {
     const chunk = readChunk(pairs, index + 1);
     const name = valueFor(chunk, '2');
     const color = dxfAciToHex(valueFor(chunk, '62'));
-    if (name && color) layers.set(name, color);
+    const lineType = valueFor(chunk, '6');
+    const lineWeight = valueFor(chunk, '370');
+    if (name) layers.set(name, { color: color ?? undefined, lineType, lineWeight });
   }
 
   return layers;
@@ -184,6 +194,8 @@ function baseEntity(
   layerId: string,
   options: {
     strokeColor?: string;
+    strokeStyle?: 'solid' | 'dashed';
+    strokeWidth?: number;
     fillColor?: string;
     visualType?: 'circle' | 'other';
   } = {},
@@ -197,8 +209,8 @@ function baseEntity(
     fillColor:
       options.fillColor ??
       (options.visualType === 'circle' ? 'rgba(37, 99, 235, 0.08)' : 'transparent'),
-    strokeWidth: 2,
-    strokeStyle: 'solid' as const,
+    strokeWidth: options.strokeWidth ?? 2,
+    strokeStyle: options.strokeStyle ?? 'solid',
     visible: true,
     locked: false,
   };
