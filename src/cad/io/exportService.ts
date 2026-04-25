@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity } from '../types';
+import { hexToDxfAci } from './dxfColor';
 
 export class ExportService {
   toJson(document: CadDocument): Blob {
@@ -38,6 +39,7 @@ export class ExportService {
       'HEADER',
       '0',
       'ENDSEC',
+      ...layersToDxf(document),
       '0',
       'SECTION',
       '2',
@@ -100,10 +102,22 @@ function entityToSvg(entity: CadEntity): string {
 }
 
 function entityToDxf(entity: CadEntity): string[] {
-  const layer = entity.layerId;
+  const header = entityHeader(entity);
 
   if (entity.type === 'line') {
-    return ['0', 'LINE', '8', layer, '10', `${entity.x1}`, '20', `${-entity.y1}`, '11', `${entity.x2}`, '21', `${-entity.y2}`];
+    return [
+      '0',
+      'LINE',
+      ...header,
+      '10',
+      `${entity.x1}`,
+      '20',
+      `${-entity.y1}`,
+      '11',
+      `${entity.x2}`,
+      '21',
+      `${-entity.y2}`,
+    ];
   }
 
   if (entity.type === 'rect') {
@@ -112,8 +126,7 @@ function entityToDxf(entity: CadEntity): string[] {
     return [
       '0',
       'LWPOLYLINE',
-      '8',
-      layer,
+      ...header,
       '90',
       '4',
       '70',
@@ -138,15 +151,24 @@ function entityToDxf(entity: CadEntity): string[] {
   }
 
   if (entity.type === 'circle') {
-    return ['0', 'CIRCLE', '8', layer, '10', `${entity.cx}`, '20', `${-entity.cy}`, '40', `${entity.radius}`];
+    return [
+      '0',
+      'CIRCLE',
+      ...header,
+      '10',
+      `${entity.cx}`,
+      '20',
+      `${-entity.cy}`,
+      '40',
+      `${entity.radius}`,
+    ];
   }
 
   if (entity.type === 'arc') {
     return [
       '0',
       'ARC',
-      '8',
-      layer,
+      ...header,
       '10',
       `${entity.cx}`,
       '20',
@@ -164,8 +186,7 @@ function entityToDxf(entity: CadEntity): string[] {
     return [
       '0',
       'LWPOLYLINE',
-      '8',
-      layer,
+      ...header,
       '90',
       `${entity.points.length}`,
       '70',
@@ -178,8 +199,7 @@ function entityToDxf(entity: CadEntity): string[] {
     return [
       '0',
       'TEXT',
-      '8',
-      layer,
+      ...header,
       '10',
       `${entity.x}`,
       '20',
@@ -196,8 +216,7 @@ function entityToDxf(entity: CadEntity): string[] {
     return [
       '0',
       'LINE',
-      '8',
-      layer,
+      ...header,
       '10',
       `${entity.startPoint.x}`,
       '20',
@@ -208,8 +227,7 @@ function entityToDxf(entity: CadEntity): string[] {
       `${-geometry.dimensionStart.y}`,
       '0',
       'LINE',
-      '8',
-      layer,
+      ...header,
       '10',
       `${entity.endPoint.x}`,
       '20',
@@ -220,8 +238,7 @@ function entityToDxf(entity: CadEntity): string[] {
       `${-geometry.dimensionEnd.y}`,
       '0',
       'LINE',
-      '8',
-      layer,
+      ...header,
       '10',
       `${geometry.dimensionStart.x}`,
       '20',
@@ -232,8 +249,7 @@ function entityToDxf(entity: CadEntity): string[] {
       `${-geometry.dimensionEnd.y}`,
       '0',
       'TEXT',
-      '8',
-      layer,
+      ...header,
       '10',
       `${geometry.mid.x}`,
       '20',
@@ -246,6 +262,41 @@ function entityToDxf(entity: CadEntity): string[] {
   }
 
   return [];
+}
+
+function layersToDxf(document: CadDocument): string[] {
+  return [
+    '0',
+    'SECTION',
+    '2',
+    'TABLES',
+    '0',
+    'TABLE',
+    '2',
+    'LAYER',
+    '70',
+    `${document.layers.length}`,
+    ...document.layers.flatMap((layer) => [
+      '0',
+      'LAYER',
+      '2',
+      layer.id,
+      '70',
+      layer.locked ? '4' : '0',
+      '62',
+      `${hexToDxfAci(layer.color)}`,
+      '6',
+      'CONTINUOUS',
+    ]),
+    '0',
+    'ENDTAB',
+    '0',
+    'ENDSEC',
+  ];
+}
+
+function entityHeader(entity: CadEntity): string[] {
+  return ['8', entity.layerId, '62', `${hexToDxfAci(entity.strokeColor)}`];
 }
 
 function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {

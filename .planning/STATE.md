@@ -25,6 +25,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Intersection snap added for line, rectangle, polyline, and dimension segments.
 - Dimension tool added: users can drag dimension lines, see automatic length labels, resize endpoints, and export dimensions to SVG/DXF as line + text.
 - Dimension editing improved: labels can be manually edited or reset to automatic distance labels, and dimensions now render/export with offset extension lines.
+- DXF layer/color fidelity improved: import reads LAYER table colors and entity ACI color code 62, and export writes a LAYER table plus entity colors.
 
 ## Decisions
 
@@ -35,4 +36,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add richer CAD annotation/edit tools.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF line type/weight fidelity, and add richer CAD annotation/edit tools.

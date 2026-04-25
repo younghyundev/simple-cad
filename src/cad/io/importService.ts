@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, CadEntityBase, CadLayer } from '../types';
+import { dxfAciToHex } from './dxfColor';
 
 export class ImportService {
   async fromJson(text: string): Promise<CadDocument> {
@@ -7,28 +8,20 @@ export class ImportService {
 
   async fromDxf(text: string): Promise<CadDocument> {
     const pairs = parseDxfPairs(text);
+    const layerDefinitions = parseLayerDefinitions(pairs);
+    const entityChunks = collectEntityChunks(pairs);
     const entities: CadEntity[] = [];
-    const layerNames = new Set<string>(['0']);
+    const layerNames = new Set<string>(['0', ...layerDefinitions.keys()]);
     const unsupportedEntities = [];
 
-    for (let index = 0; index < pairs.length; index += 1) {
-      const pair = pairs[index];
-      if (pair.code !== '0') continue;
-
-      const entityType = pair.value;
-      const chunk = [];
-      let cursor = index + 1;
-      while (cursor < pairs.length && pairs[cursor].code !== '0') {
-        chunk.push(pairs[cursor]);
-        cursor += 1;
-      }
-
+    for (const { entityType, chunk } of entityChunks) {
       const layerId = valueFor(chunk, '8') || '0';
+      const strokeColor = dxfAciToHex(valueFor(chunk, '62')) ?? layerDefinitions.get(layerId) ?? '#1f2937';
       layerNames.add(layerId);
 
       if (entityType === 'LINE') {
         entities.push({
-          ...baseEntity(layerId),
+          ...baseEntity(layerId, { strokeColor }),
           type: 'line',
           x1: numberFor(chunk, '10'),
           y1: -numberFor(chunk, '20'),
@@ -37,7 +30,7 @@ export class ImportService {
         });
       } else if (entityType === 'CIRCLE') {
         entities.push({
-          ...baseEntity(layerId, 'circle'),
+          ...baseEntity(layerId, { strokeColor, visualType: 'circle' }),
           type: 'circle',
           cx: numberFor(chunk, '10'),
           cy: -numberFor(chunk, '20'),
@@ -45,7 +38,7 @@ export class ImportService {
         });
       } else if (entityType === 'ARC') {
         entities.push({
-          ...baseEntity(layerId),
+          ...baseEntity(layerId, { strokeColor }),
           type: 'arc',
           cx: numberFor(chunk, '10'),
           cy: -numberFor(chunk, '20'),
@@ -55,7 +48,7 @@ export class ImportService {
         });
       } else if (entityType === 'TEXT') {
         entities.push({
-          ...baseEntity(layerId),
+          ...baseEntity(layerId, { strokeColor, fillColor: strokeColor }),
           type: 'text',
           x: numberFor(chunk, '10'),
           y: -numberFor(chunk, '20'),
@@ -66,26 +59,22 @@ export class ImportService {
         const xs = valuesFor(chunk, '10').map(Number);
         const ys = valuesFor(chunk, '20').map((value) => -Number(value));
         entities.push({
-          ...baseEntity(layerId),
+          ...baseEntity(layerId, { strokeColor }),
           type: 'polyline',
           points: xs.map((x, pointIndex) => ({ x, y: ys[pointIndex] ?? 0 })),
         });
-      } else if (['SECTION', 'ENDSEC', 'EOF'].includes(entityType)) {
-        // Structural markers are not drawing entities.
       } else if (entityType) {
         unsupportedEntities.push({
           sourceType: entityType,
           reason: 'This DXF entity is not supported by the first importer.',
         });
       }
-
-      index = cursor - 1;
     }
 
     const layers: CadLayer[] = [...layerNames].map((name, index) => ({
       id: name,
       name,
-      color: index === 0 ? '#2563eb' : '#7c3aed',
+      color: layerDefinitions.get(name) ?? (index === 0 ? '#2563eb' : '#7c3aed'),
       visible: true,
       locked: false,
     }));
@@ -118,6 +107,11 @@ type DxfPair = {
   value: string;
 };
 
+type DxfEntityChunk = {
+  entityType: string;
+  chunk: DxfPair[];
+};
+
 function parseDxfPairs(text: string): DxfPair[] {
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const pairs: DxfPair[] = [];
@@ -127,13 +121,82 @@ function parseDxfPairs(text: string): DxfPair[] {
   return pairs;
 }
 
-function baseEntity(layerId: string, visualType: 'circle' | 'other' = 'other'): CadEntityBase {
+function collectEntityChunks(pairs: DxfPair[]): DxfEntityChunk[] {
+  const chunks: DxfEntityChunk[] = [];
+  let currentSection: string | null = null;
+  const hasEntitiesSection = pairs.some(
+    (pair, index) =>
+      pair.code === '0' &&
+      pair.value === 'SECTION' &&
+      pairs[index + 1]?.code === '2' &&
+      pairs[index + 1].value === 'ENTITIES',
+  );
+
+  for (let index = 0; index < pairs.length; index += 1) {
+    const pair = pairs[index];
+    if (pair.code !== '0') continue;
+
+    if (pair.value === 'SECTION') {
+      currentSection = pairs[index + 1]?.code === '2' ? pairs[index + 1].value : null;
+      continue;
+    }
+    if (pair.value === 'ENDSEC') {
+      currentSection = null;
+      continue;
+    }
+    if (hasEntitiesSection && currentSection !== 'ENTITIES') continue;
+    if (!hasEntitiesSection && currentSection && currentSection !== 'ENTITIES') continue;
+    if (['SECTION', 'ENDSEC', 'EOF'].includes(pair.value)) continue;
+
+    const chunk = readChunk(pairs, index + 1);
+    chunks.push({ entityType: pair.value, chunk });
+  }
+
+  return chunks;
+}
+
+function parseLayerDefinitions(pairs: DxfPair[]): Map<string, string> {
+  const layers = new Map<string, string>();
+
+  for (let index = 0; index < pairs.length; index += 1) {
+    if (pairs[index].code !== '0' || pairs[index].value !== 'LAYER') continue;
+
+    const chunk = readChunk(pairs, index + 1);
+    const name = valueFor(chunk, '2');
+    const color = dxfAciToHex(valueFor(chunk, '62'));
+    if (name && color) layers.set(name, color);
+  }
+
+  return layers;
+}
+
+function readChunk(pairs: DxfPair[], startIndex: number): DxfPair[] {
+  const chunk = [];
+  let cursor = startIndex;
+  while (cursor < pairs.length && pairs[cursor].code !== '0') {
+    chunk.push(pairs[cursor]);
+    cursor += 1;
+  }
+  return chunk;
+}
+
+function baseEntity(
+  layerId: string,
+  options: {
+    strokeColor?: string;
+    fillColor?: string;
+    visualType?: 'circle' | 'other';
+  } = {},
+): CadEntityBase {
+  const strokeColor = options.strokeColor ?? '#1f2937';
   return {
     id: `dxf-entity-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     layerId,
     rotation: 0,
-    strokeColor: '#1f2937',
-    fillColor: visualType === 'circle' ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+    strokeColor,
+    fillColor:
+      options.fillColor ??
+      (options.visualType === 'circle' ? 'rgba(37, 99, 235, 0.08)' : 'transparent'),
     strokeWidth: 2,
     strokeStyle: 'solid' as const,
     visible: true,
