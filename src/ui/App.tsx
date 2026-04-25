@@ -27,6 +27,7 @@ import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
 import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
 import { useDocumentHistory } from '../cad/useDocumentHistory';
+import type { DocumentHistorySnapshot } from '../cad/useDocumentHistory';
 import { CadCanvas } from './CadCanvas';
 
 const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: number }> }> = [
@@ -49,6 +50,7 @@ type WorkspaceTab = {
   id: string;
   title: string;
   document: CadDocument;
+  history: DocumentHistorySnapshot;
   viewport: Viewport;
   selectedEntityIds: string[];
   lastOpenedAt: string;
@@ -76,7 +78,8 @@ export function App() {
   const {
     document,
     updateDocument,
-    replaceDocument,
+    getSnapshot,
+    loadSnapshot,
     beginHistoryBatch,
     commitHistoryBatch,
     undo,
@@ -163,29 +166,50 @@ export function App() {
   const activateTab = useCallback((tabId: string) => {
     const nextTab = tabs.find((tab) => tab.id === tabId);
     if (!nextTab) return;
+    const currentSnapshot = getSnapshot();
+    setTabs((items) =>
+      items.map((tab) =>
+        tab.id === activeTabId
+          ? {
+              ...tab,
+              document: currentSnapshot.document,
+              history: currentSnapshot,
+              viewport,
+              selectedEntityIds,
+              lastOpenedAt: new Date().toISOString(),
+            }
+          : tab,
+      ),
+    );
     setActiveTabId(tabId);
-    replaceDocument(nextTab.document);
+    loadSnapshot(nextTab.history);
     setViewport(nextTab.viewport);
     setSelectedEntityIds(nextTab.selectedEntityIds);
     setFileMessage(`${nextTab.title} 탭을 열었습니다.`);
-  }, [replaceDocument, tabs]);
+  }, [activeTabId, getSnapshot, loadSnapshot, selectedEntityIds, tabs, viewport]);
 
   const createTab = useCallback((title: string, nextDocument: CadDocument) => {
+    const history: DocumentHistorySnapshot = {
+      document: nextDocument,
+      past: [],
+      future: [],
+    };
     const tab: WorkspaceTab = {
       id: `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       title,
       document: nextDocument,
+      history,
       viewport: { offsetX: 480, offsetY: 320, scale: 1 },
       selectedEntityIds: [],
       lastOpenedAt: new Date().toISOString(),
     };
     setTabs((items) => [...items, tab]);
     setActiveTabId(tab.id);
-    replaceDocument(nextDocument);
+    loadSnapshot(history);
     setViewport(tab.viewport);
     setSelectedEntityIds([]);
     persistRecentDocument(title, nextDocument);
-  }, [persistRecentDocument, replaceDocument]);
+  }, [loadSnapshot, persistRecentDocument]);
 
   const createNewDrawing = useCallback(() => {
     createTab(`새 도면 ${tabs.length + 1}`, {
@@ -203,7 +227,7 @@ export function App() {
         const fallback = next[next.length - 1] ?? null;
         setActiveTabId(fallback?.id ?? null);
         if (fallback) {
-          replaceDocument(fallback.document);
+          loadSnapshot(fallback.history);
           setViewport(fallback.viewport);
           setSelectedEntityIds(fallback.selectedEntityIds);
         } else {
@@ -212,7 +236,7 @@ export function App() {
       }
       return next;
     });
-  }, [activeTabId, replaceDocument]);
+  }, [activeTabId, loadSnapshot]);
 
   const openFile = useCallback(async (file: File) => {
     try {
@@ -236,14 +260,22 @@ export function App() {
 
   useEffect(() => {
     if (!activeTabId) return;
+    const snapshot = getSnapshot();
     setTabs((items) =>
       items.map((tab) =>
         tab.id === activeTabId
-          ? { ...tab, document, viewport, selectedEntityIds, lastOpenedAt: new Date().toISOString() }
+          ? {
+              ...tab,
+              document: snapshot.document,
+              history: snapshot,
+              viewport,
+              selectedEntityIds,
+              lastOpenedAt: new Date().toISOString(),
+            }
           : tab,
       ),
     );
-  }, [activeTabId, document, selectedEntityIds, viewport]);
+  }, [activeTabId, getSnapshot, selectedEntityIds, viewport]);
 
   const openRecentDocument = useCallback((recent: RecentDocument) => {
     createTab(recent.title, {

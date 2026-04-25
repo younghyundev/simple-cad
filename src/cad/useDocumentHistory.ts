@@ -6,6 +6,12 @@ type UpdateOptions = {
   trackHistory?: boolean;
 };
 
+export type DocumentHistorySnapshot = {
+  document: CadDocument;
+  past: CadDocument[];
+  future: CadDocument[];
+};
+
 export function useDocumentHistory(initialDocument: CadDocument) {
   const [past, setPast] = useState<CadDocument[]>([]);
   const [document, setDocument] = useState<CadDocument>(initialDocument);
@@ -44,6 +50,22 @@ export function useDocumentHistory(initialDocument: CadDocument) {
     setDocument(next);
   }, []);
 
+  const getSnapshot = useCallback(
+    (): DocumentHistorySnapshot => ({
+      document,
+      past,
+      future,
+    }),
+    [document, future, past],
+  );
+
+  const loadSnapshot = useCallback((snapshot: DocumentHistorySnapshot) => {
+    batchStartRef.current = null;
+    setPast(snapshot.past);
+    setFuture(snapshot.future);
+    setDocument(snapshot.document);
+  }, []);
+
   const undo = useCallback(() => {
     setPast((items) => {
       if (items.length === 0) return items;
@@ -72,6 +94,8 @@ export function useDocumentHistory(initialDocument: CadDocument) {
     document,
     updateDocument,
     replaceDocument,
+    getSnapshot,
+    loadSnapshot,
     beginHistoryBatch,
     commitHistoryBatch,
     undo,
