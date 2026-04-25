@@ -519,7 +519,7 @@ function importDxfEntity(
       entityId: entity.id,
     });
   } else if (entityType === 'SPLINE') {
-    const points = splineControlPoints(chunk);
+    const points = splineSamplePoints(chunk);
     if (points.length >= 2) {
       const entity = transformEntity(
         {
@@ -532,7 +532,7 @@ function importDxfEntity(
       result.entities.push(entity);
       result.importWarnings.push({
         code: 'DXF_SPLINE_APPROXIMATED',
-        message: 'SPLINE 엔티티를 제어점 기반 폴리라인으로 근사했습니다.',
+        message: 'SPLINE 엔티티를 보간 샘플링한 폴리라인으로 근사했습니다.',
         entityId: entity.id,
       });
     } else {
@@ -606,10 +606,60 @@ function normalizeSweep(startParameter: number, endParameter: number): number {
   return sweep;
 }
 
+function splineSamplePoints(pairs: DxfPair[]) {
+  const fitPoints = splineFitPoints(pairs);
+  const controlPoints = splineControlPoints(pairs);
+  const sourcePoints = fitPoints.length >= 2 ? fitPoints : controlPoints;
+
+  if (sourcePoints.length < 3) return sourcePoints;
+  return catmullRomPoints(sourcePoints, 16);
+}
+
 function splineControlPoints(pairs: DxfPair[]) {
   const xs = valuesFor(pairs, '10').map(Number);
   const ys = valuesFor(pairs, '20').map((value) => -Number(value));
   return xs.map((x, index) => ({ x, y: ys[index] ?? 0 }));
+}
+
+function splineFitPoints(pairs: DxfPair[]) {
+  const xs = valuesFor(pairs, '11').map(Number);
+  const ys = valuesFor(pairs, '21').map((value) => -Number(value));
+  return xs.map((x, index) => ({ x, y: ys[index] ?? 0 }));
+}
+
+function catmullRomPoints(points: CadPoint[], segmentsPerSpan: number): CadPoint[] {
+  const result: CadPoint[] = [points[0]];
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[Math.max(0, index - 1)];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[Math.min(points.length - 1, index + 2)];
+    const spanLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const segments = Math.max(8, Math.min(32, Math.ceil(spanLength / 8), segmentsPerSpan));
+
+    for (let step = 1; step <= segments; step += 1) {
+      const t = step / segments;
+      result.push({
+        x: catmullRomValue(p0.x, p1.x, p2.x, p3.x, t),
+        y: catmullRomValue(p0.y, p1.y, p2.y, p3.y, t),
+      });
+    }
+  }
+
+  return result;
+}
+
+function catmullRomValue(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return (
+    0.5 *
+    (2 * p1 +
+      (-p0 + p2) * t +
+      (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+      (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
+  );
 }
 
 function insertTransform(pairs: DxfPair[], basePoint: CadPoint): InsertTransform {
