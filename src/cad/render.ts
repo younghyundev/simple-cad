@@ -81,6 +81,7 @@ function drawEntity(
   context.strokeStyle = entity.strokeColor;
   context.fillStyle = entity.fillColor;
   context.lineWidth = Math.max(1, entity.strokeWidth * viewport.scale);
+  context.setLineDash(entity.strokeStyle === 'dashed' ? [8, 6] : []);
 
   if (entity.type === 'line') {
     const start = worldToScreen({ x: entity.x1, y: entity.y1 }, viewport);

@@ -14,6 +14,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Korean communication requested and recorded in AGENTS.md.
 - Implementation started with the Phase 1 foundation scaffold.
 - Phase 2 basic entity interaction started: line, rectangle, circle, polyline, text creation; selection; drag movement; erase/delete.
+- Phase 3 basic controls added: undo/redo history, selected entity stroke color/width/style editing, layer assignment, layer add/rename/color/visibility/lock toggles.
 
 ## Decisions
 
@@ -24,4 +25,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue Phase 2 hardening: improve hit testing, add resize handles, add undo/redo history, then move into Phase 3.
+Continue Phase 3 hardening: coalesce drag history into single undo steps, add resize handles, and then move into JSON/SVG/DXF file flows.

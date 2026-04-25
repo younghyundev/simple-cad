@@ -15,6 +15,7 @@ export function createEntity(
     strokeColor: '#1f2937',
     fillColor: tool === 'rect' || tool === 'circle' ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
     strokeWidth: 2,
+    strokeStyle: 'solid',
     visible: true,
     locked: false,
   };

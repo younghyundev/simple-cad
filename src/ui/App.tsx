@@ -19,7 +19,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { sampleDocument } from '../cad/sampleDocument';
-import type { CadDocument, CadPoint, ToolId, Viewport } from '../cad/types';
+import type { CadEntity, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
+import { useDocumentHistory } from '../cad/useDocumentHistory';
 import { CadCanvas } from './CadCanvas';
 
 const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: number }> }> = [
@@ -35,7 +36,8 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
-  const [document, setDocument] = useState<CadDocument>(sampleDocument);
+  const { document, updateDocument, undo, redo, canUndo, canRedo } =
+    useDocumentHistory(sampleDocument);
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
@@ -52,12 +54,54 @@ export function App() {
 
   const deleteSelectedEntity = useCallback(() => {
     if (!selectedEntityId) return;
-    setDocument((current) => ({
+    updateDocument((current) => ({
       ...current,
       entities: current.entities.filter((entity) => entity.id !== selectedEntityId),
     }));
     setSelectedEntityId(null);
-  }, [selectedEntityId]);
+  }, [selectedEntityId, updateDocument]);
+
+  const updateSelectedEntity = useCallback(
+    (patch: Partial<CadEntity>) => {
+      if (!selectedEntityId) return;
+      updateDocument((current) => ({
+        ...current,
+        entities: current.entities.map((entity) =>
+          entity.id === selectedEntityId ? ({ ...entity, ...patch } as CadEntity) : entity,
+        ),
+      }));
+    },
+    [selectedEntityId, updateDocument],
+  );
+
+  const updateLayer = useCallback(
+    (layerId: string, patch: Partial<CadLayer>) => {
+      updateDocument((current) => ({
+        ...current,
+        layers: current.layers.map((layer) =>
+          layer.id === layerId ? { ...layer, ...patch } : layer,
+        ),
+      }));
+    },
+    [updateDocument],
+  );
+
+  const addLayer = useCallback(() => {
+    const nextIndex = document.layers.length + 1;
+    updateDocument((current) => ({
+      ...current,
+      layers: [
+        ...current.layers,
+        {
+          id: `layer-${Date.now()}`,
+          name: `레이어 ${nextIndex}`,
+          color: '#7c3aed',
+          visible: true,
+          locked: false,
+        },
+      ],
+    }));
+  }, [document.layers.length, updateDocument]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -66,6 +110,24 @@ export function App() {
         target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if (isEditingText) return;
 
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && event.shiftKey) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       if (event.key === 'Delete' || event.key === 'Backspace') {
         deleteSelectedEntity();
       }
@@ -73,7 +135,7 @@ export function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [deleteSelectedEntity]);
+  }, [deleteSelectedEntity, redo, undo]);
 
   return (
     <main className="app-shell">
@@ -97,10 +159,20 @@ export function App() {
           </button>
         </div>
         <div className="toolbar-group">
-          <button className="tool-button icon" title="실행 취소">
+          <button
+            className="tool-button icon"
+            title="실행 취소"
+            disabled={!canUndo}
+            onClick={undo}
+          >
             <Undo2 size={17} />
           </button>
-          <button className="tool-button icon" title="다시 실행">
+          <button
+            className="tool-button icon"
+            title="다시 실행"
+            disabled={!canRedo}
+            onClick={redo}
+          >
             <Redo2 size={17} />
           </button>
         </div>
@@ -155,7 +227,7 @@ export function App() {
           gridVisible={gridVisible}
           onViewportChange={setViewport}
           onCursorChange={setCursor}
-          onDocumentChange={setDocument}
+          onDocumentChange={updateDocument}
           onSelectedEntityChange={setSelectedEntityId}
           onReady={setCanvasApi}
         />
@@ -175,18 +247,59 @@ export function App() {
                 </div>
                 <div>
                   <dt>레이어</dt>
-                  <dd>{document.layers.find((layer) => layer.id === selectedEntity.layerId)?.name}</dd>
+                  <dd className="property-control">
+                    <select
+                      value={selectedEntity.layerId}
+                      onChange={(event) => updateSelectedEntity({ layerId: event.target.value })}
+                    >
+                      {document.layers.map((layer) => (
+                        <option key={layer.id} value={layer.id}>
+                          {layer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </dd>
                 </div>
                 <div>
                   <dt>색상</dt>
-                  <dd>
-                    <span className="swatch" style={{ background: selectedEntity.strokeColor }} />
-                    {selectedEntity.strokeColor}
+                  <dd className="property-control">
+                    <input
+                      type="color"
+                      value={selectedEntity.strokeColor}
+                      onChange={(event) => updateSelectedEntity({ strokeColor: event.target.value })}
+                    />
+                    <span>{selectedEntity.strokeColor}</span>
                   </dd>
                 </div>
                 <div>
                   <dt>선 두께</dt>
-                  <dd>{selectedEntity.strokeWidth}</dd>
+                  <dd className="property-control">
+                    <input
+                      min="1"
+                      max="12"
+                      type="number"
+                      value={selectedEntity.strokeWidth}
+                      onChange={(event) =>
+                        updateSelectedEntity({ strokeWidth: Number(event.target.value) || 1 })
+                      }
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt>선 스타일</dt>
+                  <dd className="property-control">
+                    <select
+                      value={selectedEntity.strokeStyle ?? 'solid'}
+                      onChange={(event) =>
+                        updateSelectedEntity({
+                          strokeStyle: event.target.value as 'solid' | 'dashed',
+                        })
+                      }
+                    >
+                      <option value="solid">실선</option>
+                      <option value="dashed">점선</option>
+                    </select>
+                  </dd>
                 </div>
               </dl>
             ) : (
@@ -195,13 +308,38 @@ export function App() {
           </div>
 
           <div className="panel-section">
-            <h2>레이어</h2>
+            <div className="panel-heading">
+              <h2>레이어</h2>
+              <button className="mini-button" onClick={addLayer}>
+                추가
+              </button>
+            </div>
             <div className="layer-list">
               {document.layers.map((layer) => (
                 <div className="layer-row" key={layer.id}>
-                  <span className="swatch" style={{ background: layer.color }} />
-                  <span>{layer.name}</span>
-                  <span className="layer-state">{layer.visible ? '표시' : '숨김'}</span>
+                  <input
+                    type="color"
+                    value={layer.color}
+                    title="레이어 색상"
+                    onChange={(event) => updateLayer(layer.id, { color: event.target.value })}
+                  />
+                  <input
+                    className="layer-name-input"
+                    value={layer.name}
+                    onChange={(event) => updateLayer(layer.id, { name: event.target.value })}
+                  />
+                  <button
+                    className={`mini-button ${layer.visible ? 'active' : ''}`}
+                    onClick={() => updateLayer(layer.id, { visible: !layer.visible })}
+                  >
+                    {layer.visible ? '표시' : '숨김'}
+                  </button>
+                  <button
+                    className={`mini-button ${layer.locked ? 'active' : ''}`}
+                    onClick={() => updateLayer(layer.id, { locked: !layer.locked })}
+                  >
+                    {layer.locked ? '잠금' : '열림'}
+                  </button>
                 </div>
               ))}
             </div>

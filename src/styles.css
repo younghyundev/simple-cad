@@ -100,6 +100,11 @@ button {
   color: #0f766e;
 }
 
+.tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: 86px 1fr 284px;
@@ -175,6 +180,18 @@ button {
   font-size: 14px;
 }
 
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panel-heading h2 {
+  margin: 0;
+}
+
 .property-list {
   display: grid;
   gap: 10px;
@@ -206,6 +223,38 @@ button {
   font-size: 13px;
 }
 
+.property-control input[type="number"],
+.property-control select,
+.layer-name-input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+}
+
+.property-control input[type="number"] {
+  padding: 0 6px;
+}
+
+.property-control select,
+.layer-name-input {
+  padding: 0 8px;
+}
+
+.property-control input[type="color"],
+.layer-row input[type="color"] {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
 .swatch {
   width: 14px;
   height: 14px;
@@ -226,14 +275,29 @@ button {
 }
 
 .layer-row {
-  grid-template-columns: 14px 1fr auto;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 42px 42px;
   min-height: 28px;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
 }
 
-.layer-state {
-  color: #6b7280;
+.mini-button {
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #374151;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.mini-button.active {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
 }
 
 .statusbar {

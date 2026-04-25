@@ -20,6 +20,7 @@ export type CadEntityBase = {
   strokeColor: string;
   fillColor: string;
   strokeWidth: number;
+  strokeStyle?: 'solid' | 'dashed';
   visible: boolean;
   locked: boolean;
 };
