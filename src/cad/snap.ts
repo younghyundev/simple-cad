@@ -6,6 +6,8 @@ export type SnapResult = {
 };
 
 const gridSize = 20;
+const maxPolylineSnapPoints = 200;
+const maxIntersectionSegments = 700;
 type SnapCandidate = {
   point: CadPoint;
   type: 'endpoint' | 'center' | 'intersection';
@@ -91,7 +93,14 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
   }
 
   if (entity.type === 'polyline') {
-    return entity.points.map((point) => ({ point, type: 'endpoint' }));
+    if (entity.points.length <= maxPolylineSnapPoints) {
+      return entity.points.map((point) => ({ point, type: 'endpoint' }));
+    }
+
+    const step = Math.ceil(entity.points.length / maxPolylineSnapPoints);
+    return entity.points
+      .filter((_, index) => index === 0 || index === entity.points.length - 1 || index % step === 0)
+      .map((point) => ({ point, type: 'endpoint' }));
   }
 
   if (entity.type === 'text') {
@@ -113,6 +122,8 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
 
 function getIntersectionCandidates(entities: CadEntity[]): SnapCandidate[] {
   const segments = entities.flatMap((entity) => entitySegments(entity));
+  if (segments.length > maxIntersectionSegments) return [];
+
   const intersections: SnapCandidate[] = [];
 
   for (let firstIndex = 0; firstIndex < segments.length; firstIndex += 1) {

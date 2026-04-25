@@ -39,6 +39,7 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 ];
 
 const fileManager = new FileManager();
+const maxAutosaveEntities = 4000;
 
 type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
 type CadEntityPatch = Partial<CadEntity> & Partial<DimensionEntity>;
@@ -77,6 +78,16 @@ export function App() {
         : null,
     [document.entities, selectedEntityIds],
   );
+  const groupedImportWarnings = useMemo(() => {
+    const groups = new Map<string, { code: string; message: string; count: number }>();
+    for (const warning of document.importWarnings ?? []) {
+      const key = `${warning.code}:${warning.message}`;
+      const current = groups.get(key);
+      if (current) current.count += 1;
+      else groups.set(key, { code: warning.code, message: warning.message, count: 1 });
+    }
+    return [...groups.values()];
+  }, [document.importWarnings]);
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
 
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
@@ -182,6 +193,10 @@ export function App() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
+      if (document.entities.length > maxAutosaveEntities) {
+        setFileMessage(`큰 도면: 자동 저장 생략됨 (${document.entities.length}개 객체)`);
+        return;
+      }
       localStorage.setItem('webcad.autosave', JSON.stringify(document));
       setFileMessage(`자동 저장됨 ${new Date().toLocaleTimeString()}`);
     }, 400);
@@ -518,11 +533,14 @@ export function App() {
           <div className="panel-section">
             <h2>변환 상태</h2>
             <div className="warning-list">
-              {document.importWarnings?.length ? (
-                document.importWarnings.map((warning, index) => (
+              {groupedImportWarnings.length ? (
+                groupedImportWarnings.map((warning, index) => (
                   <div className="warning-item" key={`${warning.code}-${index}`}>
                     <strong>{warning.code}</strong>
-                    <span>{warning.message}</span>
+                    <span>
+                      {warning.message}
+                      {warning.count > 1 ? ` (${warning.count}개)` : ''}
+                    </span>
                   </div>
                 ))
               ) : (

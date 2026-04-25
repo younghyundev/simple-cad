@@ -17,10 +17,13 @@ export function renderDocument(
   drawBackground(context);
   if (options.showGrid) drawGrid(context, viewport);
 
+  const layersById = new Map(document.layers.map((layer) => [layer.id, layer]));
+  const selectedSet = new Set(selectedEntityIds);
+
   for (const entity of document.entities) {
-    const layer = document.layers.find((item) => item.id === entity.layerId);
+    const layer = layersById.get(entity.layerId);
     if (!entity.visible || layer?.visible === false) continue;
-    drawEntity(context, entity, viewport, selectedEntityIds.includes(entity.id));
+    drawEntity(context, entity, viewport, selectedSet.has(entity.id));
   }
 }
 
