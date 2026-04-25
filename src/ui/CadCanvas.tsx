@@ -22,7 +22,7 @@ type CadCanvasProps = {
   document: CadDocument;
   activeTool: ToolId;
   viewport: Viewport;
-  selectedEntityId: string | null;
+  selectedEntityIds: string[];
   gridVisible: boolean;
   snapEnabled: boolean;
   onViewportChange: (viewport: Viewport) => void;
@@ -33,7 +33,7 @@ type CadCanvasProps = {
   ) => void;
   onDocumentBatchStart: (snapshot: CadDocument) => void;
   onDocumentBatchCommit: () => void;
-  onSelectedEntityChange: (entityId: string | null) => void;
+  onSelectedEntityChange: (entityIds: string[]) => void;
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
 };
 
@@ -48,7 +48,7 @@ export function CadCanvas({
   document,
   activeTool,
   viewport,
-  selectedEntityId,
+  selectedEntityIds,
   gridVisible,
   snapEnabled,
   onViewportChange,
@@ -73,6 +73,7 @@ export function CadCanvas({
   const [draftEntity, setDraftEntity] = useState<CadEntity | null>(null);
   const [textDraft, setTextDraftState] = useState<TextDraft | null>(null);
   const [snapMarker, setSnapMarker] = useState<SnapResult | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ start: CadPoint; end: CadPoint } | null>(null);
   const [selectedPolylinePoint, setSelectedPolylinePoint] = useState<{
     entityId: string;
     pointIndex: number;
@@ -93,10 +94,10 @@ export function CadCanvas({
       context,
       draftEntity ? { ...document, entities: [...document.entities, draftEntity] } : document,
       viewport,
-      selectedEntityId,
+      selectedEntityIds,
       { showGrid: gridVisible },
     );
-  }, [document, draftEntity, gridVisible, selectedEntityId, viewport]);
+  }, [document, draftEntity, gridVisible, selectedEntityIds, viewport]);
 
   useEffect(() => {
     render();
@@ -139,6 +140,20 @@ export function CadCanvas({
     return null;
   };
 
+  const findEntitiesInSelectionBox = (box: { start: CadPoint; end: CadPoint }): string[] => {
+    const selection = normalizeScreenRect(box.start, box.end);
+    return document.entities
+      .filter((entity) => {
+        const layer = document.layers.find((item) => item.id === entity.layerId);
+        if (!entity.visible || entity.locked || layer?.visible === false || layer?.locked) {
+          return false;
+        }
+
+        return rectsIntersect(selection, entityScreenRect(entity, viewport));
+      })
+      .map((entity) => entity.id);
+  };
+
   const resolveWorldPoint = (point: CadPoint, excludeEntityId?: string | null): SnapResult => {
     return snapPoint(point, document, {
       enabled: snapEnabled,
@@ -147,6 +162,7 @@ export function CadCanvas({
     });
   };
 
+  const selectedEntityId = selectedEntityIds.length === 1 ? selectedEntityIds[0] : null;
   const selectedEntity = selectedEntityId
     ? document.entities.find((entity) => entity.id === selectedEntityId)
     : null;
@@ -195,7 +211,7 @@ export function CadCanvas({
             : entity,
         ),
       }));
-      onSelectedEntityChange(draft.entityId);
+      onSelectedEntityChange([draft.entityId]);
       return;
     }
 
@@ -204,7 +220,7 @@ export function CadCanvas({
       ...current,
       entities: [...current.entities, entity],
     }));
-    onSelectedEntityChange(entity.id);
+    onSelectedEntityChange([entity.id]);
   };
 
   const openTextEditor = (entity: CadEntity) => {
@@ -285,12 +301,17 @@ export function CadCanvas({
             }
 
             const entityId = findEntityAt(worldPoint);
-            onSelectedEntityChange(entityId);
             setSelectedPolylinePoint(null);
             if (entityId) {
+              if (!selectedEntityIds.includes(entityId)) {
+                onSelectedEntityChange([entityId]);
+              }
               movingEntityRef.current = true;
               movedEntityRef.current = false;
               onDocumentBatchStart(document);
+            } else {
+              onSelectedEntityChange([]);
+              setSelectionBox({ start: localPoint, end: localPoint });
             }
           }
 
@@ -301,7 +322,7 @@ export function CadCanvas({
               ...current,
               entities: current.entities.filter((entity) => entity.id !== entityId),
             }));
-            onSelectedEntityChange(null);
+            onSelectedEntityChange([]);
           }
 
           if (activeTool === 'text') {
@@ -310,7 +331,7 @@ export function CadCanvas({
               worldPoint,
               value: '',
             });
-            onSelectedEntityChange(null);
+            onSelectedEntityChange([]);
           }
 
           if (
@@ -344,9 +365,16 @@ export function CadCanvas({
             });
           }
 
-          if (activeTool === 'select' && selectedEntityId && lastWorldPoint) {
+          if (activeTool === 'select' && selectionBox) {
+            setSelectionBox({ ...selectionBox, end: localPoint });
+            setDragStart(localPoint);
+            setLastWorldPoint(worldPoint);
+            return;
+          }
+
+          if (activeTool === 'select' && selectedEntityIds.length && lastWorldPoint) {
             const handleId = resizingHandleRef.current;
-            if (handleId) {
+            if (handleId && selectedEntityId) {
               resizedEntityRef.current = true;
               onDocumentChange((current) => ({
                 ...current,
@@ -373,7 +401,7 @@ export function CadCanvas({
             onDocumentChange((current) => ({
               ...current,
               entities: current.entities.map((entity) =>
-                entity.id === selectedEntityId ? translateEntity(entity, delta) : entity,
+                selectedEntityIds.includes(entity.id) ? translateEntity(entity, delta) : entity,
               ),
             }), { trackHistory: false });
             setDragStart(localPoint);
@@ -396,13 +424,19 @@ export function CadCanvas({
           setLastWorldPoint(worldPoint);
         }}
         onPointerUp={() => {
+          if (selectionBox) {
+            const selectedIds = findEntitiesInSelectionBox(selectionBox);
+            onSelectedEntityChange(selectedIds);
+            setSelectionBox(null);
+          }
+
           const entity = draftEntityRef.current;
           if (entity && isMeaningfulEntity(entity)) {
             onDocumentChange((current) => ({
               ...current,
               entities: [...current.entities, entity],
             }));
-            onSelectedEntityChange(entity.id);
+            onSelectedEntityChange([entity.id]);
           }
 
           updateDraftEntity(null);
@@ -436,10 +470,11 @@ export function CadCanvas({
                 item.id === entity.id ? insertPolylinePoint(item, snapWorldPoint) : item,
               ),
             }));
-            onSelectedEntityChange(entity.id);
+            onSelectedEntityChange([entity.id]);
           }
         }}
       />
+      {selectionBox ? <div className="selection-box" style={selectionBoxStyle(selectionBox)} /> : null}
       {snapMarker ? (
         <div
           className={`snap-marker ${snapMarker.type}`}
@@ -483,4 +518,82 @@ export function CadCanvas({
       ) : null}
     </section>
   );
+}
+
+function normalizeScreenRect(start: CadPoint, end: CadPoint) {
+  const x = Math.min(start.x, end.x);
+  const y = Math.min(start.y, end.y);
+  return {
+    x,
+    y,
+    width: Math.abs(end.x - start.x),
+    height: Math.abs(end.y - start.y),
+  };
+}
+
+function selectionBoxStyle(box: { start: CadPoint; end: CadPoint }) {
+  const rect = normalizeScreenRect(box.start, box.end);
+  return {
+    left: rect.x,
+    top: rect.y,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+function rectsIntersect(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    a.x <= b.x + b.width &&
+    a.x + a.width >= b.x &&
+    a.y <= b.y + b.height &&
+    a.y + a.height >= b.y
+  );
+}
+
+function entityScreenRect(entity: CadEntity, viewport: Viewport) {
+  const points = entityBoundsPoints(entity);
+  const screenPoints = points.map((point) => worldToScreen(point, viewport));
+  const xs = screenPoints.map((point) => point.x);
+  const ys = screenPoints.map((point) => point.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {
+    x,
+    y,
+    width: Math.max(1, Math.max(...xs) - x),
+    height: Math.max(1, Math.max(...ys) - y),
+  };
+}
+
+function entityBoundsPoints(entity: CadEntity): CadPoint[] {
+  if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
+  if (entity.type === 'rect') {
+    return [
+      { x: entity.x, y: entity.y },
+      { x: entity.x + entity.width, y: entity.y + entity.height },
+    ];
+  }
+  if (entity.type === 'circle' || entity.type === 'arc') {
+    return [
+      { x: entity.cx - entity.radius, y: entity.cy - entity.radius },
+      { x: entity.cx + entity.radius, y: entity.cy + entity.radius },
+    ];
+  }
+  if (entity.type === 'polyline') return entity.points;
+  if (entity.type === 'text') {
+    const lines = entity.content.split(/\r\n|\r|\n/);
+    const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
+    return [
+      { x: entity.x, y: entity.y - entity.fontSize },
+      {
+        x: entity.x + maxLineLength * entity.fontSize * 0.6,
+        y: entity.y + entity.fontSize * (lines.length - 1) * 1.25,
+      },
+    ];
+  }
+
+  return [entity.startPoint, entity.endPoint];
 }

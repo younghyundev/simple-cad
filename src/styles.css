@@ -198,6 +198,14 @@ button {
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
+.selection-box {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid #0f766e;
+  background: rgba(15, 118, 110, 0.12);
+  pointer-events: none;
+}
+
 .properties-panel {
   min-width: 0;
   border-left: 1px solid #d1d5db;

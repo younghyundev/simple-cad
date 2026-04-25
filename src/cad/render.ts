@@ -8,7 +8,7 @@ export function renderDocument(
   context: CanvasRenderingContext2D,
   document: CadDocument,
   viewport: Viewport,
-  selectedEntityId: string | null,
+  selectedEntityIds: string[] = [],
   options: { showGrid: boolean } = { showGrid: true },
 ): void {
   const canvas = context.canvas;
@@ -20,7 +20,7 @@ export function renderDocument(
   for (const entity of document.entities) {
     const layer = document.layers.find((item) => item.id === entity.layerId);
     if (!entity.visible || layer?.visible === false) continue;
-    drawEntity(context, entity, viewport, entity.id === selectedEntityId);
+    drawEntity(context, entity, viewport, selectedEntityIds.includes(entity.id));
   }
 }
 

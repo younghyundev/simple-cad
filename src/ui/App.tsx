@@ -65,14 +65,17 @@ export function App() {
   } = useDocumentHistory(sampleDocument);
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
-  const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['rect-1']);
   const [gridVisible, setGridVisible] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [fileMessage, setFileMessage] = useState('자동 저장 준비됨');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedEntity = useMemo(
-    () => document.entities.find((entity) => entity.id === selectedEntityId) ?? null,
-    [document.entities, selectedEntityId],
+    () =>
+      selectedEntityIds.length === 1
+        ? document.entities.find((entity) => entity.id === selectedEntityIds[0]) ?? null
+        : null,
+    [document.entities, selectedEntityIds],
   );
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
 
@@ -119,7 +122,7 @@ export function App() {
           fileHandleAvailable: false,
         },
       });
-      setSelectedEntityId(null);
+      setSelectedEntityIds([]);
       setFileMessage(`${file.name} 파일을 열었습니다.`);
     } catch (error) {
       setFileMessage(error instanceof Error ? error.message : '파일을 열 수 없습니다.');
@@ -127,25 +130,25 @@ export function App() {
   }, [replaceDocument]);
 
   const deleteSelectedEntity = useCallback(() => {
-    if (!selectedEntityId) return;
+    if (!selectedEntityIds.length) return;
     updateDocument((current) => ({
       ...current,
-      entities: current.entities.filter((entity) => entity.id !== selectedEntityId),
+      entities: current.entities.filter((entity) => !selectedEntityIds.includes(entity.id)),
     }));
-    setSelectedEntityId(null);
-  }, [selectedEntityId, updateDocument]);
+    setSelectedEntityIds([]);
+  }, [selectedEntityIds, updateDocument]);
 
   const updateSelectedEntity = useCallback(
     (patch: CadEntityPatch) => {
-      if (!selectedEntityId) return;
+      if (!selectedEntity) return;
       updateDocument((current) => ({
         ...current,
         entities: current.entities.map((entity) =>
-          entity.id === selectedEntityId ? ({ ...entity, ...patch } as CadEntity) : entity,
+          entity.id === selectedEntity.id ? ({ ...entity, ...patch } as CadEntity) : entity,
         ),
       }));
     },
-    [selectedEntityId, updateDocument],
+    [selectedEntity, updateDocument],
   );
 
   const updateLayer = useCallback(
@@ -336,7 +339,7 @@ export function App() {
           document={document}
           activeTool={activeTool}
           viewport={viewport}
-          selectedEntityId={selectedEntityId}
+          selectedEntityIds={selectedEntityIds}
           gridVisible={gridVisible}
           snapEnabled={snapEnabled}
           onViewportChange={setViewport}
@@ -344,7 +347,7 @@ export function App() {
           onDocumentChange={updateDocument}
           onDocumentBatchStart={beginHistoryBatch}
           onDocumentBatchCommit={commitHistoryBatch}
-          onSelectedEntityChange={setSelectedEntityId}
+          onSelectedEntityChange={setSelectedEntityIds}
           onReady={setCanvasApi}
         />
 
@@ -467,6 +470,8 @@ export function App() {
                   </>
                 ) : null}
               </dl>
+            ) : selectedEntityIds.length ? (
+              <p className="empty-state">{selectedEntityIds.length}개 객체가 선택되었습니다.</p>
             ) : (
               <p className="empty-state">선택된 객체가 없습니다.</p>
             )}
@@ -537,7 +542,13 @@ export function App() {
       <footer className="statusbar">
         <span>좌표 X {cursor.x.toFixed(1)} / Y {cursor.y.toFixed(1)}</span>
         <span>줌 {(viewport.scale * 100).toFixed(0)}%</span>
-        <span>{selectedEntity ? `선택: ${selectedEntity.id}` : '선택 없음'}</span>
+        <span>
+          {selectedEntity
+            ? `선택: ${selectedEntity.id}`
+            : selectedEntityIds.length
+              ? `선택: ${selectedEntityIds.length}개`
+              : '선택 없음'}
+        </span>
         <span>도구: {tools.find((tool) => tool.id === activeTool)?.label}</span>
         <span>{fileMessage}</span>
       </footer>
