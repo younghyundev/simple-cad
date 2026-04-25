@@ -2,7 +2,15 @@ import type { CadEntity, CadEntityBase, CadPoint, ToolId } from './types';
 
 const hitTolerance = 8;
 
-export type ResizeHandleId = 'start' | 'end' | 'nw' | 'ne' | 'se' | 'sw' | 'radius';
+export type ResizeHandleId =
+  | 'start'
+  | 'end'
+  | 'nw'
+  | 'ne'
+  | 'se'
+  | 'sw'
+  | 'radius'
+  | `point-${number}`;
 
 export type ResizeHandle = {
   id: ResizeHandleId;
@@ -105,6 +113,10 @@ export function translateEntity(entity: CadEntity, delta: CadPoint): CadEntity {
     return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
   }
 
+  if (entity.type === 'arc') {
+    return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
+  }
+
   if (entity.type === 'polyline') {
     return {
       ...entity,
@@ -150,6 +162,24 @@ export function getResizeHandles(entity: CadEntity): ResizeHandle[] {
         cursor: 'ew-resize',
       },
     ];
+  }
+
+  if (entity.type === 'arc') {
+    return [
+      {
+        id: 'radius',
+        point: { x: entity.cx + entity.radius, y: entity.cy },
+        cursor: 'ew-resize',
+      },
+    ];
+  }
+
+  if (entity.type === 'polyline') {
+    return entity.points.map((point, index) => ({
+      id: `point-${index}` as const,
+      point,
+      cursor: 'move',
+    }));
   }
 
   return [];
@@ -211,6 +241,23 @@ export function resizeEntity(
     };
   }
 
+  if (entity.type === 'arc' && handleId === 'radius') {
+    return {
+      ...entity,
+      radius: Math.max(1, distance({ x: entity.cx, y: entity.cy }, point)),
+    };
+  }
+
+  if (entity.type === 'polyline' && handleId.startsWith('point-')) {
+    const index = Number(handleId.replace('point-', ''));
+    return {
+      ...entity,
+      points: entity.points.map((currentPoint, pointIndex) =>
+        pointIndex === index ? point : currentPoint,
+      ),
+    };
+  }
+
   return entity;
 }
 
@@ -235,6 +282,10 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
 
   if (entity.type === 'circle') {
     return distance(point, { x: entity.cx, y: entity.cy }) <= entity.radius + tolerance;
+  }
+
+  if (entity.type === 'arc') {
+    return Math.abs(distance(point, { x: entity.cx, y: entity.cy }) - entity.radius) <= tolerance;
   }
 
   if (entity.type === 'polyline') {
@@ -265,6 +316,7 @@ export function isMeaningfulEntity(entity: CadEntity): boolean {
   }
   if (entity.type === 'rect') return entity.width > 2 && entity.height > 2;
   if (entity.type === 'circle') return entity.radius > 2;
+  if (entity.type === 'arc') return entity.radius > 2;
   return true;
 }
 

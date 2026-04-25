@@ -43,6 +43,16 @@ export class ImportService {
           cy: -numberFor(chunk, '20'),
           radius: numberFor(chunk, '40'),
         });
+      } else if (entityType === 'ARC') {
+        entities.push({
+          ...baseEntity(layerId),
+          type: 'arc',
+          cx: numberFor(chunk, '10'),
+          cy: -numberFor(chunk, '20'),
+          radius: numberFor(chunk, '40'),
+          startAngle: numberFor(chunk, '50'),
+          endAngle: numberFor(chunk, '51'),
+        });
       } else if (entityType === 'TEXT') {
         entities.push({
           ...baseEntity(layerId),

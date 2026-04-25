@@ -19,6 +19,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Phase 5 conversion workflow started: DWG import/export routes through ConversionApiClient, conversion warnings render in the properties panel, and backend API contract is documented in docs/cad-conversion-api.md.
 - Development mock CAD API added to Vite for `/api/cad/import`, `/api/cad/export`, and `/api/cad/validate`; drag movement now batches into a single undo step.
 - Resize handles added for lines, rectangles, and circles; resize operations batch into a single undo step.
+- Polyline point handles added, and ARC is now represented in the internal model with SVG/DXF render/import/export support.
 
 ## Decisions
 
@@ -29,4 +30,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add polyline point editing.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add richer polyline tools such as add/remove point.

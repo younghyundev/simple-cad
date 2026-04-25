@@ -114,6 +114,20 @@ function drawEntity(
     context.stroke();
   }
 
+  if (entity.type === 'arc') {
+    const center = worldToScreen({ x: entity.cx, y: entity.cy }, viewport);
+    context.beginPath();
+    context.arc(
+      center.x,
+      center.y,
+      entity.radius * viewport.scale,
+      degreesToRadians(-entity.startAngle),
+      degreesToRadians(-entity.endAngle),
+      true,
+    );
+    context.stroke();
+  }
+
   if (entity.type === 'polyline') {
     context.beginPath();
     entity.points.forEach((point, index) => {
@@ -201,6 +215,15 @@ function getEntityBounds(entity: CadEntity): {
     };
   }
 
+  if (entity.type === 'arc') {
+    return {
+      x: entity.cx - entity.radius,
+      y: entity.cy - entity.radius,
+      width: entity.radius * 2,
+      height: entity.radius * 2,
+    };
+  }
+
   if (entity.type === 'polyline') {
     const xs = entity.points.map((point) => point.x);
     const ys = entity.points.map((point) => point.y);
@@ -228,4 +251,8 @@ function getEntityBounds(entity: CadEntity): {
 
 function modulo(value: number, size: number): number {
   return ((value % size) + size) % size;
+}
+
+function degreesToRadians(value: number): number {
+  return (value * Math.PI) / 180;
 }

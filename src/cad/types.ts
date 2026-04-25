@@ -48,6 +48,15 @@ export type CircleEntity = CadEntityBase & {
   radius: number;
 };
 
+export type ArcEntity = CadEntityBase & {
+  type: 'arc';
+  cx: number;
+  cy: number;
+  radius: number;
+  startAngle: number;
+  endAngle: number;
+};
+
 export type PolylineEntity = CadEntityBase & {
   type: 'polyline';
   points: CadPoint[];
@@ -72,6 +81,7 @@ export type CadEntity =
   | LineEntity
   | RectEntity
   | CircleEntity
+  | ArcEntity
   | PolylineEntity
   | TextEntity
   | DimensionEntity;

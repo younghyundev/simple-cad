@@ -70,6 +70,13 @@ function entityToSvg(entity: CadEntity): string {
     return `<circle cx="${entity.cx}" cy="${entity.cy}" r="${entity.radius}" ${common}/>`;
   }
 
+  if (entity.type === 'arc') {
+    const start = polarPoint(entity.cx, entity.cy, entity.radius, -entity.startAngle);
+    const end = polarPoint(entity.cx, entity.cy, entity.radius, -entity.endAngle);
+    const largeArc = Math.abs(entity.endAngle - entity.startAngle) > 180 ? 1 : 0;
+    return `<path d="M ${start.x} ${start.y} A ${entity.radius} ${entity.radius} 0 ${largeArc} 1 ${end.x} ${end.y}" ${common}/>`;
+  }
+
   if (entity.type === 'polyline') {
     const points = entity.points.map((point) => `${point.x},${point.y}`).join(' ');
     return `<polyline points="${points}" ${common}/>`;
@@ -124,6 +131,25 @@ function entityToDxf(entity: CadEntity): string[] {
     return ['0', 'CIRCLE', '8', layer, '10', `${entity.cx}`, '20', `${-entity.cy}`, '40', `${entity.radius}`];
   }
 
+  if (entity.type === 'arc') {
+    return [
+      '0',
+      'ARC',
+      '8',
+      layer,
+      '10',
+      `${entity.cx}`,
+      '20',
+      `${-entity.cy}`,
+      '40',
+      `${entity.radius}`,
+      '50',
+      `${entity.startAngle}`,
+      '51',
+      `${entity.endAngle}`,
+    ];
+  }
+
   if (entity.type === 'polyline') {
     return [
       '0',
@@ -163,6 +189,7 @@ function getDocumentBounds(document: CadDocument) {
     if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
     if (entity.type === 'rect') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.width, y: entity.y + entity.height }];
     if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
+    if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'polyline') return entity.points;
     if (entity.type === 'text') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.content.length * entity.fontSize * 0.6, y: entity.y - entity.fontSize }];
     return [entity.startPoint, entity.endPoint];
@@ -175,6 +202,14 @@ function getDocumentBounds(document: CadDocument) {
     minY: Math.min(...points.map((point) => point.y)),
     maxX: Math.max(...points.map((point) => point.x)),
     maxY: Math.max(...points.map((point) => point.y)),
+  };
+}
+
+function polarPoint(cx: number, cy: number, radius: number, degrees: number) {
+  const radians = (degrees * Math.PI) / 180;
+  return {
+    x: cx + Math.cos(radians) * radius,
+    y: cy + Math.sin(radians) * radius,
   };
 }
 
