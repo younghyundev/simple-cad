@@ -34,6 +34,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - DXF curve fidelity improved: LWPOLYLINE bulge values now import as sampled arc segments instead of straight chords.
 - DXF spline fidelity improved: SPLINE import now prefers fit points and uses Catmull-Rom interpolation instead of connecting raw control points.
 - DXF spline and lineweight fidelity improved: SPLINE import now evaluates knot/degree/weight data when present, and lineweight import uses thinner screen stroke mapping.
+- Curve display improved: canvas/SVG strokes use round caps and joins, imported DXF lineweights are capped lower, and spline sampling density was increased.
 
 ## Decisions
 

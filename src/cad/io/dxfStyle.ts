@@ -15,7 +15,7 @@ export function dxfLineWeightToStrokeWidth(value: string | undefined): number {
   const lineWeight = Number(value);
   if (!Number.isFinite(lineWeight) || lineWeight <= 0) return 1;
 
-  return Math.max(1, Math.min(4, Math.round(lineWeight / 100)));
+  return Math.max(1, Math.min(2, Math.round(lineWeight / 140)));
 }
 
 export function strokeWidthToDxfLineWeight(value: number): number {

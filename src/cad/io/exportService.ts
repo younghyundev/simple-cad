@@ -60,7 +60,7 @@ export class ExportService {
 
 function entityToSvg(entity: CadEntity): string {
   const strokeDasharray = entity.strokeStyle === 'dashed' ? '8 6' : undefined;
-  const common = `stroke="${escapeXml(entity.strokeColor)}" stroke-width="${entity.strokeWidth}" fill="${escapeXml(entity.fillColor)}"${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ''}`;
+  const common = `stroke="${escapeXml(entity.strokeColor)}" stroke-width="${entity.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="${escapeXml(entity.fillColor)}"${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ''}`;
 
   if (entity.type === 'line') {
     return `<line x1="${entity.x1}" y1="${entity.y1}" x2="${entity.x2}" y2="${entity.y2}" ${common}/>`;
@@ -103,7 +103,7 @@ function entityToSvg(entity: CadEntity): string {
 
   if (entity.type === 'dimension') {
     const geometry = getDimensionGeometry(entity);
-    return `<g stroke="${escapeXml(entity.strokeColor)}" fill="${escapeXml(entity.fillColor)}" stroke-width="${entity.strokeWidth}">
+    return `<g stroke="${escapeXml(entity.strokeColor)}" fill="${escapeXml(entity.fillColor)}" stroke-width="${entity.strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
     <line x1="${entity.startPoint.x}" y1="${entity.startPoint.y}" x2="${geometry.dimensionStart.x}" y2="${geometry.dimensionStart.y}"/>
     <line x1="${entity.endPoint.x}" y1="${entity.endPoint.y}" x2="${geometry.dimensionEnd.x}" y2="${geometry.dimensionEnd.y}"/>
     <line x1="${geometry.dimensionStart.x}" y1="${geometry.dimensionStart.y}" x2="${geometry.dimensionEnd.x}" y2="${geometry.dimensionEnd.y}"/>

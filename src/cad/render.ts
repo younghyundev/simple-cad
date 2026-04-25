@@ -82,6 +82,8 @@ function drawEntity(
   context.strokeStyle = entity.strokeColor;
   context.fillStyle = entity.fillColor;
   context.lineWidth = Math.max(1, entity.strokeWidth * viewport.scale);
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
   context.setLineDash(entity.strokeStyle === 'dashed' ? [8, 6] : []);
 
   if (entity.type === 'line') {

@@ -615,7 +615,7 @@ function splineSamplePoints(pairs: DxfPair[]) {
   const sourcePoints = fitPoints.length >= 2 ? fitPoints : controlPoints;
 
   if (sourcePoints.length < 3) return sourcePoints;
-  return catmullRomPoints(sourcePoints, 16);
+  return catmullRomPoints(sourcePoints, 32);
 }
 
 function splineNurbsPoints(pairs: DxfPair[]) {
@@ -639,7 +639,7 @@ function splineNurbsPoints(pairs: DxfPair[]) {
   const end = knots[pointCount];
   if (start === end) return [];
 
-  const samples = Math.max(48, Math.min(240, pointCount * 24));
+  const samples = Math.max(96, Math.min(480, pointCount * 48));
   const result: CadPoint[] = [];
 
   for (let sample = 0; sample <= samples; sample += 1) {
