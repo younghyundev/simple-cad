@@ -347,7 +347,7 @@ export function App() {
 
     closeContextMenu();
     setReferenceMode('copy-base');
-    setFileMessage('참조 복사 기준점을 선택하세요');
+    setFileMessage('참조할 다른 객체의 중심점, 끝점, 교차점을 선택하세요.');
   }, [closeContextMenu, selectedEntityIds.length]);
 
   const startReferencePaste = useCallback(() => {
@@ -358,7 +358,7 @@ export function App() {
 
     closeContextMenu();
     setReferenceMode('paste-base');
-    setFileMessage('참조 붙여넣기 위치를 선택하세요');
+    setFileMessage('붙여넣을 파일에서 대응되는 중심점, 끝점, 교차점을 선택하세요.');
   }, [cadClipboard, closeContextMenu]);
 
   const handleReferencePointPick = useCallback(
@@ -755,6 +755,7 @@ export function App() {
           onSelectedEntityChange={setSelectedEntityIds}
           onReady={setCanvasApi}
           referencePickMode={referenceMode !== null}
+          referenceSnapExcludeEntityIds={referenceMode === 'copy-base' ? selectedEntityIds : []}
           onReferencePointPick={handleReferencePointPick}
           onCanvasContextMenu={openCanvasContextMenu}
         />

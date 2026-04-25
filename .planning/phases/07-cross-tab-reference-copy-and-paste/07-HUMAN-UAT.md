@@ -24,8 +24,8 @@ result: [pending]
 expected: Right-click selected geometry and see `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, and `삭제` according to clipboard/selection state.
 result: [pending]
 
-### 4. Reference copy/paste
-expected: `참조 복사` stores a clicked snapped source point and `참조 붙여넣기` places entities at the clicked snapped destination point while preserving relative spacing.
+### 4. Reference copy/paste using another object's anchor
+expected: `참조 복사` stores a clicked snapped point from another object, such as that object's center, and `참조 붙여넣기` places copied entities in another file/tab using the corresponding clicked center point while preserving the same relative offset.
 result: [pending]
 
 ### 5. Escape cancellation

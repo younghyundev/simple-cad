@@ -36,6 +36,7 @@ type CadCanvasProps = {
   onSelectedEntityChange: (entityIds: string[]) => void;
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
   referencePickMode?: boolean;
+  referenceSnapExcludeEntityIds?: string[];
   onReferencePointPick?: (point: CadPoint) => void;
   onCanvasContextMenu?: (payload: {
     screenPoint: CadPoint;
@@ -66,6 +67,7 @@ export function CadCanvas({
   onSelectedEntityChange,
   onReady,
   referencePickMode = false,
+  referenceSnapExcludeEntityIds = [],
   onReferencePointPick,
   onCanvasContextMenu,
 }: CadCanvasProps) {
@@ -168,11 +170,16 @@ export function CadCanvas({
       .map((entity) => entity.id);
   };
 
-  const resolveWorldPoint = (point: CadPoint, excludeEntityId?: string | null): SnapResult => {
+  const resolveWorldPoint = (
+    point: CadPoint,
+    excludeEntityId?: string | null,
+    excludeEntityIds: string[] = [],
+  ): SnapResult => {
     return snapPoint(point, document, {
       enabled: snapEnabled,
       scale: viewport.scale,
       excludeEntityId,
+      excludeEntityIds,
     });
   };
 
@@ -289,7 +296,11 @@ export function CadCanvas({
           event.currentTarget.setPointerCapture(event.pointerId);
           const localPoint = getLocalPoint(event);
           const rawWorldPoint = screenToWorld(localPoint, viewport);
-          const snap = resolveWorldPoint(rawWorldPoint, selectedEntityId);
+          const snap = resolveWorldPoint(
+            rawWorldPoint,
+            selectedEntityId,
+            referencePickMode ? referenceSnapExcludeEntityIds : [],
+          );
           const worldPoint = snap.point;
           setSnapMarker(snap.type === 'none' ? null : snap);
 

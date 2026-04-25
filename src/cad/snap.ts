@@ -26,12 +26,17 @@ export function snapPoint(
     enabled: boolean;
     scale: number;
     excludeEntityId?: string | null;
+    excludeEntityIds?: string[];
   },
 ): SnapResult {
   if (!options.enabled) return { point, type: 'none' };
 
   const tolerance = 12 / options.scale;
-  const candidates = getSnapCandidates(document, options.excludeEntityId);
+  const excludeEntityIds = new Set([
+    ...(options.excludeEntityId ? [options.excludeEntityId] : []),
+    ...(options.excludeEntityIds ?? []),
+  ]);
+  const candidates = getSnapCandidates(document, excludeEntityIds);
   const nearest = candidates
     .map((candidate) => ({
       ...candidate,
@@ -53,10 +58,10 @@ export function snapPoint(
 
 function getSnapCandidates(
   document: CadDocument,
-  excludeEntityId?: string | null,
+  excludeEntityIds: Set<string>,
 ): SnapCandidate[] {
   const entities = document.entities
-    .filter((entity) => entity.visible && entity.id !== excludeEntityId)
+    .filter((entity) => entity.visible && !excludeEntityIds.has(entity.id))
   const pointCandidates = entities.flatMap((entity) => entitySnapCandidates(entity));
   const intersectionCandidates = getIntersectionCandidates(entities);
 

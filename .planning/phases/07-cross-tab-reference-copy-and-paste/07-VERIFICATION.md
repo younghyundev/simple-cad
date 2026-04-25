@@ -32,8 +32,8 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 | Standard copy/paste creates new entities with new IDs | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload` assigns `copy-` IDs; browser UAT should confirm selection/rendering |
 | Cross-tab paste preserves editable properties | HUMAN NEEDED | Requires browser tabs and visual confirmation |
 | Right-click context menu shows copy/paste/reference/delete commands | HUMAN NEEDED | Requires pointer interaction |
-| Reference copy stores a source base point | AUTOMATED PASS + HUMAN NEEDED | `createClipboardPayload(selectedEntities, point)` used in `App.tsx`; snap point selection needs browser UAT |
-| Reference paste applies destination-source base point delta | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload(... destinationBasePoint: point)` used in `App.tsx`; visual placement needs browser UAT |
+| Reference copy stores an external anchor point | AUTOMATED PASS + HUMAN NEEDED | `createClipboardPayload(selectedEntities, point)` used in `App.tsx`; `referenceSnapExcludeEntityIds` excludes copied entities so another object's center/endpoint/intersection can be used as the anchor |
+| Reference paste applies destination-source anchor delta | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload(... destinationBasePoint: point)` used in `App.tsx`; visual placement against another file's corresponding center/endpoint/intersection needs browser UAT |
 | Text input copy/paste safety | HUMAN NEEDED | Requires inline canvas text editor interaction |
 | Undo/redo scoped to active tab | HUMAN NEEDED | Requires browser tab workflow confirmation |
 
@@ -42,7 +42,7 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 1. Create two tabs, select multiple entities in tab A, press Ctrl/Cmd+C, switch to tab B, press Ctrl/Cmd+V, and confirm pasted entities appear selected.
 2. In tab B, press undo and confirm the pasted batch disappears while tab A remains unchanged.
 3. Right-click selected geometry and confirm menu items: `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, `삭제`.
-4. Use `참조 복사`, click a snapped source point, then use `참조 붙여넣기` and click a snapped destination point; confirm relative spacing is preserved.
+4. Use `참조 복사`, click a snapped point on another nearby object such as its center, then use `참조 붙여넣기` in another file/tab and click the corresponding snapped center point; confirm copied entities keep the same relative offset from that anchor.
 5. Press Escape while waiting for a reference point and confirm the status changes to `참조 작업을 취소했습니다.`.
 6. Edit a text entity and confirm native Ctrl/Cmd+C and Ctrl/Cmd+V operate on text content rather than the CAD clipboard.
 
