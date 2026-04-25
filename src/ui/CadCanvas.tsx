@@ -19,7 +19,12 @@ type CadCanvasProps = {
   gridVisible: boolean;
   onViewportChange: (viewport: Viewport) => void;
   onCursorChange: (point: CadPoint) => void;
-  onDocumentChange: (document: CadDocument | ((current: CadDocument) => CadDocument)) => void;
+  onDocumentChange: (
+    document: CadDocument | ((current: CadDocument) => CadDocument),
+    options?: { trackHistory?: boolean },
+  ) => void;
+  onDocumentBatchStart: (snapshot: CadDocument) => void;
+  onDocumentBatchCommit: () => void;
   onSelectedEntityChange: (entityId: string | null) => void;
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
 };
@@ -40,12 +45,16 @@ export function CadCanvas({
   onViewportChange,
   onCursorChange,
   onDocumentChange,
+  onDocumentBatchStart,
+  onDocumentBatchCommit,
   onSelectedEntityChange,
   onReady,
 }: CadCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const draftEntityRef = useRef<CadEntity | null>(null);
   const textDraftRef = useRef<TextDraft | null>(null);
+  const movingEntityRef = useRef(false);
+  const movedEntityRef = useRef(false);
   const [dragStart, setDragStart] = useState<CadPoint | null>(null);
   const [drawingStart, setDrawingStart] = useState<CadPoint | null>(null);
   const [lastWorldPoint, setLastWorldPoint] = useState<CadPoint | null>(null);
@@ -185,7 +194,13 @@ export function CadCanvas({
           setLastWorldPoint(worldPoint);
 
           if (activeTool === 'select') {
-            onSelectedEntityChange(findEntityAt(worldPoint));
+            const entityId = findEntityAt(worldPoint);
+            onSelectedEntityChange(entityId);
+            if (entityId) {
+              movingEntityRef.current = true;
+              movedEntityRef.current = false;
+              onDocumentBatchStart(document);
+            }
           }
 
           if (activeTool === 'erase') {
@@ -239,12 +254,15 @@ export function CadCanvas({
               x: worldPoint.x - lastWorldPoint.x,
               y: worldPoint.y - lastWorldPoint.y,
             };
+            if (Math.abs(delta.x) > 0 || Math.abs(delta.y) > 0) {
+              movedEntityRef.current = true;
+            }
             onDocumentChange((current) => ({
               ...current,
               entities: current.entities.map((entity) =>
                 entity.id === selectedEntityId ? translateEntity(entity, delta) : entity,
               ),
-            }));
+            }), { trackHistory: false });
           }
 
           if (
@@ -274,6 +292,11 @@ export function CadCanvas({
           setDragStart(null);
           setDrawingStart(null);
           setLastWorldPoint(null);
+          if (movingEntityRef.current) {
+            movingEntityRef.current = false;
+            if (movedEntityRef.current) onDocumentBatchCommit();
+            movedEntityRef.current = false;
+          }
         }}
         onDoubleClick={(event) => {
           const worldPoint = screenToWorld(getLocalPoint(event), viewport);

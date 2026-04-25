@@ -1,22 +1,41 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { CadDocument } from './types';
 
 type DocumentUpdater = CadDocument | ((current: CadDocument) => CadDocument);
+type UpdateOptions = {
+  trackHistory?: boolean;
+};
 
 export function useDocumentHistory(initialDocument: CadDocument) {
   const [past, setPast] = useState<CadDocument[]>([]);
   const [document, setDocument] = useState<CadDocument>(initialDocument);
   const [future, setFuture] = useState<CadDocument[]>([]);
+  const batchStartRef = useRef<CadDocument | null>(null);
 
-  const updateDocument = useCallback((updater: DocumentUpdater) => {
+  const updateDocument = useCallback((updater: DocumentUpdater, options: UpdateOptions = {}) => {
     setDocument((current) => {
       const next = typeof updater === 'function' ? updater(current) : updater;
       if (next === current) return current;
 
-      setPast((items) => [...items, current].slice(-80));
-      setFuture([]);
+      if (options.trackHistory !== false) {
+        setPast((items) => [...items, current].slice(-80));
+        setFuture([]);
+      }
       return next;
     });
+  }, []);
+
+  const beginHistoryBatch = useCallback((snapshot: CadDocument) => {
+    batchStartRef.current = snapshot;
+  }, []);
+
+  const commitHistoryBatch = useCallback(() => {
+    const start = batchStartRef.current;
+    batchStartRef.current = null;
+    if (!start) return;
+
+    setPast((items) => [...items, start].slice(-80));
+    setFuture([]);
   }, []);
 
   const replaceDocument = useCallback((next: CadDocument) => {
@@ -53,6 +72,8 @@ export function useDocumentHistory(initialDocument: CadDocument) {
     document,
     updateDocument,
     replaceDocument,
+    beginHistoryBatch,
+    commitHistoryBatch,
     undo,
     redo,
     canUndo: past.length > 0,

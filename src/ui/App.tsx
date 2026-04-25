@@ -39,8 +39,17 @@ const fileManager = new FileManager();
 
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
-  const { document, updateDocument, replaceDocument, undo, redo, canUndo, canRedo } =
-    useDocumentHistory(sampleDocument);
+  const {
+    document,
+    updateDocument,
+    replaceDocument,
+    beginHistoryBatch,
+    commitHistoryBatch,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useDocumentHistory(sampleDocument);
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
@@ -311,6 +320,8 @@ export function App() {
           onViewportChange={setViewport}
           onCursorChange={setCursor}
           onDocumentChange={updateDocument}
+          onDocumentBatchStart={beginHistoryBatch}
+          onDocumentBatchCommit={commitHistoryBatch}
           onSelectedEntityChange={setSelectedEntityId}
           onReady={setCanvasApi}
         />
