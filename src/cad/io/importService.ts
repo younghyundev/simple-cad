@@ -1,4 +1,4 @@
-import type { CadDocument, CadEntity, CadEntityBase, CadLayer } from '../types';
+import type { CadDocument, CadEntity, CadEntityBase, CadLayer, CadWarning } from '../types';
 import { dxfAciToHex } from './dxfColor';
 import { dxfLineTypeToStrokeStyle, dxfLineWeightToStrokeWidth } from './dxfStyle';
 import { decodeDxfText } from './dxfText';
@@ -15,6 +15,7 @@ export class ImportService {
     const entities: CadEntity[] = [];
     const layerNames = new Set<string>(['0', ...layerDefinitions.keys()]);
     const unsupportedEntities = [];
+    const importWarnings: CadWarning[] = [];
 
     for (const { entityType, chunk } of entityChunks) {
       const layerId = valueFor(chunk, '8') || '0';
@@ -79,6 +80,38 @@ export class ImportService {
           type: 'polyline',
           points: xs.map((x, pointIndex) => ({ x, y: ys[pointIndex] ?? 0 })),
         });
+      } else if (entityType === 'ELLIPSE') {
+        const entity = {
+          ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth }),
+          type: 'polyline' as const,
+          points: ellipseToPolyline(chunk),
+        };
+        entities.push(entity);
+        importWarnings.push({
+          code: 'DXF_ELLIPSE_APPROXIMATED',
+          message: 'ELLIPSE 엔티티를 편집 가능한 폴리라인으로 근사했습니다.',
+          entityId: entity.id,
+        });
+      } else if (entityType === 'SPLINE') {
+        const points = splineControlPoints(chunk);
+        if (points.length >= 2) {
+          const entity = {
+            ...baseEntity(layerId, { strokeColor, strokeStyle, strokeWidth }),
+            type: 'polyline' as const,
+            points,
+          };
+          entities.push(entity);
+          importWarnings.push({
+            code: 'DXF_SPLINE_APPROXIMATED',
+            message: 'SPLINE 엔티티를 제어점 기반 폴리라인으로 근사했습니다.',
+            entityId: entity.id,
+          });
+        } else {
+          unsupportedEntities.push({
+            sourceType: entityType,
+            reason: 'SPLINE has fewer than two usable control points.',
+          });
+        }
       } else if (entityType) {
         unsupportedEntities.push({
           sourceType: entityType,
@@ -102,14 +135,17 @@ export class ImportService {
       layers,
       entities,
       unsupportedEntities,
-      importWarnings: unsupportedEntities.length
-        ? [
-            {
-              code: 'UNSUPPORTED_DXF_ENTITIES',
-              message: `${unsupportedEntities.length} unsupported DXF entities were skipped.`,
-            },
-          ]
-        : [],
+      importWarnings: [
+        ...importWarnings,
+        ...(unsupportedEntities.length
+          ? [
+              {
+                code: 'UNSUPPORTED_DXF_ENTITIES',
+                message: `${unsupportedEntities.length} unsupported DXF entities were skipped.`,
+              },
+            ]
+          : []),
+      ],
     };
   }
 
@@ -236,4 +272,43 @@ function valuesFor(pairs: DxfPair[], code: string): string[] {
 
 function numberFor(pairs: DxfPair[], code: string): number {
   return Number(valueFor(pairs, code) ?? 0);
+}
+
+function ellipseToPolyline(pairs: DxfPair[]) {
+  const center = { x: numberFor(pairs, '10'), y: -numberFor(pairs, '20') };
+  const majorAxis = { x: numberFor(pairs, '11'), y: -numberFor(pairs, '21') };
+  const ratio = Number(valueFor(pairs, '40') ?? 1) || 1;
+  const startParameter = Number(valueFor(pairs, '41') ?? 0);
+  const endParameter = Number(valueFor(pairs, '42') ?? Math.PI * 2);
+  const majorLength = Math.hypot(majorAxis.x, majorAxis.y) || 1;
+  const majorUnit = {
+    x: majorAxis.x / majorLength,
+    y: majorAxis.y / majorLength,
+  };
+  const minorAxis = {
+    x: -majorUnit.y * majorLength * ratio,
+    y: majorUnit.x * majorLength * ratio,
+  };
+  const sweep = normalizeSweep(startParameter, endParameter);
+  const segments = Math.max(24, Math.ceil((Math.abs(sweep) / (Math.PI * 2)) * 64));
+
+  return Array.from({ length: segments + 1 }, (_, index) => {
+    const parameter = startParameter + (sweep * index) / segments;
+    return {
+      x: center.x + Math.cos(parameter) * majorAxis.x + Math.sin(parameter) * minorAxis.x,
+      y: center.y + Math.cos(parameter) * majorAxis.y + Math.sin(parameter) * minorAxis.y,
+    };
+  });
+}
+
+function normalizeSweep(startParameter: number, endParameter: number): number {
+  let sweep = endParameter - startParameter;
+  if (sweep <= 0) sweep += Math.PI * 2;
+  return sweep;
+}
+
+function splineControlPoints(pairs: DxfPair[]) {
+  const xs = valuesFor(pairs, '10').map(Number);
+  const ys = valuesFor(pairs, '20').map((value) => -Number(value));
+  return xs.map((x, index) => ({ x, y: ys[index] ?? 0 }));
 }
