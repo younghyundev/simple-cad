@@ -18,6 +18,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Phase 4 file flow started: JSON open/save, autosave to localStorage, SVG export, and basic ASCII DXF import/export for LINE/CIRCLE/TEXT/LWPOLYLINE.
 - Phase 5 conversion workflow started: DWG import/export routes through ConversionApiClient, conversion warnings render in the properties panel, and backend API contract is documented in docs/cad-conversion-api.md.
 - Development mock CAD API added to Vite for `/api/cad/import`, `/api/cad/export`, and `/api/cad/validate`; drag movement now batches into a single undo step.
+- Resize handles added for lines, rectangles, and circles; resize operations batch into a single undo step.
 
 ## Decisions
 
@@ -28,4 +29,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add resize handles.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add polyline point editing.

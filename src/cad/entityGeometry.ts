@@ -2,6 +2,14 @@ import type { CadEntity, CadEntityBase, CadPoint, ToolId } from './types';
 
 const hitTolerance = 8;
 
+export type ResizeHandleId = 'start' | 'end' | 'nw' | 'ne' | 'se' | 'sw' | 'radius';
+
+export type ResizeHandle = {
+  id: ResizeHandleId;
+  point: CadPoint;
+  cursor: string;
+};
+
 export function createEntity(
   tool: ToolId,
   start: CadPoint,
@@ -113,6 +121,97 @@ export function translateEntity(entity: CadEntity, delta: CadPoint): CadEntity {
     startPoint: { x: entity.startPoint.x + delta.x, y: entity.startPoint.y + delta.y },
     endPoint: { x: entity.endPoint.x + delta.x, y: entity.endPoint.y + delta.y },
   };
+}
+
+export function getResizeHandles(entity: CadEntity): ResizeHandle[] {
+  if (entity.type === 'line') {
+    return [
+      { id: 'start', point: { x: entity.x1, y: entity.y1 }, cursor: 'nwse-resize' },
+      { id: 'end', point: { x: entity.x2, y: entity.y2 }, cursor: 'nwse-resize' },
+    ];
+  }
+
+  if (entity.type === 'rect') {
+    const right = entity.x + entity.width;
+    const bottom = entity.y + entity.height;
+    return [
+      { id: 'nw', point: { x: entity.x, y: entity.y }, cursor: 'nwse-resize' },
+      { id: 'ne', point: { x: right, y: entity.y }, cursor: 'nesw-resize' },
+      { id: 'se', point: { x: right, y: bottom }, cursor: 'nwse-resize' },
+      { id: 'sw', point: { x: entity.x, y: bottom }, cursor: 'nesw-resize' },
+    ];
+  }
+
+  if (entity.type === 'circle') {
+    return [
+      {
+        id: 'radius',
+        point: { x: entity.cx + entity.radius, y: entity.cy },
+        cursor: 'ew-resize',
+      },
+    ];
+  }
+
+  return [];
+}
+
+export function hitTestResizeHandle(
+  entity: CadEntity,
+  point: CadPoint,
+  scale: number,
+): ResizeHandle | null {
+  const tolerance = 8 / scale;
+  return (
+    getResizeHandles(entity).find((handle) => distance(handle.point, point) <= tolerance) ?? null
+  );
+}
+
+export function resizeEntity(
+  entity: CadEntity,
+  handleId: ResizeHandleId,
+  point: CadPoint,
+): CadEntity {
+  if (entity.locked) return entity;
+
+  if (entity.type === 'line') {
+    if (handleId === 'start') {
+      return { ...entity, x1: point.x, y1: point.y };
+    }
+    if (handleId === 'end') {
+      return { ...entity, x2: point.x, y2: point.y };
+    }
+  }
+
+  if (entity.type === 'rect') {
+    const left = entity.x;
+    const top = entity.y;
+    const right = entity.x + entity.width;
+    const bottom = entity.y + entity.height;
+
+    const nextLeft = handleId === 'nw' || handleId === 'sw' ? point.x : left;
+    const nextRight = handleId === 'ne' || handleId === 'se' ? point.x : right;
+    const nextTop = handleId === 'nw' || handleId === 'ne' ? point.y : top;
+    const nextBottom = handleId === 'sw' || handleId === 'se' ? point.y : bottom;
+
+    const x = Math.min(nextLeft, nextRight);
+    const y = Math.min(nextTop, nextBottom);
+    return {
+      ...entity,
+      x,
+      y,
+      width: Math.max(1, Math.abs(nextRight - nextLeft)),
+      height: Math.max(1, Math.abs(nextBottom - nextTop)),
+    };
+  }
+
+  if (entity.type === 'circle' && handleId === 'radius') {
+    return {
+      ...entity,
+      radius: Math.max(1, distance({ x: entity.cx, y: entity.cy }, point)),
+    };
+  }
+
+  return entity;
 }
 
 export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number): boolean {

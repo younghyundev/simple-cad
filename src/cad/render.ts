@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, Viewport } from './types';
+import { getResizeHandles } from './entityGeometry';
 import { worldToScreen } from './viewport';
 
 const majorGridEvery = 5;
@@ -154,13 +155,17 @@ function drawSelection(
   context.setLineDash([]);
   context.fillStyle = '#0f766e';
 
-  for (const point of [
-    start,
-    { x: end.x, y: start.y },
-    end,
-    { x: start.x, y: end.y },
-  ]) {
-    context.fillRect(point.x - 4, point.y - 4, 8, 8);
+  const handles = getResizeHandles(entity);
+  const points = handles.length
+    ? handles.map((handle) => worldToScreen(handle.point, viewport))
+    : [start, { x: end.x, y: start.y }, end, { x: start.x, y: end.y }];
+
+  for (const point of points) {
+    context.fillStyle = '#ffffff';
+    context.fillRect(point.x - 5, point.y - 5, 10, 10);
+    context.strokeStyle = '#0f766e';
+    context.lineWidth = 1.5;
+    context.strokeRect(point.x - 5, point.y - 5, 10, 10);
   }
 
   context.restore();

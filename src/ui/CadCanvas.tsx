@@ -4,7 +4,10 @@ import {
   createEntity,
   createTextEntity,
   hitTestEntity,
+  hitTestResizeHandle,
   isMeaningfulEntity,
+  resizeEntity,
+  type ResizeHandleId,
   translateEntity,
 } from '../cad/entityGeometry';
 import { renderDocument } from '../cad/render';
@@ -55,6 +58,9 @@ export function CadCanvas({
   const textDraftRef = useRef<TextDraft | null>(null);
   const movingEntityRef = useRef(false);
   const movedEntityRef = useRef(false);
+  const resizingHandleRef = useRef<ResizeHandleId | null>(null);
+  const resizingEntityRef = useRef(false);
+  const resizedEntityRef = useRef(false);
   const [dragStart, setDragStart] = useState<CadPoint | null>(null);
   const [drawingStart, setDrawingStart] = useState<CadPoint | null>(null);
   const [lastWorldPoint, setLastWorldPoint] = useState<CadPoint | null>(null);
@@ -120,6 +126,25 @@ export function CadCanvas({
     }
 
     return null;
+  };
+
+  const selectedEntity = selectedEntityId
+    ? document.entities.find((entity) => entity.id === selectedEntityId)
+    : null;
+
+  const findResizeHandleAt = (point: CadPoint): ResizeHandleId | null => {
+    if (!selectedEntity) return null;
+    const layer = document.layers.find((item) => item.id === selectedEntity.layerId);
+    if (
+      !selectedEntity.visible ||
+      selectedEntity.locked ||
+      layer?.visible === false ||
+      layer?.locked
+    ) {
+      return null;
+    }
+
+    return hitTestResizeHandle(selectedEntity, point, viewport.scale)?.id ?? null;
   };
 
   const currentLayerId = document.layers[0]?.id ?? 'layer-0';
@@ -194,6 +219,15 @@ export function CadCanvas({
           setLastWorldPoint(worldPoint);
 
           if (activeTool === 'select') {
+            const handleId = findResizeHandleAt(worldPoint);
+            if (handleId && selectedEntityId) {
+              resizingHandleRef.current = handleId;
+              resizingEntityRef.current = true;
+              resizedEntityRef.current = false;
+              onDocumentBatchStart(document);
+              return;
+            }
+
             const entityId = findEntityAt(worldPoint);
             onSelectedEntityChange(entityId);
             if (entityId) {
@@ -250,6 +284,20 @@ export function CadCanvas({
           }
 
           if (activeTool === 'select' && selectedEntityId && lastWorldPoint) {
+            const handleId = resizingHandleRef.current;
+            if (handleId) {
+              resizedEntityRef.current = true;
+              onDocumentChange((current) => ({
+                ...current,
+                entities: current.entities.map((entity) =>
+                  entity.id === selectedEntityId ? resizeEntity(entity, handleId, worldPoint) : entity,
+                ),
+              }), { trackHistory: false });
+              setDragStart(localPoint);
+              setLastWorldPoint(worldPoint);
+              return;
+            }
+
             const delta = {
               x: worldPoint.x - lastWorldPoint.x,
               y: worldPoint.y - lastWorldPoint.y,
@@ -296,6 +344,12 @@ export function CadCanvas({
             movingEntityRef.current = false;
             if (movedEntityRef.current) onDocumentBatchCommit();
             movedEntityRef.current = false;
+          }
+          if (resizingEntityRef.current) {
+            resizingEntityRef.current = false;
+            resizingHandleRef.current = null;
+            if (resizedEntityRef.current) onDocumentBatchCommit();
+            resizedEntityRef.current = false;
           }
         }}
         onDoubleClick={(event) => {
