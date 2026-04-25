@@ -291,6 +291,37 @@ function numberFor(pairs: DxfPair[], code: string): number {
   return Number(valueFor(pairs, code) ?? 0);
 }
 
+function dxfPoint(pairs: DxfPair[], xCode: string, yCode: string): CadPoint {
+  return { x: numberFor(pairs, xCode), y: -numberFor(pairs, yCode) };
+}
+
+function formatDistance(a: CadPoint, b: CadPoint): string {
+  return Math.hypot(a.x - b.x, a.y - b.y).toFixed(1);
+}
+
+function dimensionLabel(pairs: DxfPair[]): string {
+  const explicitLabel = decodeDxfText(valueFor(pairs, '1') ?? '');
+  if (explicitLabel && explicitLabel !== '<>') return explicitLabel;
+  return formatDistance(dxfPoint(pairs, '13', '23'), dxfPoint(pairs, '14', '24'));
+}
+
+function dimensionOffset(pairs: DxfPair[]): number {
+  const start = dxfPoint(pairs, '13', '23');
+  const end = dxfPoint(pairs, '14', '24');
+  const dimensionLinePoint = dxfPoint(pairs, '10', '20');
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy);
+  if (!length) return -24;
+
+  const normal = { x: -dy / length, y: dx / length };
+  const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  const offset =
+    (dimensionLinePoint.x - midpoint.x) * normal.x +
+    (dimensionLinePoint.y - midpoint.y) * normal.y;
+  return Number.isFinite(offset) && Math.abs(offset) > 0.1 ? offset : -24;
+}
+
 function importDxfEntity(
   entityType: string,
   chunk: DxfPair[],
@@ -435,6 +466,28 @@ function importDxfEntity(
         reason: 'SPLINE has fewer than two usable control points.',
       });
     }
+  } else if (entityType === 'DIMENSION') {
+    const startPoint = dxfPoint(chunk, '13', '23');
+    const endPoint = dxfPoint(chunk, '14', '24');
+    const label = dimensionLabel(chunk);
+    const entity = transformEntity(
+      {
+        ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
+        type: 'dimension' as const,
+        startPoint,
+        endPoint,
+        label,
+        labelMode: label === formatDistance(startPoint, endPoint) ? 'auto' : 'manual',
+        labelOffset: dimensionOffset(chunk),
+      },
+      transform,
+    );
+    result.entities.push(entity);
+    result.importWarnings.push({
+      code: 'DXF_DIMENSION_IMPORTED',
+      message: 'DIMENSION 엔티티를 편집 가능한 Web CAD 치수 객체로 가져왔습니다.',
+      entityId: entity.id,
+    });
   } else {
     result.unsupportedEntities.push({
       sourceType: entityType,
