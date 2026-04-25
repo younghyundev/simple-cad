@@ -25,11 +25,164 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-rows: 52px 1fr 30px;
+  grid-template-rows: 52px 38px 1fr 30px;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
   background: #f3f4f6;
+}
+
+.tabbar {
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 10px 0;
+  border-bottom: 1px solid #d1d5db;
+  background: #f9fafb;
+  overflow-x: auto;
+}
+
+.tabbar-empty {
+  align-self: center;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 220px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d1d5db;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: #eef2f7;
+  color: #374151;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: #0f766e;
+}
+
+.tab-button span:not(.tab-close) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+}
+
+.tab-close:hover {
+  background: rgba(15, 118, 110, 0.12);
+}
+
+.start-page {
+  min-height: 0;
+  overflow: auto;
+  background: #f8fafc;
+}
+
+.start-page-inner {
+  display: grid;
+  gap: 24px;
+  width: min(760px, calc(100vw - 64px));
+  margin: 56px auto;
+}
+
+.start-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.start-heading h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 0;
+}
+
+.start-heading p {
+  margin: 4px 0 0;
+  color: #6b7280;
+}
+
+.start-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.start-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.start-action.primary {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.recent-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.recent-panel h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.recent-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recent-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111827;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item small {
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .topbar {

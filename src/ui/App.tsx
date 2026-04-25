@@ -2,12 +2,14 @@ import {
   Circle,
   DraftingCompass,
   FileDown,
+  FileText,
   FileUp,
   Grid3X3,
   Hand,
   Magnet,
   MousePointer2,
   Move,
+  Plus,
   Redo2,
   Save,
   Square,
@@ -15,6 +17,7 @@ import {
   Type,
   Undo2,
   Waypoints,
+  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -22,7 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
-import type { CadEntity, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
+import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
 import { useDocumentHistory } from '../cad/useDocumentHistory';
 import { CadCanvas } from './CadCanvas';
 
@@ -40,6 +43,23 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 
 const fileManager = new FileManager();
 const maxAutosaveEntities = 4000;
+const recentStorageKey = 'webcad.recentDocuments';
+
+type WorkspaceTab = {
+  id: string;
+  title: string;
+  document: CadDocument;
+  viewport: Viewport;
+  selectedEntityIds: string[];
+  lastOpenedAt: string;
+};
+
+type RecentDocument = {
+  id: string;
+  title: string;
+  document: CadDocument;
+  lastOpenedAt: string;
+};
 
 type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
 type CadEntityPatch = Partial<CadEntity> & Partial<DimensionEntity>;
@@ -64,6 +84,9 @@ export function App() {
     canUndo,
     canRedo,
   } = useDocumentHistory(sampleDocument);
+  const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['rect-1']);
@@ -105,6 +128,7 @@ export function App() {
 
   const saveAs = useCallback(
     async (type: 'json' | 'svg' | 'dxf' | 'dwg') => {
+      if (!activeTabId) return;
       try {
         setFileMessage(`${type.toUpperCase()} 파일을 준비하는 중...`);
         const blob = await fileManager.save(document, {
@@ -117,28 +141,120 @@ export function App() {
         setFileMessage(error instanceof Error ? error.message : `${type.toUpperCase()} 내보내기에 실패했습니다.`);
       }
     },
-    [document, downloadBlob],
+    [activeTabId, document, downloadBlob],
   );
+
+  const persistRecentDocument = useCallback((title: string, nextDocument = document) => {
+    if (nextDocument.entities.length > maxAutosaveEntities) return;
+
+    const recent: RecentDocument = {
+      id: `${Date.now()}`,
+      title,
+      document: nextDocument,
+      lastOpenedAt: new Date().toISOString(),
+    };
+    setRecentDocuments((items) => {
+      const next = [recent, ...items.filter((item) => item.title !== title)].slice(0, 8);
+      localStorage.setItem(recentStorageKey, JSON.stringify(next));
+      return next;
+    });
+  }, [document]);
+
+  const activateTab = useCallback((tabId: string) => {
+    const nextTab = tabs.find((tab) => tab.id === tabId);
+    if (!nextTab) return;
+    setActiveTabId(tabId);
+    replaceDocument(nextTab.document);
+    setViewport(nextTab.viewport);
+    setSelectedEntityIds(nextTab.selectedEntityIds);
+    setFileMessage(`${nextTab.title} 탭을 열었습니다.`);
+  }, [replaceDocument, tabs]);
+
+  const createTab = useCallback((title: string, nextDocument: CadDocument) => {
+    const tab: WorkspaceTab = {
+      id: `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      title,
+      document: nextDocument,
+      viewport: { offsetX: 480, offsetY: 320, scale: 1 },
+      selectedEntityIds: [],
+      lastOpenedAt: new Date().toISOString(),
+    };
+    setTabs((items) => [...items, tab]);
+    setActiveTabId(tab.id);
+    replaceDocument(nextDocument);
+    setViewport(tab.viewport);
+    setSelectedEntityIds([]);
+    persistRecentDocument(title, nextDocument);
+  }, [persistRecentDocument, replaceDocument]);
+
+  const createNewDrawing = useCallback(() => {
+    createTab(`새 도면 ${tabs.length + 1}`, {
+      ...sampleDocument,
+      id: `document-${Date.now()}`,
+      name: `새 도면 ${tabs.length + 1}`,
+      entities: [],
+    });
+  }, [createTab, tabs.length]);
+
+  const closeTab = useCallback((tabId: string) => {
+    setTabs((items) => {
+      const next = items.filter((tab) => tab.id !== tabId);
+      if (tabId === activeTabId) {
+        const fallback = next[next.length - 1] ?? null;
+        setActiveTabId(fallback?.id ?? null);
+        if (fallback) {
+          replaceDocument(fallback.document);
+          setViewport(fallback.viewport);
+          setSelectedEntityIds(fallback.selectedEntityIds);
+        } else {
+          setSelectedEntityIds([]);
+        }
+      }
+      return next;
+    });
+  }, [activeTabId, replaceDocument]);
 
   const openFile = useCallback(async (file: File) => {
     try {
       const nextDocument = await fileManager.open(file);
-      replaceDocument({
+      const openedDocument = {
         ...nextDocument,
         name: nextDocument.name || file.name,
         sourceFile: {
           name: file.name,
-          type: file.name.endsWith('.dxf') ? 'dxf' : file.name.endsWith('.dwg') ? 'dwg' : 'json',
+          type: fileTypeFromName(file.name),
           lastSavedAt: new Date().toISOString(),
           fileHandleAvailable: false,
         },
-      });
-      setSelectedEntityIds([]);
+      };
+      createTab(file.name, openedDocument);
       setFileMessage(`${file.name} 파일을 열었습니다.`);
     } catch (error) {
       setFileMessage(error instanceof Error ? error.message : '파일을 열 수 없습니다.');
     }
-  }, [replaceDocument]);
+  }, [createTab]);
+
+  useEffect(() => {
+    if (!activeTabId) return;
+    setTabs((items) =>
+      items.map((tab) =>
+        tab.id === activeTabId
+          ? { ...tab, document, viewport, selectedEntityIds, lastOpenedAt: new Date().toISOString() }
+          : tab,
+      ),
+    );
+  }, [activeTabId, document, selectedEntityIds, viewport]);
+
+  const openRecentDocument = useCallback((recent: RecentDocument) => {
+    createTab(recent.title, {
+      ...recent.document,
+      id: `recent-${Date.now()}`,
+      sourceFile: {
+        ...(recent.document.sourceFile ?? { type: 'json' as const, name: recent.title }),
+        lastSavedAt: recent.lastOpenedAt,
+      },
+    });
+  }, [createTab]);
 
   const deleteSelectedEntity = useCallback(() => {
     if (!selectedEntityIds.length) return;
@@ -193,6 +309,7 @@ export function App() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
+      if (!activeTabId) return;
       if (document.entities.length > maxAutosaveEntities) {
         setFileMessage(`큰 도면: 자동 저장 생략됨 (${document.entities.length}개 객체)`);
         return;
@@ -202,7 +319,7 @@ export function App() {
     }, 400);
 
     return () => window.clearTimeout(timeout);
-  }, [document]);
+  }, [activeTabId, document]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -257,6 +374,10 @@ export function App() {
           <span>Web CAD</span>
         </div>
         <div className="toolbar-group">
+          <button className="tool-button wide" title="새 도면" onClick={createNewDrawing}>
+            <Plus size={17} />
+            새 도면
+          </button>
           <button
             className="tool-button wide"
             title="열기"
@@ -265,19 +386,39 @@ export function App() {
             <FileUp size={17} />
             열기
           </button>
-          <button className="tool-button wide" title="JSON 저장" onClick={() => void saveAs('json')}>
+          <button
+            className="tool-button wide"
+            title="JSON 저장"
+            disabled={!activeTabId}
+            onClick={() => void saveAs('json')}
+          >
             <Save size={17} />
             저장
           </button>
-          <button className="tool-button wide" title="SVG 내보내기" onClick={() => void saveAs('svg')}>
+          <button
+            className="tool-button wide"
+            title="SVG 내보내기"
+            disabled={!activeTabId}
+            onClick={() => void saveAs('svg')}
+          >
             <FileDown size={17} />
             SVG
           </button>
-          <button className="tool-button wide" title="DXF 내보내기" onClick={() => void saveAs('dxf')}>
+          <button
+            className="tool-button wide"
+            title="DXF 내보내기"
+            disabled={!activeTabId}
+            onClick={() => void saveAs('dxf')}
+          >
             <FileDown size={17} />
             DXF
           </button>
-          <button className="tool-button wide" title="DWG 내보내기" onClick={() => void saveAs('dwg')}>
+          <button
+            className="tool-button wide"
+            title="DWG 내보내기"
+            disabled={!activeTabId}
+            onClick={() => void saveAs('dwg')}
+          >
             <FileDown size={17} />
             DWG
           </button>
@@ -332,7 +473,44 @@ export function App() {
         </div>
       </header>
 
-      <section className="workspace">
+      <nav className="tabbar" aria-label="열린 도면">
+        {tabs.length ? (
+          tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`tab-button ${tab.id === activeTabId ? 'active' : ''}`}
+              onClick={() => activateTab(tab.id)}
+              title={tab.title}
+            >
+              <FileText size={14} />
+              <span>{tab.title}</span>
+              <span
+                className="tab-close"
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeTab(tab.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeTab(tab.id);
+                  }
+                }}
+              >
+                <X size={13} />
+              </span>
+            </button>
+          ))
+        ) : (
+          <span className="tabbar-empty">열린 도면 없음</span>
+        )}
+      </nav>
+
+      {activeTabId ? (
+        <section className="workspace">
         <aside className="tool-panel" aria-label="도구">
           {tools.map((tool) => {
             const Icon = tool.icon;
@@ -555,7 +733,50 @@ export function App() {
             </div>
           </div>
         </aside>
-      </section>
+        </section>
+      ) : (
+        <section className="start-page">
+          <div className="start-page-inner">
+            <div className="start-heading">
+              <span className="brand-mark">WC</span>
+              <div>
+                <h1>Web CAD</h1>
+                <p>도면을 열거나 새 작업을 시작하세요.</p>
+              </div>
+            </div>
+            <div className="start-actions">
+              <button className="start-action primary" onClick={createNewDrawing}>
+                <Plus size={20} />
+                <span>새 도면</span>
+              </button>
+              <button className="start-action" onClick={() => fileInputRef.current?.click()}>
+                <FileUp size={20} />
+                <span>파일 열기</span>
+              </button>
+            </div>
+            <section className="recent-panel">
+              <h2>최근 열기</h2>
+              {recentDocuments.length ? (
+                <div className="recent-list">
+                  {recentDocuments.map((recent) => (
+                    <button
+                      className="recent-item"
+                      key={recent.id}
+                      onClick={() => openRecentDocument(recent)}
+                    >
+                      <FileText size={17} />
+                      <span>{recent.title}</span>
+                      <small>{new Date(recent.lastOpenedAt).toLocaleString()}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">최근에 연 도면이 없습니다.</p>
+              )}
+            </section>
+          </div>
+        </section>
+      )}
 
       <footer className="statusbar">
         <span>좌표 X {cursor.x.toFixed(1)} / Y {cursor.y.toFixed(1)}</span>
@@ -572,4 +793,23 @@ export function App() {
       </footer>
     </main>
   );
+}
+
+function readRecentDocuments(): RecentDocument[] {
+  try {
+    const value = localStorage.getItem(recentStorageKey);
+    if (!value) return [];
+    const parsed = JSON.parse(value) as RecentDocument[];
+    return Array.isArray(parsed) ? parsed.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
+function fileTypeFromName(fileName: string): CadFileType {
+  const normalized = fileName.toLowerCase();
+  if (normalized.endsWith('.dxf')) return 'dxf';
+  if (normalized.endsWith('.dwg')) return 'dwg';
+  if (normalized.endsWith('.svg')) return 'svg';
+  return 'json';
 }

@@ -37,6 +37,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Curve display improved: canvas/SVG strokes use round caps and joins, imported DXF lineweights are capped lower, and spline sampling density was increased.
 - Selection workflow improved: select tool now supports drag marquee multi-selection, multi-entity move, multi-delete, and selection count display.
 - Large drawing performance improved: snap candidate/intersection work is capped for dense drawings, render lookup paths use maps/sets, canvas resizing is avoided when dimensions are unchanged, large autosave is skipped, and repeated import warnings are grouped.
+- Workspace UX started: app now has a start page with new drawing/file open/recent open actions, recent document persistence, and multi-document tabs with tab switching/closing.
 
 ## Decisions
 
