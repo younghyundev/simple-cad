@@ -75,6 +75,8 @@ export type DimensionEntity = CadEntityBase & {
   startPoint: CadPoint;
   endPoint: CadPoint;
   label: string;
+  labelMode?: 'auto' | 'manual';
+  labelOffset?: number;
 };
 
 export type CadEntity =

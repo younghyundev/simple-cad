@@ -87,13 +87,12 @@ function entityToSvg(entity: CadEntity): string {
   }
 
   if (entity.type === 'dimension') {
-    const mid = {
-      x: (entity.startPoint.x + entity.endPoint.x) / 2,
-      y: (entity.startPoint.y + entity.endPoint.y) / 2,
-    };
+    const geometry = getDimensionGeometry(entity);
     return `<g stroke="${escapeXml(entity.strokeColor)}" fill="${escapeXml(entity.fillColor)}" stroke-width="${entity.strokeWidth}">
-    <line x1="${entity.startPoint.x}" y1="${entity.startPoint.y}" x2="${entity.endPoint.x}" y2="${entity.endPoint.y}"/>
-    <text x="${mid.x}" y="${mid.y - 6}" font-size="13" text-anchor="middle">${escapeXml(entity.label)}</text>
+    <line x1="${entity.startPoint.x}" y1="${entity.startPoint.y}" x2="${geometry.dimensionStart.x}" y2="${geometry.dimensionStart.y}"/>
+    <line x1="${entity.endPoint.x}" y1="${entity.endPoint.y}" x2="${geometry.dimensionEnd.x}" y2="${geometry.dimensionEnd.y}"/>
+    <line x1="${geometry.dimensionStart.x}" y1="${geometry.dimensionStart.y}" x2="${geometry.dimensionEnd.x}" y2="${geometry.dimensionEnd.y}"/>
+    <text x="${geometry.mid.x}" y="${geometry.mid.y - 6}" font-size="13" text-anchor="middle">${escapeXml(entity.label)}</text>
   </g>`;
   }
 
@@ -193,10 +192,7 @@ function entityToDxf(entity: CadEntity): string[] {
   }
 
   if (entity.type === 'dimension') {
-    const mid = {
-      x: (entity.startPoint.x + entity.endPoint.x) / 2,
-      y: (entity.startPoint.y + entity.endPoint.y) / 2,
-    };
+    const geometry = getDimensionGeometry(entity);
     return [
       '0',
       'LINE',
@@ -207,17 +203,41 @@ function entityToDxf(entity: CadEntity): string[] {
       '20',
       `${-entity.startPoint.y}`,
       '11',
-      `${entity.endPoint.x}`,
+      `${geometry.dimensionStart.x}`,
       '21',
+      `${-geometry.dimensionStart.y}`,
+      '0',
+      'LINE',
+      '8',
+      layer,
+      '10',
+      `${entity.endPoint.x}`,
+      '20',
       `${-entity.endPoint.y}`,
+      '11',
+      `${geometry.dimensionEnd.x}`,
+      '21',
+      `${-geometry.dimensionEnd.y}`,
+      '0',
+      'LINE',
+      '8',
+      layer,
+      '10',
+      `${geometry.dimensionStart.x}`,
+      '20',
+      `${-geometry.dimensionStart.y}`,
+      '11',
+      `${geometry.dimensionEnd.x}`,
+      '21',
+      `${-geometry.dimensionEnd.y}`,
       '0',
       'TEXT',
       '8',
       layer,
       '10',
-      `${mid.x}`,
+      `${geometry.mid.x}`,
       '20',
-      `${-mid.y}`,
+      `${-geometry.mid.y}`,
       '40',
       '13',
       '1',
@@ -228,6 +248,43 @@ function entityToDxf(entity: CadEntity): string[] {
   return [];
 }
 
+function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {
+  const dx = entity.endPoint.x - entity.startPoint.x;
+  const dy = entity.endPoint.y - entity.startPoint.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const offset = entity.labelOffset ?? -24;
+  const normal = {
+    x: -dy / length,
+    y: dx / length,
+  };
+  const dimensionStart = {
+    x: entity.startPoint.x + normal.x * offset,
+    y: entity.startPoint.y + normal.y * offset,
+  };
+  const dimensionEnd = {
+    x: entity.endPoint.x + normal.x * offset,
+    y: entity.endPoint.y + normal.y * offset,
+  };
+
+  return {
+    dimensionStart,
+    dimensionEnd,
+    mid: {
+      x: (dimensionStart.x + dimensionEnd.x) / 2,
+      y: (dimensionStart.y + dimensionEnd.y) / 2,
+    },
+  };
+}
+
+function entityBoundsPoints(entity: CadEntity) {
+  if (entity.type === 'dimension') {
+    const geometry = getDimensionGeometry(entity);
+    return [entity.startPoint, entity.endPoint, geometry.dimensionStart, geometry.dimensionEnd];
+  }
+
+  return null;
+}
+
 function getDocumentBounds(document: CadDocument) {
   const points = document.entities.flatMap((entity) => {
     if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
@@ -236,7 +293,7 @@ function getDocumentBounds(document: CadDocument) {
     if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'polyline') return entity.points;
     if (entity.type === 'text') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.content.length * entity.fontSize * 0.6, y: entity.y - entity.fontSize }];
-    if (entity.type === 'dimension') return [entity.startPoint, entity.endPoint];
+    if (entity.type === 'dimension') return entityBoundsPoints(entity) ?? [];
     return [];
   });
 

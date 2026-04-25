@@ -79,6 +79,8 @@ export function createEntity(
       startPoint: start,
       endPoint: end,
       label: formatDistance(start, end),
+      labelMode: 'auto',
+      labelOffset: -24,
     };
   }
 
@@ -290,9 +292,12 @@ export function resizeEntity(
 
 export function updateDimensionLabel(entity: CadEntity): CadEntity {
   if (entity.type !== 'dimension') return entity;
+  if (entity.labelMode === 'manual') return entity;
+
   return {
     ...entity,
     label: formatDistance(entity.startPoint, entity.endPoint),
+    labelMode: 'auto',
   };
 }
 
@@ -379,7 +384,12 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
     );
   }
 
-  return pointToSegmentDistance(point, entity.startPoint, entity.endPoint) <= tolerance;
+  const geometry = getDimensionGeometry(entity);
+  return (
+    pointToSegmentDistance(point, entity.startPoint, geometry.dimensionStart) <= tolerance ||
+    pointToSegmentDistance(point, entity.endPoint, geometry.dimensionEnd) <= tolerance ||
+    pointToSegmentDistance(point, geometry.dimensionStart, geometry.dimensionEnd) <= tolerance
+  );
 }
 
 export function isMeaningfulEntity(entity: CadEntity): boolean {
@@ -398,6 +408,28 @@ function distance(a: CadPoint, b: CadPoint): number {
 
 function formatDistance(a: CadPoint, b: CadPoint): string {
   return distance(a, b).toFixed(1);
+}
+
+function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {
+  const dx = entity.endPoint.x - entity.startPoint.x;
+  const dy = entity.endPoint.y - entity.startPoint.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const offset = entity.labelOffset ?? -24;
+  const normal = {
+    x: -dy / length,
+    y: dx / length,
+  };
+
+  return {
+    dimensionStart: {
+      x: entity.startPoint.x + normal.x * offset,
+      y: entity.startPoint.y + normal.y * offset,
+    },
+    dimensionEnd: {
+      x: entity.endPoint.x + normal.x * offset,
+      y: entity.endPoint.y + normal.y * offset,
+    },
+  };
 }
 
 function pointToSegmentDistance(point: CadPoint, start: CadPoint, end: CadPoint): number {

@@ -158,13 +158,16 @@ function drawDimension(
   entity: Extract<CadEntity, { type: 'dimension' }>,
   viewport: Viewport,
 ): void {
+  const geometry = getDimensionGeometry(entity);
   const start = worldToScreen(entity.startPoint, viewport);
   const end = worldToScreen(entity.endPoint, viewport);
+  const dimensionStart = worldToScreen(geometry.dimensionStart, viewport);
+  const dimensionEnd = worldToScreen(geometry.dimensionEnd, viewport);
   const mid = {
-    x: (start.x + end.x) / 2,
-    y: (start.y + end.y) / 2,
+    x: (dimensionStart.x + dimensionEnd.x) / 2,
+    y: (dimensionStart.y + dimensionEnd.y) / 2,
   };
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
+  const angle = Math.atan2(dimensionEnd.y - dimensionStart.y, dimensionEnd.x - dimensionStart.x);
   const arrowSize = 8;
 
   context.save();
@@ -172,19 +175,49 @@ function drawDimension(
   context.strokeStyle = entity.strokeColor;
   context.fillStyle = entity.fillColor;
   context.lineWidth = Math.max(1, entity.strokeWidth * viewport.scale);
+
   context.beginPath();
   context.moveTo(start.x, start.y);
-  context.lineTo(end.x, end.y);
+  context.lineTo(dimensionStart.x, dimensionStart.y);
+  context.moveTo(end.x, end.y);
+  context.lineTo(dimensionEnd.x, dimensionEnd.y);
   context.stroke();
 
-  drawArrowHead(context, start, angle + Math.PI, arrowSize);
-  drawArrowHead(context, end, angle, arrowSize);
+  context.beginPath();
+  context.moveTo(dimensionStart.x, dimensionStart.y);
+  context.lineTo(dimensionEnd.x, dimensionEnd.y);
+  context.stroke();
+
+  drawArrowHead(context, dimensionStart, angle + Math.PI, arrowSize);
+  drawArrowHead(context, dimensionEnd, angle, arrowSize);
 
   context.font = `${13 * Math.max(1, Math.min(1.25, viewport.scale))}px Inter, system-ui, sans-serif`;
   context.textAlign = 'center';
   context.textBaseline = 'bottom';
   context.fillText(entity.label, mid.x, mid.y - 6);
   context.restore();
+}
+
+function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {
+  const dx = entity.endPoint.x - entity.startPoint.x;
+  const dy = entity.endPoint.y - entity.startPoint.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const offset = entity.labelOffset ?? -24;
+  const normal = {
+    x: -dy / length,
+    y: dx / length,
+  };
+
+  return {
+    dimensionStart: {
+      x: entity.startPoint.x + normal.x * offset,
+      y: entity.startPoint.y + normal.y * offset,
+    },
+    dimensionEnd: {
+      x: entity.endPoint.x + normal.x * offset,
+      y: entity.endPoint.y + normal.y * offset,
+    },
+  };
 }
 
 function drawArrowHead(
@@ -293,11 +326,26 @@ function getEntityBounds(entity: CadEntity): {
     };
   }
 
+  const geometry = getDimensionGeometry(entity);
+  const xs = [
+    entity.startPoint.x,
+    entity.endPoint.x,
+    geometry.dimensionStart.x,
+    geometry.dimensionEnd.x,
+  ];
+  const ys = [
+    entity.startPoint.y,
+    entity.endPoint.y,
+    geometry.dimensionStart.y,
+    geometry.dimensionEnd.y,
+  ];
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
   return {
-    x: entity.startPoint.x,
-    y: entity.startPoint.y,
-    width: entity.endPoint.x - entity.startPoint.x,
-    height: entity.endPoint.y - entity.startPoint.y,
+    x,
+    y,
+    width: Math.max(1, Math.max(...xs) - x),
+    height: Math.max(1, Math.max(...ys) - y),
   };
 }
 

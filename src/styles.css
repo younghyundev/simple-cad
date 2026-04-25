@@ -259,6 +259,7 @@ button {
 }
 
 .property-control input[type="number"],
+.property-control input[type="text"],
 .property-control select,
 .layer-name-input {
   width: 100%;
@@ -271,7 +272,8 @@ button {
   font-size: 12px;
 }
 
-.property-control input[type="number"] {
+.property-control input[type="number"],
+.property-control input[type="text"] {
   padding: 0 6px;
 }
 

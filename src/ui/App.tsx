@@ -40,6 +40,16 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 
 const fileManager = new FileManager();
 
+type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
+type CadEntityPatch = Partial<CadEntity> & Partial<DimensionEntity>;
+
+function formatDimensionLabel(entity: DimensionEntity): string {
+  return Math.hypot(
+    entity.endPoint.x - entity.startPoint.x,
+    entity.endPoint.y - entity.startPoint.y,
+  ).toFixed(1);
+}
+
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
   const {
@@ -126,7 +136,7 @@ export function App() {
   }, [selectedEntityId, updateDocument]);
 
   const updateSelectedEntity = useCallback(
-    (patch: Partial<CadEntity>) => {
+    (patch: CadEntityPatch) => {
       if (!selectedEntityId) return;
       updateDocument((current) => ({
         ...current,
@@ -407,6 +417,55 @@ export function App() {
                     </select>
                   </dd>
                 </div>
+                {selectedEntity.type === 'dimension' ? (
+                  <>
+                    <div>
+                      <dt>치수 라벨</dt>
+                      <dd className="property-control">
+                        <input
+                          type="text"
+                          value={selectedEntity.label}
+                          onChange={(event) =>
+                            updateSelectedEntity({
+                              label: event.target.value,
+                              labelMode: 'manual',
+                            })
+                          }
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>오프셋</dt>
+                      <dd className="property-control">
+                        <input
+                          type="number"
+                          value={selectedEntity.labelOffset ?? -24}
+                          onChange={(event) =>
+                            updateSelectedEntity({
+                              labelOffset: Number(event.target.value) || 0,
+                            })
+                          }
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>라벨 모드</dt>
+                      <dd className="property-control">
+                        <button
+                          className={`mini-button ${selectedEntity.labelMode !== 'manual' ? 'active' : ''}`}
+                          onClick={() =>
+                            updateSelectedEntity({
+                              label: formatDimensionLabel(selectedEntity),
+                              labelMode: 'auto',
+                            })
+                          }
+                        >
+                          자동 라벨
+                        </button>
+                      </dd>
+                    </div>
+                  </>
+                ) : null}
               </dl>
             ) : (
               <p className="empty-state">선택된 객체가 없습니다.</p>

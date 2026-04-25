@@ -24,6 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Snap support added: toolbar toggle, grid snap, endpoint snap, center snap, and visible snap marker during drawing/resizing.
 - Intersection snap added for line, rectangle, polyline, and dimension segments.
 - Dimension tool added: users can drag dimension lines, see automatic length labels, resize endpoints, and export dimensions to SVG/DXF as line + text.
+- Dimension editing improved: labels can be manually edited or reset to automatic distance labels, and dimensions now render/export with offset extension lines.
 
 ## Decisions
 
@@ -34,4 +35,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add dimension offset/label editing.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add richer CAD annotation/edit tools.
