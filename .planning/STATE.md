@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+last_updated: "2026-04-25T16:22:20.966Z"
+progress:
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+---
+
 # State: Web CAD
 
 ## Project Reference
@@ -40,6 +53,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Workspace UX started: app now has a start page with new drawing/file open/recent open actions, recent document persistence, and multi-document tabs with tab switching/closing.
 - Workspace tab history improved: each tab now preserves its own selection, viewport, and undo/redo history.
 - Phase 7 context captured: cross-tab copy/paste, right-click context menu, standard clipboard shortcuts, and reference-point copy/paste decisions are ready for planning.
+- Phase 7 UI-SPEC approved: context menu layout, reference-point mode feedback, keyboard input safety, spacing, typography, color, and Korean copy are locked for planning.
 
 ## Decisions
 
@@ -57,4 +71,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Plan Phase 7: break cross-tab reference copy/paste into implementation tasks for clipboard state, context menu UI, keyboard shortcuts, reference point picking, paste translation, and undo/redo coverage.
+Plan Phase 7 using `.planning/phases/07-cross-tab-reference-copy-and-paste/07-CONTEXT.md` and `07-UI-SPEC.md`.
