@@ -304,6 +304,26 @@ button {
   color: #0f766e;
 }
 
+.warning-list {
+  display: grid;
+  gap: 8px;
+}
+
+.warning-item {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid #f5c16c;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #7c2d12;
+  font-size: 12px;
+}
+
+.warning-item strong {
+  color: #9a3412;
+}
+
 .statusbar {
   display: flex;
   align-items: center;

@@ -67,13 +67,18 @@ export function App() {
   }, []);
 
   const saveAs = useCallback(
-    async (type: 'json' | 'svg' | 'dxf') => {
-      const blob = await fileManager.save(document, {
-        fileName: document.name,
-        type,
-      });
-      downloadBlob(blob, `${document.name.replace(/\s+/g, '-')}.${type}`);
-      setFileMessage(`${type.toUpperCase()} 파일을 내보냈습니다.`);
+    async (type: 'json' | 'svg' | 'dxf' | 'dwg') => {
+      try {
+        setFileMessage(`${type.toUpperCase()} 파일을 준비하는 중...`);
+        const blob = await fileManager.save(document, {
+          fileName: document.name,
+          type,
+        });
+        downloadBlob(blob, `${document.name.replace(/\s+/g, '-')}.${type}`);
+        setFileMessage(`${type.toUpperCase()} 파일을 내보냈습니다.`);
+      } catch (error) {
+        setFileMessage(error instanceof Error ? error.message : `${type.toUpperCase()} 내보내기에 실패했습니다.`);
+      }
     },
     [document, downloadBlob],
   );
@@ -230,6 +235,10 @@ export function App() {
           <button className="tool-button wide" title="DXF 내보내기" onClick={() => void saveAs('dxf')}>
             <FileDown size={17} />
             DXF
+          </button>
+          <button className="tool-button wide" title="DWG 내보내기" onClick={() => void saveAs('dwg')}>
+            <FileDown size={17} />
+            DWG
           </button>
         </div>
         <div className="toolbar-group">
@@ -416,6 +425,28 @@ export function App() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="panel-section">
+            <h2>변환 상태</h2>
+            <div className="warning-list">
+              {document.importWarnings?.length ? (
+                document.importWarnings.map((warning, index) => (
+                  <div className="warning-item" key={`${warning.code}-${index}`}>
+                    <strong>{warning.code}</strong>
+                    <span>{warning.message}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="empty-state">변환 경고가 없습니다.</p>
+              )}
+              {document.unsupportedEntities?.length ? (
+                <div className="warning-item">
+                  <strong>미지원 객체</strong>
+                  <span>{document.unsupportedEntities.length}개 객체가 변환되지 않았습니다.</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </aside>
