@@ -359,6 +359,70 @@ button {
   pointer-events: none;
 }
 
+.cad-context-menu {
+  position: fixed;
+  z-index: 5;
+  display: grid;
+  width: 176px;
+  max-width: 220px;
+  padding: 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+}
+
+.cad-context-menu button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cad-context-menu button:hover,
+.cad-context-menu button:focus-visible {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
+  outline: none;
+}
+
+.cad-context-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.cad-context-menu button:disabled:hover,
+.cad-context-menu button:disabled:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: #111827;
+}
+
+.cad-context-menu button.danger:hover,
+.cad-context-menu button.danger:focus-visible {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.cad-context-menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: #d1d5db;
+}
+
 .properties-panel {
   min-width: 0;
   border-left: 1px solid #d1d5db;

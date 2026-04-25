@@ -1,5 +1,8 @@
 import {
+  ClipboardPaste,
   Circle,
+  Copy,
+  Crosshair,
   DraftingCompass,
   FileDown,
   FileText,
@@ -23,6 +26,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
+import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
+import type { CadClipboardPayload } from '../cad/clipboard';
 import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
 import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
@@ -63,6 +68,14 @@ type RecentDocument = {
   lastOpenedAt: string;
 };
 
+type ContextMenuState = {
+  x: number;
+  y: number;
+  worldPoint: CadPoint;
+};
+
+type ReferenceMode = 'copy-base' | 'paste-base' | null;
+
 type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
 type CadEntityPatch = Partial<CadEntity> & Partial<DimensionEntity>;
 
@@ -96,6 +109,9 @@ export function App() {
   const [gridVisible, setGridVisible] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [fileMessage, setFileMessage] = useState('자동 저장 준비됨');
+  const [cadClipboard, setCadClipboard] = useState<CadClipboardPayload | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [referenceMode, setReferenceMode] = useState<ReferenceMode>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedEntity = useMemo(
     () =>
@@ -288,6 +304,119 @@ export function App() {
     });
   }, [createTab]);
 
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const copySelectedEntities = useCallback(() => {
+    const selectedEntities = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
+    if (!selectedEntities.length) {
+      setFileMessage('복사할 객체를 선택하세요.');
+      return;
+    }
+
+    setCadClipboard(createClipboardPayload(selectedEntities));
+    closeContextMenu();
+    setFileMessage('선택 객체를 복사했습니다.');
+  }, [closeContextMenu, document.entities, selectedEntityIds]);
+
+  const pasteEntities = useCallback(() => {
+    if (!cadClipboard) {
+      setFileMessage('복사된 객체가 없습니다.');
+      return;
+    }
+
+    const pasted = pasteClipboardPayload(cadClipboard, {
+      destinationDocument: document,
+      fallbackOffset: { x: 20, y: 20 },
+    });
+    updateDocument((current) => ({
+      ...current,
+      entities: [...current.entities, ...pasted.entities],
+    }));
+    setSelectedEntityIds(pasted.entityIds);
+    closeContextMenu();
+    setFileMessage('객체를 붙여넣었습니다.');
+  }, [cadClipboard, closeContextMenu, document, updateDocument]);
+
+  const startReferenceCopy = useCallback(() => {
+    if (!selectedEntityIds.length) {
+      setFileMessage('복사할 객체를 선택하세요.');
+      return;
+    }
+
+    closeContextMenu();
+    setReferenceMode('copy-base');
+    setFileMessage('참조 복사 기준점을 선택하세요');
+  }, [closeContextMenu, selectedEntityIds.length]);
+
+  const startReferencePaste = useCallback(() => {
+    if (!cadClipboard) {
+      setFileMessage('복사된 객체가 없습니다.');
+      return;
+    }
+
+    closeContextMenu();
+    setReferenceMode('paste-base');
+    setFileMessage('참조 붙여넣기 위치를 선택하세요');
+  }, [cadClipboard, closeContextMenu]);
+
+  const handleReferencePointPick = useCallback(
+    (point: CadPoint) => {
+      if (referenceMode === 'copy-base') {
+        const selectedEntities = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
+        if (!selectedEntities.length) {
+          setReferenceMode(null);
+          setFileMessage('복사할 객체를 선택하세요.');
+          return;
+        }
+
+        setCadClipboard(createClipboardPayload(selectedEntities, point));
+        setReferenceMode(null);
+        setFileMessage('참조 기준점과 함께 복사했습니다.');
+        return;
+      }
+
+      if (referenceMode === 'paste-base') {
+        if (!cadClipboard) {
+          setReferenceMode(null);
+          setFileMessage('복사된 객체가 없습니다.');
+          return;
+        }
+
+        const pasted = pasteClipboardPayload(cadClipboard, {
+          destinationDocument: document,
+          destinationBasePoint: point,
+        });
+        updateDocument((current) => ({
+          ...current,
+          entities: [...current.entities, ...pasted.entities],
+        }));
+        setSelectedEntityIds(pasted.entityIds);
+        setReferenceMode(null);
+        setFileMessage('참조 위치에 붙여넣었습니다.');
+      }
+    },
+    [cadClipboard, document, referenceMode, selectedEntityIds, updateDocument],
+  );
+
+  const openCanvasContextMenu = useCallback(
+    (payload: { screenPoint: CadPoint; worldPoint: CadPoint; entityId: string | null }) => {
+      if (!activeTabId) return;
+      if (payload.entityId && !selectedEntityIds.includes(payload.entityId)) {
+        setSelectedEntityIds([payload.entityId]);
+      }
+      if (!payload.entityId && !selectedEntityIds.length && !cadClipboard) return;
+
+      setContextMenu({
+        x: Math.min(payload.screenPoint.x, window.innerWidth - 220),
+        y: Math.min(payload.screenPoint.y, window.innerHeight - 180),
+        worldPoint: payload.worldPoint,
+      });
+    },
+    [activeTabId, cadClipboard, selectedEntityIds],
+  );
+
   const deleteSelectedEntity = useCallback(() => {
     if (!selectedEntityIds.length) return;
     updateDocument((current) => ({
@@ -295,7 +424,8 @@ export function App() {
       entities: current.entities.filter((entity) => !selectedEntityIds.includes(entity.id)),
     }));
     setSelectedEntityIds([]);
-  }, [selectedEntityIds, updateDocument]);
+    closeContextMenu();
+  }, [closeContextMenu, selectedEntityIds, updateDocument]);
 
   const updateSelectedEntity = useCallback(
     (patch: CadEntityPatch) => {
@@ -354,11 +484,49 @@ export function App() {
   }, [activeTabId, document]);
 
   useEffect(() => {
+    setContextMenu(null);
+    setReferenceMode(null);
+  }, [activeTabId]);
+
+  useEffect(() => {
+    setContextMenu(null);
+    setReferenceMode(null);
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.cad-context-menu')) return;
+      setContextMenu(null);
+    };
+
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => window.removeEventListener('pointerdown', onPointerDown);
+  }, [contextMenu]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isEditingText =
         target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if (isEditingText) return;
+
+      if (event.key === 'Escape') {
+        if (referenceMode) {
+          event.preventDefault();
+          setReferenceMode(null);
+          setContextMenu(null);
+          setFileMessage('참조 작업을 취소했습니다.');
+          return;
+        }
+        if (contextMenu) {
+          event.preventDefault();
+          setContextMenu(null);
+          return;
+        }
+      }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && event.shiftKey) {
         event.preventDefault();
@@ -378,6 +546,18 @@ export function App() {
         return;
       }
 
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
+        event.preventDefault();
+        copySelectedEntities();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        pasteEntities();
+        return;
+      }
+
       if (event.key === 'Delete' || event.key === 'Backspace') {
         deleteSelectedEntity();
       }
@@ -385,7 +565,7 @@ export function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [deleteSelectedEntity, redo, undo]);
+  }, [contextMenu, copySelectedEntities, deleteSelectedEntity, pasteEntities, redo, referenceMode, undo]);
 
   return (
     <main className="app-shell">
@@ -574,7 +754,70 @@ export function App() {
           onDocumentBatchCommit={commitHistoryBatch}
           onSelectedEntityChange={setSelectedEntityIds}
           onReady={setCanvasApi}
+          referencePickMode={referenceMode !== null}
+          onReferencePointPick={handleReferencePointPick}
+          onCanvasContextMenu={openCanvasContextMenu}
         />
+
+        {contextMenu ? (
+          <div
+            className="cad-context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            role="menu"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!selectedEntityIds.length}
+              onClick={copySelectedEntities}
+            >
+              <Copy size={16} />
+              <span>복사</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!selectedEntityIds.length}
+              onClick={startReferenceCopy}
+            >
+              <Crosshair size={16} />
+              <span>참조 복사</span>
+            </button>
+            <div className="cad-context-menu-divider" />
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!cadClipboard}
+              onClick={pasteEntities}
+            >
+              <ClipboardPaste size={16} />
+              <span>붙여넣기</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!cadClipboard}
+              onClick={startReferencePaste}
+            >
+              <Crosshair size={16} />
+              <span>참조 붙여넣기</span>
+            </button>
+            {selectedEntityIds.length ? (
+              <>
+                <div className="cad-context-menu-divider" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="danger"
+                  onClick={deleteSelectedEntity}
+                >
+                  <Trash2 size={16} />
+                  <span>삭제</span>
+                </button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
 
         <aside className="properties-panel">
           <div className="panel-section">

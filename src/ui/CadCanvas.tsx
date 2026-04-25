@@ -35,6 +35,13 @@ type CadCanvasProps = {
   onDocumentBatchCommit: () => void;
   onSelectedEntityChange: (entityIds: string[]) => void;
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
+  referencePickMode?: boolean;
+  onReferencePointPick?: (point: CadPoint) => void;
+  onCanvasContextMenu?: (payload: {
+    screenPoint: CadPoint;
+    worldPoint: CadPoint;
+    entityId: string | null;
+  }) => void;
 };
 
 type TextDraft = {
@@ -58,6 +65,9 @@ export function CadCanvas({
   onDocumentBatchCommit,
   onSelectedEntityChange,
   onReady,
+  referencePickMode = false,
+  onReferencePointPick,
+  onCanvasContextMenu,
 }: CadCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const draftEntityRef = useRef<CadEntity | null>(null);
@@ -282,6 +292,16 @@ export function CadCanvas({
           const snap = resolveWorldPoint(rawWorldPoint, selectedEntityId);
           const worldPoint = snap.point;
           setSnapMarker(snap.type === 'none' ? null : snap);
+
+          if (referencePickMode) {
+            updateDraftEntity(null);
+            setDragStart(null);
+            setDrawingStart(null);
+            setLastWorldPoint(worldPoint);
+            onReferencePointPick?.(worldPoint);
+            return;
+          }
+
           setDragStart(localPoint);
           setDrawingStart(worldPoint);
           setLastWorldPoint(worldPoint);
@@ -476,6 +496,18 @@ export function CadCanvas({
             }));
             onSelectedEntityChange([entity.id]);
           }
+        }}
+        onContextMenu={(event) => {
+          if (textDraftRef.current) return;
+          event.preventDefault();
+          const localPoint = getLocalPoint(event);
+          const worldPoint = screenToWorld(localPoint, viewport);
+          const entityId = findEntityAt(worldPoint);
+          onCanvasContextMenu?.({
+            screenPoint: { x: event.clientX, y: event.clientY },
+            worldPoint,
+            entityId,
+          });
         }}
       />
       {selectionBox ? <div className="selection-box" style={selectionBoxStyle(selectionBox)} /> : null}
