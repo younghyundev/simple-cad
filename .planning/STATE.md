@@ -29,6 +29,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - DXF line style fidelity improved: import maps line type code 6 and lineweight code 370 into stroke style/width, and export writes LTYPE, line type, and lineweight data.
 - DXF text coverage improved: MTEXT import is supported, multiline text renders/selects correctly, and multiline text exports as MTEXT while SVG uses tspans.
 - DXF entity coverage improved: ELLIPSE and SPLINE import are preserved as editable polyline approximations with conversion warnings.
+- DXF block/reference coverage improved: BLOCK definitions are parsed and INSERT references are exploded into editable entities with insertion transform support.
 
 ## Decisions
 
@@ -39,4 +40,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF block/reference coverage, and add richer CAD annotation/edit tools.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF dimension/native annotation coverage, and add richer CAD annotation/edit tools.
