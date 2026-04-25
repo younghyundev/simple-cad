@@ -2,10 +2,20 @@ import type { CadDocument, CadEntity, CadPoint } from './types';
 
 export type SnapResult = {
   point: CadPoint;
-  type: 'grid' | 'endpoint' | 'center' | 'none';
+  type: 'grid' | 'endpoint' | 'center' | 'intersection' | 'none';
 };
 
 const gridSize = 20;
+type SnapCandidate = {
+  point: CadPoint;
+  type: 'endpoint' | 'center' | 'intersection';
+};
+
+type Segment = {
+  entityId: string;
+  start: CadPoint;
+  end: CadPoint;
+};
 
 export function snapPoint(
   point: CadPoint,
@@ -42,13 +52,16 @@ export function snapPoint(
 function getSnapCandidates(
   document: CadDocument,
   excludeEntityId?: string | null,
-): Array<{ point: CadPoint; type: 'endpoint' | 'center' }> {
-  return document.entities
+): SnapCandidate[] {
+  const entities = document.entities
     .filter((entity) => entity.visible && entity.id !== excludeEntityId)
-    .flatMap((entity) => entitySnapCandidates(entity));
+  const pointCandidates = entities.flatMap((entity) => entitySnapCandidates(entity));
+  const intersectionCandidates = getIntersectionCandidates(entities);
+
+  return [...pointCandidates, ...intersectionCandidates];
 }
 
-function entitySnapCandidates(entity: CadEntity): Array<{ point: CadPoint; type: 'endpoint' | 'center' }> {
+function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
   if (entity.type === 'line') {
     return [
       { point: { x: entity.x1, y: entity.y1 }, type: 'endpoint' },
@@ -96,6 +109,107 @@ function entitySnapCandidates(entity: CadEntity): Array<{ point: CadPoint; type:
       type: 'center',
     },
   ];
+}
+
+function getIntersectionCandidates(entities: CadEntity[]): SnapCandidate[] {
+  const segments = entities.flatMap((entity) => entitySegments(entity));
+  const intersections: SnapCandidate[] = [];
+
+  for (let firstIndex = 0; firstIndex < segments.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < segments.length; secondIndex += 1) {
+      const first = segments[firstIndex];
+      const second = segments[secondIndex];
+      if (first.entityId === second.entityId) continue;
+
+      const point = segmentIntersection(first.start, first.end, second.start, second.end);
+      if (point) intersections.push({ point, type: 'intersection' });
+    }
+  }
+
+  return intersections;
+}
+
+function entitySegments(entity: CadEntity): Segment[] {
+  if (entity.type === 'line') {
+    return [
+      {
+        entityId: entity.id,
+        start: { x: entity.x1, y: entity.y1 },
+        end: { x: entity.x2, y: entity.y2 },
+      },
+    ];
+  }
+
+  if (entity.type === 'rect') {
+    const topLeft = { x: entity.x, y: entity.y };
+    const topRight = { x: entity.x + entity.width, y: entity.y };
+    const bottomRight = { x: entity.x + entity.width, y: entity.y + entity.height };
+    const bottomLeft = { x: entity.x, y: entity.y + entity.height };
+    return [
+      { entityId: entity.id, start: topLeft, end: topRight },
+      { entityId: entity.id, start: topRight, end: bottomRight },
+      { entityId: entity.id, start: bottomRight, end: bottomLeft },
+      { entityId: entity.id, start: bottomLeft, end: topLeft },
+    ];
+  }
+
+  if (entity.type === 'polyline') {
+    const segments: Segment[] = [];
+    for (let index = 0; index < entity.points.length - 1; index += 1) {
+      segments.push({
+        entityId: entity.id,
+        start: entity.points[index],
+        end: entity.points[index + 1],
+      });
+    }
+    return segments;
+  }
+
+  if (entity.type === 'dimension') {
+    return [{ entityId: entity.id, start: entity.startPoint, end: entity.endPoint }];
+  }
+
+  return [];
+}
+
+function segmentIntersection(
+  firstStart: CadPoint,
+  firstEnd: CadPoint,
+  secondStart: CadPoint,
+  secondEnd: CadPoint,
+): CadPoint | null {
+  const denominator =
+    (firstStart.x - firstEnd.x) * (secondStart.y - secondEnd.y) -
+    (firstStart.y - firstEnd.y) * (secondStart.x - secondEnd.x);
+
+  if (Math.abs(denominator) < 0.000001) return null;
+
+  const firstCross = firstStart.x * firstEnd.y - firstStart.y * firstEnd.x;
+  const secondCross = secondStart.x * secondEnd.y - secondStart.y * secondEnd.x;
+  const point = {
+    x:
+      (firstCross * (secondStart.x - secondEnd.x) -
+        (firstStart.x - firstEnd.x) * secondCross) /
+      denominator,
+    y:
+      (firstCross * (secondStart.y - secondEnd.y) -
+        (firstStart.y - firstEnd.y) * secondCross) /
+      denominator,
+  };
+
+  return isPointOnSegment(point, firstStart, firstEnd) && isPointOnSegment(point, secondStart, secondEnd)
+    ? point
+    : null;
+}
+
+function isPointOnSegment(point: CadPoint, start: CadPoint, end: CadPoint): boolean {
+  const tolerance = 0.000001;
+  return (
+    point.x >= Math.min(start.x, end.x) - tolerance &&
+    point.x <= Math.max(start.x, end.x) + tolerance &&
+    point.y >= Math.min(start.y, end.y) - tolerance &&
+    point.y <= Math.max(start.y, end.y) + tolerance
+  );
 }
 
 function distance(a: CadPoint, b: CadPoint): number {

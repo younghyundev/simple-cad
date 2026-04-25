@@ -190,6 +190,14 @@ button {
   border-color: #dc2626;
 }
 
+.snap-marker.intersection {
+  width: 14px;
+  height: 14px;
+  border-color: #ea580c;
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
 .properties-panel {
   min-width: 0;
   border-left: 1px solid #d1d5db;
