@@ -21,6 +21,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Resize handles added for lines, rectangles, and circles; resize operations batch into a single undo step.
 - Polyline point handles added, and ARC is now represented in the internal model with SVG/DXF render/import/export support.
 - Polyline editing improved: double-click a polyline segment to insert a point, select a point handle and press Delete/Backspace to remove it.
+- Snap support added: toolbar toggle, grid snap, endpoint snap, center snap, and visible snap marker during drawing/resizing.
 
 ## Decisions
 
@@ -31,4 +32,4 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add snap-to-grid/endpoint behavior.
+Continue hardening: replace mock CAD API with a real conversion backend, improve DXF layer/color fidelity, and add object intersection snap.

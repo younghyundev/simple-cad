@@ -167,6 +167,29 @@ button {
   transform: translateY(-24px);
 }
 
+.snap-marker {
+  position: absolute;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #dc2626;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.snap-marker.grid {
+  border-color: #7c3aed;
+}
+
+.snap-marker.center {
+  border-color: #0f766e;
+}
+
+.snap-marker.endpoint {
+  border-color: #dc2626;
+}
+
 .properties-panel {
   min-width: 0;
   border-left: 1px solid #d1d5db;

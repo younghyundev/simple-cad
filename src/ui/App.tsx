@@ -4,6 +4,7 @@ import {
   FileUp,
   Grid3X3,
   Hand,
+  Magnet,
   MousePointer2,
   Move,
   Redo2,
@@ -54,6 +55,7 @@ export function App() {
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>('rect-1');
   const [gridVisible, setGridVisible] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
   const [fileMessage, setFileMessage] = useState('자동 저장 준비됨');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedEntity = useMemo(
@@ -290,6 +292,13 @@ export function App() {
           >
             <Grid3X3 size={17} />
           </button>
+          <button
+            className={`tool-button icon ${snapEnabled ? 'active' : ''}`}
+            title="스냅"
+            onClick={() => setSnapEnabled((value) => !value)}
+          >
+            <Magnet size={17} />
+          </button>
         </div>
       </header>
 
@@ -317,6 +326,7 @@ export function App() {
           viewport={viewport}
           selectedEntityId={selectedEntityId}
           gridVisible={gridVisible}
+          snapEnabled={snapEnabled}
           onViewportChange={setViewport}
           onCursorChange={setCursor}
           onDocumentChange={updateDocument}

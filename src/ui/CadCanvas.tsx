@@ -13,6 +13,7 @@ import {
   translateEntity,
 } from '../cad/entityGeometry';
 import { renderDocument } from '../cad/render';
+import { snapPoint, type SnapResult } from '../cad/snap';
 import type { CadDocument, CadEntity, CadPoint, ToolId, Viewport } from '../cad/types';
 import { clampScale, screenToWorld, worldToScreen, zoomAt } from '../cad/viewport';
 
@@ -22,6 +23,7 @@ type CadCanvasProps = {
   viewport: Viewport;
   selectedEntityId: string | null;
   gridVisible: boolean;
+  snapEnabled: boolean;
   onViewportChange: (viewport: Viewport) => void;
   onCursorChange: (point: CadPoint) => void;
   onDocumentChange: (
@@ -47,6 +49,7 @@ export function CadCanvas({
   viewport,
   selectedEntityId,
   gridVisible,
+  snapEnabled,
   onViewportChange,
   onCursorChange,
   onDocumentChange,
@@ -68,6 +71,7 @@ export function CadCanvas({
   const [lastWorldPoint, setLastWorldPoint] = useState<CadPoint | null>(null);
   const [draftEntity, setDraftEntity] = useState<CadEntity | null>(null);
   const [textDraft, setTextDraftState] = useState<TextDraft | null>(null);
+  const [snapMarker, setSnapMarker] = useState<SnapResult | null>(null);
   const [selectedPolylinePoint, setSelectedPolylinePoint] = useState<{
     entityId: string;
     pointIndex: number;
@@ -132,6 +136,14 @@ export function CadCanvas({
     }
 
     return null;
+  };
+
+  const resolveWorldPoint = (point: CadPoint, excludeEntityId?: string | null): SnapResult => {
+    return snapPoint(point, document, {
+      enabled: snapEnabled,
+      scale: viewport.scale,
+      excludeEntityId,
+    });
   };
 
   const selectedEntity = selectedEntityId
@@ -245,7 +257,10 @@ export function CadCanvas({
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
           const localPoint = getLocalPoint(event);
-          const worldPoint = screenToWorld(localPoint, viewport);
+          const rawWorldPoint = screenToWorld(localPoint, viewport);
+          const snap = resolveWorldPoint(rawWorldPoint, selectedEntityId);
+          const worldPoint = snap.point;
+          setSnapMarker(snap.type === 'none' ? null : snap);
           setDragStart(localPoint);
           setDrawingStart(worldPoint);
           setLastWorldPoint(worldPoint);
@@ -309,7 +324,10 @@ export function CadCanvas({
         }}
         onPointerMove={(event) => {
           const localPoint = getLocalPoint(event);
-          const worldPoint = screenToWorld(localPoint, viewport);
+          const rawWorldPoint = screenToWorld(localPoint, viewport);
+          const snap = resolveWorldPoint(rawWorldPoint, selectedEntityId);
+          const worldPoint = snap.point;
+          setSnapMarker(snap.type === 'none' ? null : snap);
           onCursorChange(worldPoint);
 
           if (!dragStart) return;
@@ -339,9 +357,11 @@ export function CadCanvas({
               return;
             }
 
+            const unsnappedWorldPoint = screenToWorld(localPoint, viewport);
+            const unsnappedLastPoint = lastWorldPoint;
             const delta = {
-              x: worldPoint.x - lastWorldPoint.x,
-              y: worldPoint.y - lastWorldPoint.y,
+              x: unsnappedWorldPoint.x - unsnappedLastPoint.x,
+              y: unsnappedWorldPoint.y - unsnappedLastPoint.y,
             };
             if (Math.abs(delta.x) > 0 || Math.abs(delta.y) > 0) {
               movedEntityRef.current = true;
@@ -352,6 +372,9 @@ export function CadCanvas({
                 entity.id === selectedEntityId ? translateEntity(entity, delta) : entity,
               ),
             }), { trackHistory: false });
+            setDragStart(localPoint);
+            setLastWorldPoint(unsnappedWorldPoint);
+            return;
           }
 
           if (
@@ -381,6 +404,7 @@ export function CadCanvas({
           setDragStart(null);
           setDrawingStart(null);
           setLastWorldPoint(null);
+          setSnapMarker(null);
           if (movingEntityRef.current) {
             movingEntityRef.current = false;
             if (movedEntityRef.current) onDocumentBatchCommit();
@@ -395,6 +419,8 @@ export function CadCanvas({
         }}
         onDoubleClick={(event) => {
           const worldPoint = screenToWorld(getLocalPoint(event), viewport);
+          const snap = resolveWorldPoint(worldPoint, selectedEntityId);
+          const snapWorldPoint = snap.point;
           const entityId = findEntityAt(worldPoint);
           const entity = document.entities.find((item) => item.id === entityId);
           if (entity?.type === 'text') openTextEditor(entity);
@@ -402,13 +428,22 @@ export function CadCanvas({
             onDocumentChange((current) => ({
               ...current,
               entities: current.entities.map((item) =>
-                item.id === entity.id ? insertPolylinePoint(item, worldPoint) : item,
+                item.id === entity.id ? insertPolylinePoint(item, snapWorldPoint) : item,
               ),
             }));
             onSelectedEntityChange(entity.id);
           }
         }}
       />
+      {snapMarker ? (
+        <div
+          className={`snap-marker ${snapMarker.type}`}
+          style={{
+            left: worldToScreen(snapMarker.point, viewport).x,
+            top: worldToScreen(snapMarker.point, viewport).y,
+          }}
+        />
+      ) : null}
       {textDraft ? (
         <input
           className="canvas-text-input"
