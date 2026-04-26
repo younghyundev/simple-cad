@@ -143,13 +143,13 @@ SimpleCAD 내부 도면 모델을 그대로 저장하고 다시 불러오는 기
 - LWPOLYLINE / POLYLINE
 - CIRCLE
 - ARC
-- TEXT / MTEXT
-- DIMENSION
+- TEXT / MTEXT 줄바꿈, 회전, 정렬, 높이 보존
+- DIMENSION 표시와 측정값/기준점 warning detail 보존
 - ELLIPSE와 지원 가능한 SPLINE의 편집 가능한 native 보존
 - HATCH 경계와 채움 정보의 가능한 범위 보존
 - LEADER / MLEADER 표시 선의 폴리라인 fallback
-- ATTRIB / ATTDEF 텍스트의 편집 가능한 텍스트 fallback
-- BLOCK / INSERT의 폭발 처리와 블록명, 중첩 깊이, 속성 개수 warning detail
+- ATTRIB / ATTDEF 텍스트의 편집 가능한 텍스트 fallback과 key/value warning detail
+- BLOCK / INSERT의 폭발 처리와 블록명, 중첩 깊이, scale/rotation, 속성 개수 warning detail
 - 레이어 이름/색상/표시/잠금, 선 스타일, 선 두께 일부 보존
 - 단위, 도면 범위, model/paper space 일부 메타데이터 추적
 

@@ -29,11 +29,13 @@
 3. 지원하지 못한 linetype/lineweight는 warning detail로 분류된다.
 4. 기존 CAD fidelity regression이 유지된다.
 
-### Phase 21 — Annotation and Block Fallbacks
+### Phase 21 — Annotation and Block Fallbacks ✅
 
 **Goal:** TEXT/MTEXT, DIMENSION, BLOCK/INSERT/ATTRIB fallback 정보를 더 읽기 쉬운 editable 객체와 warning detail로 보존한다.
 
 **Requirements:** COMPAT-04, COMPAT-05, COMPAT-06
+
+**Status:** Complete — see [Phase 21 summary](phases/21-annotation-and-block-fallbacks/21-SUMMARY.md).
 
 **Success criteria:**
 

@@ -174,6 +174,7 @@ function drawEntity(
     const lineHeight = fontSize * 1.25;
     context.fillStyle = entity.fillColor;
     context.font = `${fontSize}px Inter, system-ui, sans-serif`;
+    context.textAlign = entity.textAlign ?? 'left';
     if (entity.rotation) {
       context.save();
       context.translate(point.x, point.y);

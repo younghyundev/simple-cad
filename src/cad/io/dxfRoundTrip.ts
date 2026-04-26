@@ -88,7 +88,7 @@ export function summarizeCadDocument(document: CadDocument): DxfRoundTripSummary
     ),
     textContents: flattenEntities(document.entities)
       .filter((entity): entity is Extract<CadEntity, { type: 'text' }> => entity.type === 'text')
-      .map((entity) => entity.content)
+      .map((entity) => [entity.content, entity.rotation || 0, entity.textAlign ?? 'left'].join('|'))
       .sort(),
     dimensionLabels: flattenEntities(document.entities)
       .filter(

@@ -30,6 +30,31 @@ async function main(): Promise<void> {
   assert(exportedLayerStyle.includes('DASHED'), 'DXF export should include imported layer linetype.');
   assert(exportedLayerStyle.includes('211'), 'DXF export should include imported layer lineweight.');
 
+  const annotationDocument = await importer.fromDxf(annotationBlockDxfFixture());
+  const rotatedText = annotationDocument.entities.find(
+    (entity) => entity.type === 'text' && entity.content.includes('Rotated'),
+  );
+  assert(rotatedText?.type === 'text' && rotatedText.rotation === 30, 'TEXT rotation should be preserved.');
+  assert(rotatedText?.type === 'text' && rotatedText.textAlign === 'center', 'TEXT alignment should be preserved.');
+  assert(
+    (annotationDocument.importWarnings ?? []).some((warning) =>
+      warning.code === 'DXF_TEXT_PRESERVED' && warning.details?.rotation === 30,
+    ),
+    'TEXT preserved warning should include rotation detail.',
+  );
+  assert(
+    (annotationDocument.importWarnings ?? []).some((warning) =>
+      warning.code === 'DXF_DIMENSION_IMPORTED' && warning.details?.measuredValue,
+    ),
+    'DIMENSION warning should include measured value detail.',
+  );
+  assert(
+    (annotationDocument.importWarnings ?? []).some((warning) =>
+      warning.code === 'DXF_INSERT_EXPLODED' && warning.details?.scaleX === 2 && warning.details?.rotationDegrees === 45,
+    ),
+    'INSERT warning should include transform details.',
+  );
+
   const roundTrip = await runDxfRoundTrip(splineDxfFixture());
   assert(
     (roundTrip.firstImport.importWarnings ?? []).some((warning) => warning.code === 'DXF_SPLINE_PRESERVED'),
@@ -103,6 +128,71 @@ async function main(): Promise<void> {
   console.log(`preserved spline warnings: ${roundTrip.firstImport.importWarnings?.length ?? 0}`);
   console.log('mock DWG import/export mode: passed');
   console.log('async job import/export: passed');
+}
+
+function annotationBlockDxfFixture(): string {
+  return [
+    '0', 'SECTION',
+    '2', 'BLOCKS',
+    '0', 'BLOCK',
+    '2', 'NOTE_BLOCK',
+    '10', '0',
+    '20', '0',
+    '0', 'TEXT',
+    '8', '0',
+    '10', '0',
+    '20', '0',
+    '40', '10',
+    '50', '15',
+    '72', '2',
+    '1', 'Block Text',
+    '0', 'ATTDEF',
+    '8', '0',
+    '10', '10',
+    '20', '0',
+    '40', '8',
+    '2', 'TAG',
+    '3', 'Prompt',
+    '1', 'Value',
+    '0', 'ENDBLK',
+    '0', 'ENDSEC',
+    '0', 'SECTION',
+    '2', 'ENTITIES',
+    '0', 'TEXT',
+    '8', '0',
+    '10', '0',
+    '20', '0',
+    '40', '12',
+    '50', '30',
+    '72', '1',
+    '1', 'Rotated',
+    '0', 'MTEXT',
+    '8', '0',
+    '10', '0',
+    '20', '20',
+    '40', '10',
+    '50', '10',
+    '71', '3',
+    '1', 'A\\PNote',
+    '0', 'DIMENSION',
+    '8', '0',
+    '13', '0',
+    '23', '0',
+    '14', '30',
+    '24', '0',
+    '1', '30',
+    '70', '0',
+    '0', 'INSERT',
+    '8', '0',
+    '2', 'NOTE_BLOCK',
+    '10', '100',
+    '20', '100',
+    '41', '2',
+    '42', '2',
+    '50', '45',
+    '0', 'ENDSEC',
+    '0', 'EOF',
+  ].join('\n');
 }
 
 function layerStyleDxfFixture(): string {

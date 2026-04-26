@@ -332,6 +332,8 @@ function entityToDxf(entity: CadEntity): string[] {
         `${-entity.y}`,
         '40',
         `${entity.fontSize}`,
+        ...(entity.rotation ? ['50', `${entity.rotation}`] : []),
+        ...(entity.textAlign ? ['71', `${textAlignToMTextAttachment(entity.textAlign)}`] : []),
         '1',
         encodeDxfText(entity.content),
       ];
@@ -347,6 +349,8 @@ function entityToDxf(entity: CadEntity): string[] {
       `${-entity.y}`,
       '40',
       `${entity.fontSize}`,
+      ...(entity.rotation ? ['50', `${entity.rotation}`] : []),
+      ...(entity.textAlign ? ['72', `${textAlignToDxfHorizontal(entity.textAlign)}`] : []),
       '1',
       encodeDxfText(entity.content),
     ];
@@ -537,6 +541,18 @@ function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>)
       y: (dimensionStart.y + dimensionEnd.y) / 2,
     },
   };
+}
+
+function textAlignToDxfHorizontal(value: 'left' | 'center' | 'right'): number {
+  if (value === 'center') return 1;
+  if (value === 'right') return 2;
+  return 0;
+}
+
+function textAlignToMTextAttachment(value: 'left' | 'center' | 'right'): number {
+  if (value === 'center') return 2;
+  if (value === 'right') return 3;
+  return 1;
 }
 
 function entityBoundsPoints(entity: CadEntity) {

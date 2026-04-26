@@ -12,9 +12,9 @@
 
 ## Annotation and Block Fallbacks
 
-- [ ] **COMPAT-04**: TEXT/MTEXT의 줄바꿈, 회전, 정렬, 높이 정보를 가능한 범위에서 editable text 객체로 보존한다.
-- [ ] **COMPAT-05**: DIMENSION 계열 중 직접 편집 가능한 형태로 변환하지 못한 정보는 측정값, 기준점, raw type을 warning detail로 보존한다.
-- [ ] **COMPAT-06**: BLOCK/INSERT/ATTRIB 계열은 중첩, scale, rotation, attribute key/value를 더 일관된 fallback 또는 warning detail로 보존한다.
+- [x] **COMPAT-04**: TEXT/MTEXT의 줄바꿈, 회전, 정렬, 높이 정보를 가능한 범위에서 editable text 객체로 보존한다.
+- [x] **COMPAT-05**: DIMENSION 계열 중 직접 편집 가능한 형태로 변환하지 못한 정보는 측정값, 기준점, raw type을 warning detail로 보존한다.
+- [x] **COMPAT-06**: BLOCK/INSERT/ATTRIB 계열은 중첩, scale, rotation, attribute key/value를 더 일관된 fallback 또는 warning detail로 보존한다.
 
 ## Layout and External Reference Classification
 
@@ -46,9 +46,9 @@
 | COMPAT-01 | Phase 20 | Complete |
 | COMPAT-02 | Phase 20 | Complete |
 | COMPAT-03 | Phase 20 | Complete |
-| COMPAT-04 | Phase 21 | Planned |
-| COMPAT-05 | Phase 21 | Planned |
-| COMPAT-06 | Phase 21 | Planned |
+| COMPAT-04 | Phase 21 | Complete |
+| COMPAT-05 | Phase 21 | Complete |
+| COMPAT-06 | Phase 21 | Complete |
 | COMPAT-07 | Phase 22 | Planned |
 | COMPAT-08 | Phase 22 | Planned |
 | COMPAT-09 | Phase 23 | Planned |

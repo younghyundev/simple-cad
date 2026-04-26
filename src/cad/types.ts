@@ -101,6 +101,7 @@ export type TextEntity = CadEntityBase & {
   y: number;
   content: string;
   fontSize: number;
+  textAlign?: 'left' | 'center' | 'right';
 };
 
 export type DimensionEntity = CadEntityBase & {

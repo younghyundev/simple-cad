@@ -404,6 +404,46 @@ function numberFor(pairs: DxfPair[], code: string): number {
   return Number(valueFor(pairs, code) ?? 0);
 }
 
+function textAlignFromDxf(value: string | undefined): 'left' | 'center' | 'right' {
+  if (value === '1' || value === '4') return 'center';
+  if (value === '2' || value === '3' || value === '5') return 'right';
+  return 'left';
+}
+
+function mTextAlignFromDxf(value: string | undefined): 'left' | 'center' | 'right' {
+  if (value === '2' || value === '5' || value === '8') return 'center';
+  if (value === '3' || value === '6' || value === '9') return 'right';
+  return 'left';
+}
+
+function textAlignToDxfDetail(value: string | undefined): string {
+  if (!value) return 'left';
+  return value;
+}
+
+function textPreservedWarning(
+  sourceType: 'TEXT' | 'MTEXT',
+  entityId: string,
+  content: string,
+  chunk: DxfPair[],
+): CadWarning {
+  return {
+    code: sourceType === 'TEXT' ? 'DXF_TEXT_PRESERVED' : 'DXF_MTEXT_PRESERVED',
+    message: `${sourceType} 텍스트를 편집 가능한 텍스트 객체로 가져왔습니다.`,
+    entityId,
+    severity: 'info',
+    category: 'preserved',
+    sourceType,
+    details: {
+      textLength: content.length,
+      lineCount: content.split(/\r\n|\r|\n/).length,
+      rotation: numberFor(chunk, '50'),
+      height: numberFor(chunk, '40') || 16,
+      align: textAlignToDxfDetail(sourceType === 'TEXT' ? textAlignFromDxf(valueFor(chunk, '72')) : mTextAlignFromDxf(valueFor(chunk, '71'))),
+    },
+  };
+}
+
 function dxfPoint(pairs: DxfPair[], xCode: string, yCode: string): CadPoint {
   return { x: numberFor(pairs, xCode), y: -numberFor(pairs, yCode) };
 }
@@ -569,33 +609,39 @@ function importDxfEntity(
       ),
     );
   } else if (entityType === 'TEXT') {
-    result.entities.push(
-      transformEntity(
-        {
-          ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
-          type: 'text',
-          x: numberFor(chunk, '10'),
-          y: -numberFor(chunk, '20'),
-          content: decodeDxfText(valueFor(chunk, '1') || 'TEXT'),
-          fontSize: numberFor(chunk, '40') || 16,
-        },
-        transform,
-      ),
+    const content = decodeDxfText(valueFor(chunk, '1') || 'TEXT');
+    const entity = transformEntity(
+      {
+        ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
+        type: 'text' as const,
+        x: numberFor(chunk, '10'),
+        y: -numberFor(chunk, '20'),
+        rotation: numberFor(chunk, '50'),
+        content,
+        fontSize: numberFor(chunk, '40') || 16,
+        textAlign: textAlignFromDxf(valueFor(chunk, '72')),
+      },
+      transform,
     );
+    result.entities.push(entity);
+    result.importWarnings.push(textPreservedWarning('TEXT', entity.id, content, chunk));
   } else if (entityType === 'MTEXT') {
-    result.entities.push(
-      transformEntity(
-        {
-          ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
-          type: 'text',
-          x: numberFor(chunk, '10'),
-          y: -numberFor(chunk, '20'),
-          content: decodeDxfText([...valuesFor(chunk, '3'), valueFor(chunk, '1') ?? 'MTEXT'].join('')),
-          fontSize: numberFor(chunk, '40') || 16,
-        },
-        transform,
-      ),
+    const content = decodeDxfText([...valuesFor(chunk, '3'), valueFor(chunk, '1') ?? 'MTEXT'].join(''));
+    const entity = transformEntity(
+      {
+        ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
+        type: 'text' as const,
+        x: numberFor(chunk, '10'),
+        y: -numberFor(chunk, '20'),
+        rotation: numberFor(chunk, '50'),
+        content,
+        fontSize: numberFor(chunk, '40') || 16,
+        textAlign: mTextAlignFromDxf(valueFor(chunk, '71')),
+      },
+      transform,
     );
+    result.entities.push(entity);
+    result.importWarnings.push(textPreservedWarning('MTEXT', entity.id, content, chunk));
   } else if (entityType === 'LWPOLYLINE') {
     const polyline = lwPolylinePoints(chunk);
     const entity = transformEntity(
@@ -694,6 +740,15 @@ function importDxfEntity(
       severity: 'info',
       category: 'conversion',
       sourceType: 'DIMENSION',
+      details: {
+        dimensionType: valueFor(chunk, '70') ?? null,
+        label,
+        measuredValue: formatDistance(startPoint, endPoint),
+        startX: startPoint.x,
+        startY: startPoint.y,
+        endX: endPoint.x,
+        endY: endPoint.y,
+      },
     });
   } else if (entityType === 'HATCH') {
     const boundary = hatchBoundaryFromDxf(chunk);
@@ -805,6 +860,10 @@ function importDxfEntity(
         tag: valueFor(chunk, '2') ?? null,
         prompt: valueFor(chunk, '3') ?? null,
         textLength: content.length,
+        rotation: numberFor(chunk, '50'),
+        height: numberFor(chunk, '40') || 16,
+        x: numberFor(chunk, '10'),
+        y: -numberFor(chunk, '20'),
       },
     });
   } else {
@@ -922,6 +981,11 @@ function importInsertEntity(
       entityCount: result.entities.length,
       nestedDepth,
       attributeCount,
+      insertionX: transform.insertionPoint.x,
+      insertionY: transform.insertionPoint.y,
+      scaleX: transform.scaleX,
+      scaleY: transform.scaleY,
+      rotationDegrees: (transform.rotation * 180) / Math.PI,
       unsupportedChildCount: result.unsupportedEntities.length - unsupportedBefore,
     },
   });
@@ -1056,6 +1120,7 @@ function transformEntity(entity: CadEntity, transform?: InsertTransform): CadEnt
       ...entity,
       x: point.x,
       y: point.y,
+      rotation: entity.rotation + (transform.rotation * 180) / Math.PI,
       fontSize: entity.fontSize * averageScale(transform),
     };
   }
