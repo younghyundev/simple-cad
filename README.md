@@ -2,6 +2,10 @@
 
 SimpleCAD는 브라우저에서 가벼운 2D 도면을 열고, 편집하고, 저장할 수 있는 웹 기반 CAD 편집기입니다. 전문 CAD 전체를 대체하기보다 간단한 작업물의 확인, 수정, 공유, 파일 변환 흐름을 빠르게 처리하는 데 초점을 둡니다.
 
+## 스크린샷 
+ <img width="1132" height="822" alt="image" src="https://github.com/user-attachments/assets/4256c945-b935-4d0c-af48-7d42a272c1ca" />
+
+
 ## 주요 기능
 
 - 선, 사각형, 원, 폴리라인, 텍스트, 치수 객체 생성
