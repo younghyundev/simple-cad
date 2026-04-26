@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.3 Share Link Management and Review Workflow (Shipped: 2026-04-26)
+
+**Status:** Shipped
+**Completed:** 2026-04-26
+**Archive:** [v1.3 ROADMAP](milestones/v1.3-ROADMAP.md), [v1.3 REQUIREMENTS](milestones/v1.3-REQUIREMENTS.md)
+**Phases completed:** 4 phases, 4 plans
+
+### Delivered
+
+- Local share link registry with right-panel link list, copy, delete, and local deleted/expired guards.
+- Share creation dialog with title, description, expiry metadata, and read-only shared document metadata display.
+- Review comment filters for all, unresolved, resolved, and selected-entity comments.
+- Comment card navigation that selects linked entities and pans the canvas toward comment coordinates.
+- Collaboration E2E coverage for share creation, copy, delete, expiry, read-only open, review filters, and comment focus.
+
+### Known Deferred Items
+
+- Server-side share revocation, permissions, audit history, and identity-aware access control.
+- Real backend replacement for localStorage collaboration storage.
+- Shared document version comparison and change history.
+
+---
+
 ## v1.2 Production CAD Workflow and Collaboration (Shipped: 2026-04-26)
 
 **Status:** Shipped

@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-26에 완료되어 SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름을 갖춘 상태입니다. v1.3은 실제 백엔드 전환 없이 브라우저 기반 공유 링크와 검토 UX를 더 실무적으로 관리하는 데 집중합니다.
+v1.1, v1.2, v1.3이 2026-04-26에 shipped 상태로 완료되었습니다. SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름, 브라우저 기반 공유 링크 관리와 검토 UX를 갖춘 상태입니다.
 
 현재 구현된 핵심 범위:
 
@@ -31,17 +31,11 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 - Native ELLIPSE/SPLINE 보존, HATCH/LEADER/ATTRIB fallback, BLOCK/INSERT detail warning, DXF metadata 추적
 - GitHub Actions quality-gates job, `npm run verify`, CI logs/artifacts/job summary
 - localStorage mock 서버 저장/다시 열기, 공유 링크, 읽기 전용 공유 문서, 좌표/객체 검토 주석
+- 공유 링크 목록/복사/삭제/만료 관리, 공유 제목/설명/만료일 옵션, 검토 주석 필터와 위치 이동
 
-## Current Milestone: v1.3 Share Link Management and Review Workflow — Complete
+## Current Milestone
 
-**Goal:** 백엔드 저장소 도입 없이도 공유 링크를 만들고, 관리하고, 검토 상태를 추적할 수 있는 브라우저 기반 협업 흐름을 완성합니다.
-
-**Target features:**
-
-- 공유 링크 목록, 복사, 삭제, 만료 상태 관리
-- 링크 생성 시 제목, 설명, 만료일 같은 공유 옵션 설정
-- 검토 주석 필터링, 선택 연동, 해결 상태 추적 개선
-- 공유/검토 상태의 localStorage 회귀 테스트와 README 문서화
+No active milestone is planned yet. Next target requested by the user: 더 넓은 DXF/DWG 고급 호환성.
 
 ## Core Value
 
@@ -77,18 +71,14 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 - ✓ CI artifact와 job summary에서 Playwright report, test results, quality gate logs를 확인할 수 있다. — v1.2 Phase 14
 - ✓ 로컬과 CI가 같은 `npm run verify`, Node 22, Playwright 설치 흐름을 사용한다. — v1.2 Phase 14
 - ✓ 서버 저장, 공유 링크, 주석 기반 검토 흐름을 제공한다. — v1.2 Phase 15
-
-### Active
-
-없음. v1.3 범위는 완료되었습니다.
-
-### Recently Validated
-
 - ✓ 공유 링크를 목록으로 관리하고 복사/삭제/만료 상태를 확인할 수 있다. — v1.3 Phase 16
 - ✓ 공유 링크 생성 시 제목, 설명, 만료일 같은 기본 옵션을 지정할 수 있다. — v1.3 Phase 17
 - ✓ 검토 주석을 미해결/해결/선택 객체 기준으로 필터링하고 캔버스 위치와 연동할 수 있다. — v1.3 Phase 18
 - ✓ 공유 링크와 검토 상태가 브라우저 저장소에서 안정적으로 보존되고 회귀 테스트로 검증된다. — v1.3 Phase 19
 
+### Active
+
+없음. 다음 마일스톤 요구사항은 별도 `REQUIREMENTS.md`에서 새로 정의합니다.
 
 ### Out of Scope
 
@@ -143,4 +133,4 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0/v1.1의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after Phase 19 execution*
+*Last updated: 2026-04-26 after v1.3 archive*

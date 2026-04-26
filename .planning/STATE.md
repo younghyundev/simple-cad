@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Share Link Management and Review Workflow
 status: completed
-last_updated: "2026-04-26T12:20:00Z"
-last_activity: 2026-04-26 -- Phase 19 completed and v1.3 ready to archive
+last_updated: "2026-04-26T12:35:00Z"
+last_activity: 2026-04-26 -- v1.3 milestone archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** v1.3 공유 링크 관리와 검토 워크플로우
+**Current focus:** Planning next milestone for broader DXF/DWG compatibility
 
 ## Current Position
 
 Phase: 19 — Collaboration Regression Coverage and Docs
 Plan: Complete
-Status: Milestone complete
-Last activity: 2026-04-26 -- Phase 19 completed
+Status: Milestone archived
+Last activity: 2026-04-26 -- v1.3 milestone archived
 
 ## Current Status
 
@@ -55,6 +55,7 @@ Last activity: 2026-04-26 -- Phase 19 completed
 - Phase 17 completed: share creation dialog, title/description/expiry metadata, read-only metadata banner, past-date validation, README update, and collaboration E2E coverage.
 - Phase 18 completed: review filters for all/unresolved/resolved/selected entity, comment focus navigation, active comment styling, and collaboration E2E coverage.
 - Phase 19 completed: expired share link regression, README review workflow documentation, and full `npm run verify`.
+- v1.3 archive created in `.planning/milestones/`.
 
 ## Accumulated Context
 
@@ -71,7 +72,7 @@ Last activity: 2026-04-26 -- Phase 19 completed
 
 ## Next Action
 
-Run `$gsd-complete-milestone` to archive v1.3, or start the next milestone when ready.
+Start v1.4 for broader DXF/DWG compatibility.
 
 **Completed Phase:** 19 (Collaboration Regression Coverage and Docs)
-**Completed Milestone:** v1.3 (Share Link Management and Review Workflow)
+**Completed Milestone:** v1.3 (Share Link Management and Review Workflow) — archived 2026-04-26
