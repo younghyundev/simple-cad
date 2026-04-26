@@ -1,0 +1,93 @@
+name: Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: quality-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Prepare artifact directories
+        run: mkdir -p artifacts/quality-gates
+
+      - name: Build
+        run: npm run build 2>&1 | tee artifacts/quality-gates/build.log
+
+      - name: CAD fidelity
+        run: npm run test:cad-fidelity 2>&1 | tee artifacts/quality-gates/cad-fidelity.log
+
+      - name: Conversion regression
+        run: npm run test:conversion 2>&1 | tee artifacts/quality-gates/conversion.log
+
+      - name: Performance baseline
+        run: npm run test:performance 2>&1 | tee artifacts/quality-gates/performance.log
+
+      - name: Playwright E2E
+        run: npm run test:e2e 2>&1 | tee artifacts/quality-gates/e2e.log
+
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "## SimpleCAD Quality Gates"
+            echo ""
+            echo "| Check | Log |"
+            echo "| --- | --- |"
+            echo "| Build | artifacts/quality-gates/build.log |"
+            echo "| CAD fidelity | artifacts/quality-gates/cad-fidelity.log |"
+            echo "| Conversion regression | artifacts/quality-gates/conversion.log |"
+            echo "| Performance baseline | artifacts/quality-gates/performance.log |"
+            echo "| Playwright E2E | artifacts/quality-gates/e2e.log |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload quality gate logs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: quality-gate-logs
+          path: artifacts/quality-gates/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14

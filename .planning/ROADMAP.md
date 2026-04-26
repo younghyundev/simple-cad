@@ -15,7 +15,7 @@
 |-------|------|------|--------------|
 | 12 | Production DWG Conversion Backend | Complete 2026-04-26: DWG 변환 서버 설정 계약, 비동기 job, 오류 분류, mock 시나리오, 문서화를 완료했다. | DWG-01, DWG-02, DWG-03, DWG-04 |
 | 13 | Advanced CAD Entity Preservation | Complete 2026-04-26: native SPLINE/ELLIPSE, HATCH, advanced fallback warnings, BLOCK/INSERT details, DXF metadata, fixtures를 완료했다. | CAD-01, CAD-02, CAD-03, CAD-04 |
-| 14 | CI Quality Gates | build, E2E, CAD fidelity, 성능, 변환 회귀 검증을 GitHub Actions에서 자동 실행한다. | CI-01, CI-02, CI-03 |
+| 14 | CI Quality Gates | Complete 2026-04-26: GitHub Actions quality-gates job, Node 22/npm ci/Playwright install, logs, artifacts, job summary, local verify를 완료했다. | CI-01, CI-02, CI-03 |
 | 15 | Sharing and Review Collaboration | 서버 저장, 공유 링크, 좌표/객체 주석을 기존 파일/탭/dirty 흐름과 통합한다. | SHARE-01, SHARE-02, SHARE-03, SHARE-04 |
 
 ## Phase Details
@@ -52,7 +52,7 @@
 3. 완료: BLOCK/INSERT 속성과 중첩 변환 정보가 기존보다 더 많이 보존된다.
 4. 완료: 단위, 도면 범위, model/paper space 메타데이터가 import/export 요약에 포함된다.
 
-### Phase 14: CI Quality Gates
+### Phase 14: CI Quality Gates — Complete 2026-04-26
 
 **Goal:** build, E2E, CAD fidelity, 성능, 변환 회귀 검증을 GitHub Actions에서 자동 실행한다.
 
@@ -63,9 +63,9 @@
 **Depends on:** Phase 11
 
 **Success criteria:**
-1. GitHub Actions에서 `npm run build`, `test:e2e`, `test:cad-fidelity`, `test:performance`, `test:conversion`이 실행된다.
-2. Playwright trace, 성능 측정치, 변환 회귀 결과를 CI artifact 또는 summary에서 확인할 수 있다.
-3. 로컬과 CI가 같은 Node/Playwright 설치 흐름을 사용한다.
+1. 완료: GitHub Actions에서 `npm run build`, `test:e2e`, `test:cad-fidelity`, `test:performance`, `test:conversion`이 실행된다.
+2. 완료: Playwright trace, 성능 측정치, 변환 회귀 결과를 CI artifact 또는 summary에서 확인할 수 있다.
+3. 완료: 로컬과 CI가 같은 Node/Playwright 설치 흐름을 사용한다.
 
 ### Phase 15: Sharing and Review Collaboration
 

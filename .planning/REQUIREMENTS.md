@@ -22,9 +22,9 @@
 
 ### CI Quality Gates
 
-- [ ] **CI-01**: GitHub Actions에서 build, CAD fidelity, conversion regression, performance baseline, Playwright E2E가 자동 실행된다.
-- [ ] **CI-02**: E2E failure trace, performance summary, conversion regression output은 CI artifact 또는 job summary로 확인할 수 있다.
-- [ ] **CI-03**: CI 환경에서 Node/Playwright/browser dependency가 재현 가능하게 설치되고, main branch 보호에 사용할 수 있는 단일 검증 명령이 제공된다.
+- [x] **CI-01**: GitHub Actions에서 build, CAD fidelity, conversion regression, performance baseline, Playwright E2E가 자동 실행된다.
+- [x] **CI-02**: E2E failure trace, performance summary, conversion regression output은 CI artifact 또는 job summary로 확인할 수 있다.
+- [x] **CI-03**: CI 환경에서 Node/Playwright/browser dependency가 재현 가능하게 설치되고, main branch 보호에 사용할 수 있는 단일 검증 명령이 제공된다.
 
 ### Sharing and Review Collaboration
 
@@ -66,9 +66,9 @@
 | CAD-02 | Phase 13 | Complete |
 | CAD-03 | Phase 13 | Complete |
 | CAD-04 | Phase 13 | Complete |
-| CI-01 | Phase 14 | Pending |
-| CI-02 | Phase 14 | Pending |
-| CI-03 | Phase 14 | Pending |
+| CI-01 | Phase 14 | Complete |
+| CI-02 | Phase 14 | Complete |
+| CI-03 | Phase 14 | Complete |
 | SHARE-01 | Phase 15 | Pending |
 | SHARE-02 | Phase 15 | Pending |
 | SHARE-03 | Phase 15 | Pending |
@@ -81,4 +81,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after Phase 13 execution*
+*Last updated: 2026-04-26 after Phase 14 execution*

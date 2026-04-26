@@ -51,7 +51,7 @@ npm run dev
 npm run build
 ```
 
-현재 Vite 버전은 Node.js `20.19+` 또는 `22.12+`를 권장합니다. Node `20.18.1`에서도 빌드는 통과하지만 경고가 표시될 수 있습니다.
+현재 Vite 버전은 Node.js `20.19+` 또는 `22.12+`를 요구합니다. CI는 Node 22를 사용합니다.
 
 ## 파일 Fidelity 검증
 
@@ -65,6 +65,12 @@ npm run test:cad-fidelity
 
 ## 워크플로우 및 성능 검증
 
+로컬에서 CI와 같은 전체 품질 게이트를 실행하려면 다음 명령을 사용합니다.
+
+```bash
+npm run verify
+```
+
 브라우저 핵심 흐름은 Playwright로 검증합니다.
 
 ```bash
@@ -77,6 +83,14 @@ npm run test:e2e
 npm run test:performance
 npm run test:conversion
 ```
+
+Linux CI 환경에서 Playwright 브라우저 의존성을 설치해야 할 때는 다음 명령을 사용합니다.
+
+```bash
+npx playwright install --with-deps
+```
+
+GitHub Actions는 `main` push와 pull request에서 build, E2E, CAD fidelity, performance, conversion regression을 실행합니다. 실행 결과는 job summary에 요약되며, `quality-gate-logs`, `playwright-report`, `playwright-test-results` artifact에서 로그와 Playwright 리포트를 확인할 수 있습니다.
 
 ## DWG 변환 API 설정
 
