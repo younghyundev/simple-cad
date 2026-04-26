@@ -76,6 +76,7 @@ export function CadCanvas({
   onCanvasContextMenu,
 }: CadCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const textInputRef = useRef<HTMLInputElement | null>(null);
   const draftEntityRef = useRef<CadEntity | null>(null);
   const textDraftRef = useRef<TextDraft | null>(null);
   const movingEntityRef = useRef(false);
@@ -231,6 +232,13 @@ export function CadCanvas({
     setTextDraftState(draft);
   };
 
+  useEffect(() => {
+    if (!textDraft) return;
+    const input = textInputRef.current;
+    input?.focus();
+    input?.select();
+  }, [textDraft?.entityId, textDraft?.screenPoint.x, textDraft?.screenPoint.y]);
+
   const commitTextDraft = () => {
     const draft = textDraftRef.current;
     updateTextDraft(null);
@@ -383,6 +391,7 @@ export function CadCanvas({
               value: '',
             });
             onSelectedEntityChange([]);
+            return;
           }
 
           if (
@@ -554,6 +563,7 @@ export function CadCanvas({
       ) : null}
       {textDraft ? (
         <input
+          ref={textInputRef}
           className="canvas-text-input"
           style={{
             left: textDraft.screenPoint.x,
@@ -561,6 +571,9 @@ export function CadCanvas({
           }}
           value={textDraft.value}
           autoFocus
+          placeholder="텍스트 입력"
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
           onChange={(event) =>
             updateTextDraft(
               textDraftRef.current

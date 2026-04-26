@@ -332,6 +332,14 @@ export function App() {
     setContextMenu(null);
   }, []);
 
+  const selectTool = useCallback((toolId: ToolId) => {
+    setActiveTool(toolId);
+    setContextMenu(null);
+    if (toolId === 'text') {
+      setFileMessage('텍스트를 넣을 위치를 캔버스에서 클릭하세요.');
+    }
+  }, []);
+
   const copySelectedEntities = useCallback(() => {
     const selectedEntities = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
     if (!selectedEntities.length) {
@@ -781,7 +789,7 @@ export function App() {
                 key={tool.id}
                 className={`tool-tile ${activeTool === tool.id ? 'active' : ''}`}
                 title={tool.label}
-                onClick={() => setActiveTool(tool.id)}
+                onClick={() => selectTool(tool.id)}
               >
                 <Icon size={20} />
                 <span>{tool.label}</span>
