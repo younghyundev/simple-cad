@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:performance": "vite build --ssr src/cad/performance/performanceBaseline.ts --outDir .cad-performance --emptyOutDir && node .cad-performance/performanceBaseline.js",
+    "test:conversion": "vite build --ssr src/cad/io/conversionRegressionCheck.ts --outDir .cad-conversion --emptyOutDir && node .cad-conversion/conversionRegressionCheck.js",
     "test:cad-fidelity": "vite build --ssr src/cad/io/roundTripCheck.ts --outDir .cad-fidelity --emptyOutDir && node .cad-fidelity/roundTripCheck.js"
   },
   "dependencies": {
@@ -18,6 +21,7 @@
     "vite": "^7.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3"
   }

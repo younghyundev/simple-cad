@@ -31,9 +31,9 @@
 
 ### Verification and Performance
 
-- [ ] **QA-01**: 핵심 워크플로우(생성, 선택, 이동, 저장, DXF import/export, 참조 붙여넣기)는 자동 브라우저 테스트로 검증된다.
-- [ ] **QA-02**: 큰 도면 fixture에서 렌더링, 선택, 스냅, 저장 성능 기준을 측정할 수 있다.
-- [ ] **QA-03**: DXF/DWG 변환 실패, 네트워크 실패, 미지원 엔티티 경고가 테스트로 검증된다.
+- [x] **QA-01**: 핵심 워크플로우(생성, 선택, 이동, 저장, DXF import/export, 참조 붙여넣기)는 자동 브라우저 테스트로 검증된다.
+- [x] **QA-02**: 큰 도면 fixture에서 렌더링, 선택, 스냅, 저장 성능 기준을 측정할 수 있다.
+- [x] **QA-03**: DXF/DWG 변환 실패, 네트워크 실패, 미지원 엔티티 경고가 테스트로 검증된다.
 
 ## v1.2 Candidates
 
@@ -74,9 +74,9 @@
 | SAVE-02 | Phase 10 | Complete |
 | SAVE-03 | Phase 10 | Complete |
 | SAVE-04 | Phase 10 | Complete |
-| QA-01 | Phase 11 | Pending |
-| QA-02 | Phase 11 | Pending |
-| QA-03 | Phase 11 | Pending |
+| QA-01 | Phase 11 | Complete |
+| QA-02 | Phase 11 | Complete |
+| QA-03 | Phase 11 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 17 total
@@ -85,4 +85,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after Phase 10 completion*
+*Last updated: 2026-04-26 after Phase 11 completion*

@@ -63,6 +63,21 @@ npm run test:cad-fidelity
 
 이 검증은 `src/cad/io/fixtures/fidelity-basic.dxf`를 가져온 뒤 DXF로 다시 내보내고 재가져와서 객체 수, 레이어, 경계, 선 스타일, 텍스트, 치수, 경고 요약의 드리프트를 확인합니다.
 
+## 워크플로우 및 성능 검증
+
+브라우저 핵심 흐름은 Playwright로 검증합니다.
+
+```bash
+npm run test:e2e
+```
+
+큰 도면 기준선과 변환 실패/경고 회귀 검증은 다음 명령으로 실행합니다.
+
+```bash
+npm run test:performance
+npm run test:conversion
+```
+
 ## 저장 방식
 
 상단의 `저장`은 현재 탭의 저장 대상 형식과 파일명을 기준으로 동작합니다. `JSON`, `DXF`, `DWG` 버튼은 다른 이름 저장처럼 대상 형식을 바꾸며, `SVG`는 도면 원본 형식을 바꾸지 않는 내보내기로 처리됩니다.

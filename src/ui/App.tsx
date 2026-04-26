@@ -917,11 +917,12 @@ export function App() {
   ]);
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" data-testid="app-shell">
       <header className="topbar">
         <input
           ref={fileInputRef}
           className="hidden-input"
+          data-testid="file-input"
           type="file"
           accept=".json,.dxf,.dwg"
           onChange={(event) => {
@@ -942,6 +943,7 @@ export function App() {
           <button
             className="tool-button wide"
             title="열기"
+            data-testid="open-file-button"
             onClick={() => fileInputRef.current?.click()}
           >
             <FileUp size={17} />
@@ -950,6 +952,7 @@ export function App() {
           <button
             className="tool-button wide"
             title="저장"
+            data-testid="save-button"
             disabled={!activeTabId}
             onClick={() => void saveCurrentDocument()}
           >
@@ -1051,6 +1054,7 @@ export function App() {
             <button
               key={tab.id}
               className={`tab-button ${tab.id === activeTabId ? 'active' : ''}`}
+              data-testid="workspace-tab"
               onClick={() => activateTab(tab.id)}
               title={tab.title}
             >
@@ -1094,6 +1098,7 @@ export function App() {
               <button
                 key={tool.id}
                 className={`tool-tile ${activeTool === tool.id ? 'active' : ''}`}
+                data-testid={`tool-${tool.id}`}
                 title={tool.label}
                 onClick={() => selectTool(tool.id)}
               >
@@ -1131,6 +1136,7 @@ export function App() {
         {contextMenu ? (
           <div
             className="cad-context-menu"
+            data-testid="cad-context-menu"
             style={{ left: contextMenu.x, top: contextMenu.y }}
             role="menu"
           >
@@ -1539,11 +1545,11 @@ export function App() {
               </div>
             </div>
             <div className="start-actions">
-              <button className="start-action primary" onClick={createNewDrawing}>
+              <button className="start-action primary" data-testid="start-new-drawing" onClick={createNewDrawing}>
                 <Plus size={20} />
                 <span>새 도면</span>
               </button>
-              <button className="start-action" onClick={() => fileInputRef.current?.click()}>
+              <button className="start-action" data-testid="start-open-file" onClick={() => fileInputRef.current?.click()}>
                 <FileUp size={20} />
                 <span>파일 열기</span>
               </button>
@@ -1572,7 +1578,7 @@ export function App() {
         </section>
       )}
 
-      <footer className="statusbar">
+      <footer className="statusbar" data-testid="statusbar">
         <span>좌표 X {cursor.x.toFixed(1)} / Y {cursor.y.toFixed(1)}</span>
         <span>줌 {(viewport.scale * 100).toFixed(0)}%</span>
         <span>

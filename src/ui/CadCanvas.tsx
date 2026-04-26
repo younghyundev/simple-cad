@@ -311,10 +311,11 @@ export function CadCanvas({
   }, [onDocumentChange, selectedPolylinePoint]);
 
   return (
-    <section className="canvas-stage">
+    <section className="canvas-stage" data-testid="canvas-stage">
       <canvas
         ref={canvasRef}
         className={`cad-canvas ${activeTool === 'pan' ? 'pan-tool' : ''}`}
+        data-testid="cad-canvas"
         onWheel={(event) => {
           event.preventDefault();
           const localPoint = getLocalPoint(event);
@@ -581,6 +582,7 @@ export function CadCanvas({
         <input
           ref={textInputRef}
           className="canvas-text-input"
+          data-testid="canvas-text-input"
           style={{
             left: textDraft.screenPoint.x,
             top: textDraft.screenPoint.y,

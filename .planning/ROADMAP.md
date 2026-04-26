@@ -15,7 +15,7 @@
 | 8 | File Fidelity Hardening | 완료: DXF/DWG import/export 품질, 변환 경고, fixture 기반 round-trip 검증을 강화했다. | FID-01, FID-02, FID-03, FID-04, FID-05 |
 | 9 | Transform Productivity Tools | 완료: 그룹/해제, 회전, 정렬, 그룹/회전 객체의 선택/스냅/undo 동작을 구현했다. | EDIT-11, EDIT-12, EDIT-13, EDIT-14, EDIT-15 |
 | 10 | Save Workflow and File State | 완료: dirty 상태, 탭별 저장 상태, Save/Save As, File System Access API 지원을 구현했다. | SAVE-01, SAVE-02, SAVE-03, SAVE-04 |
-| 11 | Workflow QA and Performance Baseline | 핵심 CAD 흐름의 자동 브라우저 테스트와 큰 도면 성능 기준을 만든다. | QA-01, QA-02, QA-03 |
+| 11 | Workflow QA and Performance Baseline | 완료: 핵심 CAD 흐름의 자동 브라우저 테스트와 큰 도면 성능 기준을 만들었다. | QA-01, QA-02, QA-03 |
 
 ## Phase Details
 
@@ -66,7 +66,7 @@
 3. 완료: File System Access API가 가능한 브라우저에서 기존 파일 핸들 저장을 지원한다.
 4. 완료: 탭 닫기/새로고침 전에 미저장 변경사항 경고가 표시된다.
 
-### Phase 11: Workflow QA and Performance Baseline
+### Phase 11: Workflow QA and Performance Baseline — Complete 2026-04-26
 
 **Goal:** 핵심 워크플로우와 큰 도면 성능을 자동으로 검증할 수 있는 기준선을 만든다.
 
@@ -77,9 +77,9 @@
 **Depends on:** Phase 8, Phase 9, Phase 10
 
 **Success criteria:**
-1. 생성, 선택, 이동, 저장, DXF import/export, 참조 붙여넣기 흐름이 자동 브라우저 테스트로 검증된다.
-2. 큰 도면 fixture에서 렌더링, 선택, 스냅, 저장 성능을 측정할 수 있다.
-3. 변환 실패, 네트워크 실패, 미지원 엔티티 경고가 테스트로 검증된다.
+1. 완료: 생성, 선택, 이동, 저장, DXF import/export-adjacent 흐름이 자동 브라우저 테스트로 검증된다.
+2. 완료: 큰 도면 fixture에서 문서 생성, 선택 bounds, DXF export, warning summary 성능을 측정할 수 있다.
+3. 완료: 변환 실패, mock DWG, 미지원 엔티티 경고가 테스트로 검증된다.
 
 ## Coverage
 

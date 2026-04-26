@@ -3,6 +3,10 @@ node_modules/
 dist/
 .vite/
 .cad-fidelity/
+.cad-conversion/
+.cad-performance/
+test-results/
+playwright-report/
 build/
 .env
 .env.*

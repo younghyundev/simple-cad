@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Phase 9, Phase 10도 완료되어 DXF round-trip 검증, 구조화된 변환 경고, DWG mock/server 모드 구분, 그룹/회전/정렬 transform 도구, 저장 상태/Save As/File System Access API 흐름이 추가되었습니다.
+v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Phase 9, Phase 10, Phase 11도 완료되어 DXF round-trip 검증, 구조화된 변환 경고, DWG mock/server 모드 구분, 그룹/회전/정렬 transform 도구, 저장 상태/Save As/File System Access API 흐름, 자동 QA/성능 기준선이 추가되었습니다.
 
 현재 구현된 핵심 범위:
 
@@ -26,6 +26,7 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 - 변환 경고 카테고리 요약과 DWG mock/server 모드 표시
 - 선택 객체 그룹화/그룹 해제, 회전, 다중 객체 정렬
 - 탭 dirty marker, 상태바 저장 상태, Save/Save As, 브라우저 파일 직접 저장 fallback
+- Playwright E2E, CAD fidelity, 성능 기준선, 변환 회귀 검증 스크립트
 
 ## Current Milestone: v1.1 File Fidelity and Editing Productivity
 
@@ -36,7 +37,7 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 - DXF/DWG import/export 품질과 변환 경고 UX 개선
 - 그룹/회전/정렬 같은 기본 transform 편집 도구 추가
 - 파일 저장 UX 개선: dirty 상태, 기존 파일 형식 저장, Save As 흐름 — 완료
-- 핵심 CAD 워크플로우 자동 브라우저 테스트와 성능 기준 추가
+- 핵심 CAD 워크플로우 자동 브라우저 테스트와 성능 기준 추가 — 완료
 
 ## Core Value
 
@@ -65,8 +66,8 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 
 - [ ] 실제 DWG 변환 서버를 연결한다.
 - [x] 저장 UX를 개선하고 File System Access API 지원을 검토한다.
-- [ ] 주요 CAD 워크플로우에 자동 브라우저 테스트를 추가한다.
-- [ ] 큰 도면 렌더링/스냅/선택 성능을 추가 최적화한다.
+- [x] 주요 CAD 워크플로우에 자동 브라우저 테스트를 추가한다.
+- [x] 큰 도면 렌더링/스냅/선택 성능 기준선을 추가한다.
 
 ### Out of Scope
 
@@ -106,6 +107,7 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 | DWG 개발 mock과 실제 서버 변환을 명시적으로 구분 | 사용자가 mock 결과를 실제 DWG 변환으로 오해하지 않게 해야 함 | ✓ Good |
 | 그룹은 JSON에 보존하고 SVG/DXF에는 자식 객체를 flatten | 외부 파일 호환성과 내부 편집 생산성을 동시에 유지하기 위함 | ✓ Good |
 | 파일 핸들은 런타임 탭 상태에만 보관 | 브라우저 FileSystemHandle은 직렬화할 수 없고 recent/localStorage에 저장하면 안 됨 | ✓ Good |
+| 워크플로우 QA는 Playwright와 CLI 회귀 스크립트를 함께 사용 | Canvas 사용자 흐름은 브라우저가 필요하고, 파일/성능 회귀는 빠른 CLI 검증이 안정적임 | ✓ Good |
 
 ## Next Milestone Goals
 
@@ -121,4 +123,4 @@ v1.1 목표:
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after Phase 10 completion*
+*Last updated: 2026-04-26 after Phase 11 completion*
