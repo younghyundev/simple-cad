@@ -30,7 +30,13 @@ test('creates an embedded share link, opens it read-only, and preserves comments
   await expect(page.getByText('검토 메모')).toBeVisible();
 
   await page.getByTestId('share-link-button').click();
+  await expect(page.getByTestId('share-dialog')).toBeVisible();
+  await page.getByTestId('share-title-input').fill('현장 검토 공유');
+  await page.getByTestId('share-description-input').fill('치수 확인 필요');
+  await page.getByTestId('confirm-share-link-button').click();
   await expect(page.getByTestId('statusbar')).toContainText('공유 링크를 만들었습니다.');
+  await expect(page.getByText('현장 검토 공유')).toBeVisible();
+  await expect(page.getByText('치수 확인 필요')).toBeVisible();
   await expect(page.getByTestId('copy-share-link-button')).toBeVisible();
   await page.getByTestId('copy-share-link-button').click();
   await expect(page.getByTestId('statusbar')).toContainText('공유 링크를 복사했습니다.');
@@ -40,6 +46,8 @@ test('creates an embedded share link, opens it read-only, and preserves comments
   await page.goto('/');
   await page.goto(`/${shareHash}`);
   await expect(page.getByTestId('readonly-banner')).toContainText('읽기 전용 공유 문서');
+  await expect(page.getByTestId('readonly-banner')).toContainText('현장 검토 공유');
+  await expect(page.getByTestId('readonly-banner')).toContainText('치수 확인 필요');
   await expect(page.getByTestId('share-link-button')).toBeDisabled();
   await expect(page.getByTestId('comment-marker')).toBeVisible();
   await expect(page.getByText('검토 메모')).toBeVisible();
@@ -50,6 +58,7 @@ test('deletes a locally registered embedded share link', async ({ page }) => {
   await expect(page.getByTestId('cad-canvas')).toBeVisible();
 
   await page.getByTestId('share-link-button').click();
+  await page.getByTestId('confirm-share-link-button').click();
   await expect(page.getByTestId('copy-share-link-button')).toBeVisible();
   const shareHash = new URL(page.url()).hash;
 

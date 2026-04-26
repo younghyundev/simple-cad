@@ -27,6 +27,7 @@ export type ShareLink = {
   readonly: true;
   createdAt: string;
   title?: string;
+  description?: string;
   expiresAt?: string;
   deletedAt?: string;
 };
@@ -34,6 +35,9 @@ export type ShareLink = {
 export type CollaborationState = {
   serverDocumentId?: string;
   shareToken?: string;
+  shareTitle?: string;
+  shareDescription?: string;
+  shareExpiresAt?: string;
   readonly: boolean;
   lastServerSavedAt?: string;
   serverSavedRevision?: number;
@@ -51,6 +55,7 @@ export type SaveShareLinkInput = {
   token: string;
   documentId: string;
   title: string;
+  description?: string;
   expiresAt?: string;
 };
 
@@ -97,6 +102,7 @@ const isShareLink = (value: unknown): value is ShareLink =>
   value.readonly === true &&
   isString(value.createdAt) &&
   (value.title === undefined || isString(value.title)) &&
+  (value.description === undefined || isString(value.description)) &&
   (value.expiresAt === undefined || isString(value.expiresAt)) &&
   (value.deletedAt === undefined || isString(value.deletedAt));
 
@@ -194,6 +200,7 @@ export class LocalCollaborationRepository {
       readonly: true,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       title: input.title.trim() || 'Untitled',
+      description: input.description?.trim() || undefined,
       expiresAt: input.expiresAt,
       deletedAt: undefined,
     };
@@ -232,6 +239,7 @@ export class LocalCollaborationRepository {
         readonly: true,
         createdAt: new Date().toISOString(),
         title: document.title,
+        description: undefined,
       };
     if (!existing) {
       writeCollection(shareLinksKey, [...links, link]);

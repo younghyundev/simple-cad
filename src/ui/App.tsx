@@ -107,8 +107,17 @@ type RecentDocument = {
 type SharedDocumentPayload = {
   version: 1;
   title: string;
+  description?: string;
+  expiresAt?: string;
+  createdAt?: string;
   document: CadDocument;
   comments?: ReviewComment[];
+};
+
+type ShareDialogState = {
+  title: string;
+  description: string;
+  expiresOn: string;
 };
 
 type ContextMenuState = {
@@ -172,6 +181,7 @@ export function App() {
   const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
   const [reviewComments, setReviewComments] = useState<ReviewComment[]>([]);
   const [shareLinks, setShareLinks] = useState<ShareLink[]>(() => collaborationRepository.listShareLinks());
+  const [shareDialog, setShareDialog] = useState<ShareDialogState | null>(null);
   const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
   const [collaborationState, setCollaborationState] = useState<CollaborationState>(() => createCollaborationState());
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
@@ -218,6 +228,9 @@ export function App() {
   const activeReadonly = collaborationState.readonly;
   const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
   const activeShareLinks = shareLinks.filter((link) => !link.deletedAt);
+  const activeShareExpired = collaborationState.shareExpiresAt
+    ? Date.parse(collaborationState.shareExpiresAt) <= Date.now()
+    : false;
 
   const refreshShareLinks = useCallback(() => {
     setShareLinks(collaborationRepository.listShareLinks());
@@ -632,14 +645,36 @@ export function App() {
     saveState.targetName,
   ]);
 
-  const createShareLink = useCallback(async () => {
+  const openShareDialog = useCallback(() => {
     if (!activeTabId || collaborationState.readonly) return;
+    setShareDialog({
+      title: document.name || saveState.targetName || 'Untitled',
+      description: '',
+      expiresOn: '',
+    });
+  }, [activeTabId, collaborationState.readonly, document.name, saveState.targetName]);
+
+  const createShareLink = useCallback(async (options: ShareDialogState) => {
+    if (!activeTabId || collaborationState.readonly) return;
+    const title = options.title.trim() || document.name || saveState.targetName || 'Untitled';
+    const description = options.description.trim();
+    const today = new Date().toISOString().slice(0, 10);
+    if (options.expiresOn && options.expiresOn < today) {
+      setFileMessage('만료일은 오늘 이후로 선택하세요.');
+      return;
+    }
+    const expiresAt = options.expiresOn
+      ? new Date(`${options.expiresOn}T23:59:59.999`).toISOString()
+      : undefined;
     const latestComments = collaborationState.serverDocumentId
       ? collaborationRepository.listComments(collaborationState.serverDocumentId)
       : reviewCommentsRef.current;
     const payload: SharedDocumentPayload = {
       version: 1,
-      title: document.name || saveState.targetName || 'Untitled',
+      title,
+      description: description || undefined,
+      expiresAt,
+      createdAt: new Date().toISOString(),
       document: stripRuntimeFileState(document),
       comments: latestComments,
     };
@@ -655,14 +690,20 @@ export function App() {
     setCollaborationState((current) => ({
       ...current,
       shareToken: encoded,
+      shareTitle: title,
+      shareDescription: description || undefined,
+      shareExpiresAt: expiresAt,
       readonly: false,
     }));
     collaborationRepository.saveShareLink({
       token: encoded,
       documentId: activeTabId,
-      title: payload.title,
+      title,
+      description: description || undefined,
+      expiresAt,
     });
     refreshShareLinks();
+    setShareDialog(null);
     window.history.replaceState(null, '', shareUrl);
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
@@ -716,6 +757,10 @@ export function App() {
         setFileMessage('공유 링크 도면을 열 수 없습니다.');
         return;
       }
+      if (payload.expiresAt && Date.parse(payload.expiresAt) <= Date.now()) {
+        setFileMessage('만료된 공유 링크입니다.');
+        return;
+      }
 
       createTab(
         payload.title,
@@ -727,6 +772,9 @@ export function App() {
         createSaveState(payload.document, payload.title),
         createCollaborationState({
           shareToken: embeddedShare,
+          shareTitle: payload.title,
+          shareDescription: payload.description,
+          shareExpiresAt: payload.expiresAt,
           serverSavedRevision: 0,
           readonly: true,
         }),
@@ -1319,7 +1367,7 @@ export function App() {
             title="공유"
             data-testid="share-link-button"
             disabled={!activeTabId || activeReadonly}
-            onClick={() => void createShareLink()}
+            onClick={openShareDialog}
           >
             <Share2 size={17} />
             공유
@@ -1504,7 +1552,12 @@ export function App() {
 
         {activeReadonly ? (
           <div className="readonly-banner" data-testid="readonly-banner">
-            읽기 전용 공유 문서
+            <strong>읽기 전용 공유 문서</strong>
+            {collaborationState.shareTitle ? <span>{collaborationState.shareTitle}</span> : null}
+            {collaborationState.shareDescription ? <small>{collaborationState.shareDescription}</small> : null}
+            {collaborationState.shareExpiresAt ? (
+              <small>{activeShareExpired ? '만료됨' : `${new Date(collaborationState.shareExpiresAt).toLocaleDateString()}까지`}</small>
+            ) : null}
           </div>
         ) : null}
 
@@ -1902,6 +1955,7 @@ export function App() {
                       <Link2 size={14} />
                       <span>{link.title || '공유 도면'}</span>
                     </div>
+                    {link.description ? <p className="share-link-description">{link.description}</p> : null}
                     <small>
                       {formatShareLinkStatus(link)} · {new Date(link.createdAt).toLocaleString()}
                     </small>
@@ -2082,6 +2136,71 @@ export function App() {
         ) : null}
         <span>{fileMessage}</span>
       </footer>
+
+      {shareDialog ? (
+        <div className="modal-backdrop" role="presentation">
+          <form
+            className="share-dialog"
+            data-testid="share-dialog"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createShareLink(shareDialog);
+            }}
+          >
+            <div className="panel-heading">
+              <h2>공유 링크 만들기</h2>
+              <button
+                className="mini-button"
+                type="button"
+                onClick={() => setShareDialog(null)}
+              >
+                닫기
+              </button>
+            </div>
+            <label className="dialog-field">
+              <span>제목</span>
+              <input
+                data-testid="share-title-input"
+                value={shareDialog.title}
+                onChange={(event) => setShareDialog((current) =>
+                  current ? { ...current, title: event.target.value } : current,
+                )}
+              />
+            </label>
+            <label className="dialog-field">
+              <span>설명</span>
+              <textarea
+                data-testid="share-description-input"
+                rows={3}
+                value={shareDialog.description}
+                onChange={(event) => setShareDialog((current) =>
+                  current ? { ...current, description: event.target.value } : current,
+                )}
+              />
+            </label>
+            <label className="dialog-field">
+              <span>만료일</span>
+              <input
+                data-testid="share-expiry-input"
+                type="date"
+                min={new Date().toISOString().slice(0, 10)}
+                value={shareDialog.expiresOn}
+                onChange={(event) => setShareDialog((current) =>
+                  current ? { ...current, expiresOn: event.target.value } : current,
+                )}
+              />
+            </label>
+            <div className="dialog-actions">
+              <button className="mini-button" type="button" onClick={() => setShareDialog(null)}>
+                취소
+              </button>
+              <button className="mini-button active" data-testid="confirm-share-link-button" type="submit">
+                만들기
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -2210,6 +2329,9 @@ function decodeSharedDocumentPayload(value: string): SharedDocumentPayload | nul
     return {
       version: 1,
       title: parsed.title,
+      description: typeof parsed.description === 'string' ? parsed.description : undefined,
+      expiresAt: typeof parsed.expiresAt === 'string' ? parsed.expiresAt : undefined,
+      createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : undefined,
       document: parsed.document,
       comments: Array.isArray(parsed.comments) ? parsed.comments : [],
     };

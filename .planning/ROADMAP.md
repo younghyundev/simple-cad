@@ -28,11 +28,13 @@
 3. 만료된 링크는 목록과 공유 열기 흐름에서 명확히 구분된다.
 4. 기존 `#share=` 임베디드 링크는 계속 열 수 있다.
 
-### Phase 17 — Share Creation Options
+### Phase 17 — Share Creation Options ✅
 
 **Goal:** 공유 링크를 만들 때 제목, 설명, 만료일 같은 옵션을 지정하고 링크 payload에 보존한다.
 
 **Requirements:** SHARE-03, SHARE-04
+
+**Status:** Complete — see [Phase 17 summary](phases/17-share-creation-options/17-SUMMARY.md).
 
 **Success criteria:**
 

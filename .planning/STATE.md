@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Share Link Management and Review Workflow
 status: planning
-last_updated: "2026-04-26T11:10:00Z"
-last_activity: 2026-04-26 -- Phase 16 completed
+last_updated: "2026-04-26T11:35:00Z"
+last_activity: 2026-04-26 -- Phase 17 completed
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 17 — Share Creation Options
+Phase: 18 — Review Comment Workflow Polish
 Plan: Not started
-Status: Phase 16 complete
-Last activity: 2026-04-26 -- Phase 16 completed
+Status: Phase 17 complete
+Last activity: 2026-04-26 -- Phase 17 completed
 
 ## Current Status
 
@@ -52,6 +52,7 @@ Last activity: 2026-04-26 -- Phase 16 completed
 - v1.2 archive created in `.planning/milestones/`.
 - v1.3 started with a browser-only collaboration scope: share link management, share options, review comment workflow polish, and regression documentation.
 - Phase 16 completed: local share link registry, right-panel link list, copy/delete actions, local deleted/expired guards, README limitation note, and collaboration E2E coverage.
+- Phase 17 completed: share creation dialog, title/description/expiry metadata, read-only metadata banner, past-date validation, README update, and collaboration E2E coverage.
 
 ## Accumulated Context
 
@@ -68,8 +69,8 @@ Last activity: 2026-04-26 -- Phase 16 completed
 
 ## Next Action
 
-Run `$gsd-plan-phase 17` to plan share creation options.
+Run `$gsd-plan-phase 18` to plan review comment workflow polish.
 
-**Completed Phase:** 16 (Share Link Registry and Lifecycle)
-**Next Phase:** 17 (Share Creation Options)
+**Completed Phase:** 17 (Share Creation Options)
+**Next Phase:** 18 (Review Comment Workflow Polish)
 **Current Milestone:** v1.3 (Share Link Management and Review Workflow)
