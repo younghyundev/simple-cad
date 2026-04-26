@@ -15,6 +15,7 @@ import {
   Plus,
   Redo2,
   Save,
+  Share2,
   Square,
   Trash2,
   Type,
@@ -176,6 +177,7 @@ export function App() {
   const [referencePreviewPoint, setReferencePreviewPoint] = useState<CadPoint | null>(null);
   const [rotationDegrees, setRotationDegrees] = useState('15');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const loadedShareTokenRef = useRef<string | null>(null);
   const selectedEntities = useMemo(
     () => document.entities.filter((entity) => selectedEntityIds.includes(entity.id)),
     [document.entities, selectedEntityIds],
@@ -203,6 +205,7 @@ export function App() {
   const activeDirty = isSaveStateDirty(saveState);
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
   const serverStatus = formatServerState(collaborationState, saveState.revision);
+  const activeReadonly = collaborationState.readonly;
 
   const markDirty = useCallback(() => {
     setSaveState((current) => ({
@@ -216,23 +219,29 @@ export function App() {
       updater: CadDocument | ((current: CadDocument) => CadDocument),
       options: { trackHistory?: boolean } = {},
     ) => {
+      if (collaborationState.readonly) {
+        setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+        return;
+      }
       updateHistoryDocument(updater, options);
       markDirty();
     },
-    [markDirty, updateHistoryDocument],
+    [collaborationState.readonly, markDirty, updateHistoryDocument],
   );
 
   const undoDocument = useCallback(() => {
+    if (collaborationState.readonly) return;
     if (!canUndo) return;
     undo();
     markDirty();
-  }, [canUndo, markDirty, undo]);
+  }, [canUndo, collaborationState.readonly, markDirty, undo]);
 
   const redoDocument = useCallback(() => {
+    if (collaborationState.readonly) return;
     if (!canRedo) return;
     redo();
     markDirty();
-  }, [canRedo, markDirty, redo]);
+  }, [canRedo, collaborationState.readonly, markDirty, redo]);
 
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
     canvasApiRef.current = api;
@@ -270,6 +279,10 @@ export function App() {
 
   const saveCurrentDocument = useCallback(async () => {
     if (!activeTabId) return;
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 원본 저장을 할 수 없습니다.');
+      return;
+    }
 
     try {
       setSaveState((current) => ({ ...current, isSaving: true }));
@@ -322,7 +335,7 @@ export function App() {
       setConversionProgress(null);
       setFileMessage(formatConversionError(error, '저장에 실패했습니다.'));
     }
-  }, [activeTabId, document, downloadBlob, handleConversionProgress, persistRecentDocument, saveState, updateHistoryDocument]);
+  }, [activeTabId, collaborationState.readonly, document, downloadBlob, handleConversionProgress, persistRecentDocument, saveState, updateHistoryDocument]);
 
   const saveAs = useCallback(
     async (type: CadFileType) => {
@@ -362,7 +375,7 @@ export function App() {
         }
 
         const savedAt = new Date().toISOString();
-        if (isDocumentSourceType(type)) {
+        if (isDocumentSourceType(type) && !collaborationState.readonly) {
           const savedDocument = withSourceFile(document, {
             name: handle?.name ?? withExtension(suggestedName, type),
             type,
@@ -397,7 +410,16 @@ export function App() {
         setFileMessage(formatConversionError(error, `${type.toUpperCase()} 내보내기에 실패했습니다.`));
       }
     },
-    [activeTabId, document, downloadBlob, handleConversionProgress, persistRecentDocument, saveState.targetName, updateHistoryDocument],
+    [
+      activeTabId,
+      collaborationState.readonly,
+      document,
+      downloadBlob,
+      handleConversionProgress,
+      persistRecentDocument,
+      saveState.targetName,
+      updateHistoryDocument,
+    ],
   );
 
   const activateTab = useCallback((tabId: string) => {
@@ -557,8 +579,8 @@ export function App() {
     });
   }, [createTab]);
 
-  const saveToServer = useCallback(() => {
-    if (!activeTabId) return;
+  const saveDocumentToServer = useCallback((): ServerDocumentRecord | null => {
+    if (!activeTabId || collaborationState.readonly) return null;
     const record = collaborationRepository.saveDocument({
       id: collaborationState.serverDocumentId,
       title: document.name || saveState.targetName || 'Untitled',
@@ -574,7 +596,48 @@ export function App() {
     setServerDocuments(collaborationRepository.listDocuments());
     persistRecentDocument(record.title, record.document);
     setFileMessage(`${record.title} 서버 저장됨`);
-  }, [activeTabId, collaborationState.serverDocumentId, document, persistRecentDocument, saveState.revision, saveState.targetName]);
+    return record;
+  }, [
+    activeTabId,
+    collaborationState.readonly,
+    collaborationState.serverDocumentId,
+    document,
+    persistRecentDocument,
+    saveState.revision,
+    saveState.targetName,
+  ]);
+
+  const saveToServer = useCallback(() => {
+    saveDocumentToServer();
+  }, [saveDocumentToServer]);
+
+  const createShareLink = useCallback(async () => {
+    if (!activeTabId || collaborationState.readonly) return;
+    const savedRecord =
+      collaborationState.serverDocumentId
+        ? collaborationRepository.openDocument(collaborationState.serverDocumentId)
+        : saveDocumentToServer();
+    const record = savedRecord ?? saveDocumentToServer();
+    if (!record) {
+      setFileMessage('공유할 서버 도면을 저장할 수 없습니다.');
+      return;
+    }
+
+    const shareLink = collaborationRepository.createShareLink(record.id);
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set('share', shareLink.token);
+    setCollaborationState((current) => ({
+      ...current,
+      serverDocumentId: record.id,
+      shareToken: shareLink.token,
+      readonly: false,
+    }));
+    setServerDocuments(collaborationRepository.listDocuments());
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
+    }
+    setFileMessage('공유 링크를 만들었습니다.');
+  }, [activeTabId, collaborationState.readonly, collaborationState.serverDocumentId, saveDocumentToServer]);
 
   const openServerDocument = useCallback((record: ServerDocumentRecord) => {
     const serverRecord = collaborationRepository.openDocument(record.id);
@@ -602,6 +665,37 @@ export function App() {
     setFileMessage(`${serverRecord.title} 서버 도면을 열었습니다.`);
   }, [createTab]);
 
+  useEffect(() => {
+    const shareToken = new URLSearchParams(window.location.search).get('share');
+    if (!shareToken || loadedShareTokenRef.current === shareToken) return;
+    loadedShareTokenRef.current = shareToken;
+
+    const sharedRecord = collaborationRepository.resolveShareLink(shareToken);
+    if (!sharedRecord) {
+      setFileMessage('공유 링크 도면을 찾을 수 없습니다.');
+      return;
+    }
+
+    createTab(
+      sharedRecord.title,
+      {
+        ...sharedRecord.document,
+        id: `shared-${Date.now()}`,
+        name: sharedRecord.document.name || sharedRecord.title,
+      },
+      createSaveState(sharedRecord.document, sharedRecord.title),
+      createCollaborationState({
+        serverDocumentId: sharedRecord.id,
+        shareToken,
+        lastServerSavedAt: sharedRecord.updatedAt,
+        serverSavedRevision: 0,
+        readonly: true,
+      }),
+    );
+    setActiveTool('select');
+    setFileMessage('읽기 전용 공유 문서를 열었습니다.');
+  }, [createTab]);
+
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
@@ -627,6 +721,10 @@ export function App() {
   }, [closeContextMenu, document.entities, selectedEntityIds]);
 
   const pasteEntities = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     if (!cadClipboard) {
       setFileMessage('복사된 객체가 없습니다.');
       return;
@@ -650,7 +748,7 @@ export function App() {
     setSelectedEntityIds(pasted.entityIds);
     closeContextMenu();
     setFileMessage('객체를 붙여넣었습니다.');
-  }, [cadClipboard, closeContextMenu, document, updateDocument]);
+  }, [cadClipboard, closeContextMenu, collaborationState.readonly, document, updateDocument]);
 
   const startReferenceCopy = useCallback(() => {
     if (!selectedEntityIds.length) {
@@ -665,6 +763,10 @@ export function App() {
   }, [closeContextMenu, selectedEntityIds.length]);
 
   const startReferencePaste = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     if (!cadClipboard) {
       setFileMessage('복사된 객체가 없습니다.');
       return;
@@ -678,7 +780,7 @@ export function App() {
     setReferencePreviewPoint(null);
     setReferenceMode('paste-base');
     setFileMessage('붙여넣을 파일에서 대응되는 중심점, 끝점, 교차점을 선택하세요.');
-  }, [cadClipboard, closeContextMenu]);
+  }, [cadClipboard, closeContextMenu, collaborationState.readonly]);
 
   const handleReferencePointPick = useCallback(
     (point: CadPoint) => {
@@ -747,6 +849,10 @@ export function App() {
   );
 
   const deleteSelectedEntity = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     if (!selectedEntityIds.length) return;
     updateDocument((current) => ({
       ...current,
@@ -754,9 +860,13 @@ export function App() {
     }));
     setSelectedEntityIds([]);
     closeContextMenu();
-  }, [closeContextMenu, selectedEntityIds, updateDocument]);
+  }, [closeContextMenu, collaborationState.readonly, selectedEntityIds, updateDocument]);
 
   const groupSelectedEntities = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     const selected = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
     if (selected.length < 2) {
       setFileMessage('그룹화할 객체를 2개 이상 선택하세요.');
@@ -774,9 +884,13 @@ export function App() {
     setSelectedEntityIds([group.id]);
     closeContextMenu();
     setFileMessage(`${selected.length}개 객체를 그룹화했습니다.`);
-  }, [closeContextMenu, document.entities, document.layers, selectedEntityIds, updateDocument]);
+  }, [closeContextMenu, collaborationState.readonly, document.entities, document.layers, selectedEntityIds, updateDocument]);
 
   const ungroupSelectedEntities = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     const groups = document.entities.filter(
       (entity): entity is GroupEntity => selectedEntityIds.includes(entity.id) && entity.type === 'group',
     );
@@ -795,10 +909,14 @@ export function App() {
     setSelectedEntityIds(groups.flatMap((group) => group.children.map((child) => child.id)));
     closeContextMenu();
     setFileMessage('그룹을 해제했습니다.');
-  }, [closeContextMenu, document.entities, selectedEntityIds, updateDocument]);
+  }, [closeContextMenu, collaborationState.readonly, document.entities, selectedEntityIds, updateDocument]);
 
   const rotateSelectedEntities = useCallback(
     (degrees?: number) => {
+      if (collaborationState.readonly) {
+        setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+        return;
+      }
       const amount = degrees ?? Number(rotationDegrees);
       const selected = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
       const bounds = getSelectionBounds(selected);
@@ -817,11 +935,15 @@ export function App() {
       closeContextMenu();
       setFileMessage(`선택 객체를 ${amount}도 회전했습니다.`);
     },
-    [closeContextMenu, document.entities, rotationDegrees, selectedEntityIds, updateDocument],
+    [closeContextMenu, collaborationState.readonly, document.entities, rotationDegrees, selectedEntityIds, updateDocument],
   );
 
   const alignSelectedEntities = useCallback(
     (mode: AlignMode) => {
+      if (collaborationState.readonly) {
+        setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+        return;
+      }
       if (selectedEntityIds.length < 2) {
         setFileMessage('정렬할 객체를 2개 이상 선택하세요.');
         return;
@@ -834,11 +956,15 @@ export function App() {
       closeContextMenu();
       setFileMessage('선택 객체를 정렬했습니다.');
     },
-    [closeContextMenu, selectedEntityIds, updateDocument],
+    [closeContextMenu, collaborationState.readonly, selectedEntityIds, updateDocument],
   );
 
   const updateSelectedEntity = useCallback(
     (patch: CadEntityPatch) => {
+      if (collaborationState.readonly) {
+        setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+        return;
+      }
       if (!selectedEntity) return;
       updateDocument((current) => ({
         ...current,
@@ -847,11 +973,15 @@ export function App() {
         ),
       }));
     },
-    [selectedEntity, updateDocument],
+    [collaborationState.readonly, selectedEntity, updateDocument],
   );
 
   const updateLayer = useCallback(
     (layerId: string, patch: Partial<CadLayer>) => {
+      if (collaborationState.readonly) {
+        setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+        return;
+      }
       updateDocument((current) => ({
         ...current,
         layers: current.layers.map((layer) =>
@@ -859,10 +989,14 @@ export function App() {
         ),
       }));
     },
-    [updateDocument],
+    [collaborationState.readonly, updateDocument],
   );
 
   const addLayer = useCallback(() => {
+    if (collaborationState.readonly) {
+      setFileMessage('읽기 전용 공유 문서는 편집할 수 없습니다.');
+      return;
+    }
     const nextIndex = document.layers.length + 1;
     updateDocument((current) => ({
       ...current,
@@ -877,7 +1011,7 @@ export function App() {
         },
       ],
     }));
-  }, [document.layers.length, updateDocument]);
+  }, [collaborationState.readonly, document.layers.length, updateDocument]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -1044,7 +1178,7 @@ export function App() {
             className="tool-button wide"
             title="저장"
             data-testid="save-button"
-            disabled={!activeTabId}
+            disabled={!activeTabId || activeReadonly}
             onClick={() => void saveCurrentDocument()}
           >
             <Save size={17} />
@@ -1054,11 +1188,21 @@ export function App() {
             className="tool-button wide"
             title="서버 저장"
             data-testid="server-save-button"
-            disabled={!activeTabId}
+            disabled={!activeTabId || activeReadonly}
             onClick={saveToServer}
           >
             <Save size={17} />
             서버 저장
+          </button>
+          <button
+            className="tool-button wide"
+            title="공유"
+            data-testid="share-link-button"
+            disabled={!activeTabId || activeReadonly}
+            onClick={() => void createShareLink()}
+          >
+            <Share2 size={17} />
+            공유
           </button>
           <button
             className="tool-button wide"
@@ -1195,12 +1339,15 @@ export function App() {
         <aside className="tool-panel" aria-label="도구">
           {tools.map((tool) => {
             const Icon = tool.icon;
+            const disabledByReadonly =
+              activeReadonly && !['select', 'pan'].includes(tool.id);
             return (
               <button
                 key={tool.id}
                 className={`tool-tile ${activeTool === tool.id ? 'active' : ''}`}
                 data-testid={`tool-${tool.id}`}
                 title={tool.label}
+                disabled={disabledByReadonly}
                 onClick={() => selectTool(tool.id)}
               >
                 <Icon size={20} />
@@ -1213,6 +1360,7 @@ export function App() {
         <CadCanvas
           document={document}
           activeTool={activeTool}
+          readonly={activeReadonly}
           viewport={viewport}
           selectedEntityIds={selectedEntityIds}
           previewEntities={referencePreviewEntities}
@@ -1234,6 +1382,12 @@ export function App() {
           onCanvasContextMenu={openCanvasContextMenu}
         />
 
+        {activeReadonly ? (
+          <div className="readonly-banner" data-testid="readonly-banner">
+            읽기 전용 공유 문서
+          </div>
+        ) : null}
+
         {contextMenu ? (
           <div
             className="cad-context-menu"
@@ -1253,7 +1407,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!selectedEntityIds.length}
+              disabled={!selectedEntityIds.length || activeReadonly}
               onClick={startReferenceCopy}
             >
               <Crosshair size={16} />
@@ -1263,7 +1417,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={groupSelectedEntities}
             >
               <span>그룹화</span>
@@ -1271,7 +1425,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!selectionHasGroup}
+              disabled={!selectionHasGroup || activeReadonly}
               onClick={ungroupSelectedEntities}
             >
               <span>그룹 해제</span>
@@ -1279,7 +1433,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!selectedEntityIds.length}
+              disabled={!selectedEntityIds.length || activeReadonly}
               onClick={() => rotateSelectedEntities(15)}
             >
               <span>15도 회전</span>
@@ -1287,7 +1441,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('left')}
             >
               <span>왼쪽 정렬</span>
@@ -1295,7 +1449,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('center-x')}
             >
               <span>가운데 정렬</span>
@@ -1303,7 +1457,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('right')}
             >
               <span>오른쪽 정렬</span>
@@ -1311,7 +1465,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('top')}
             >
               <span>위 정렬</span>
@@ -1319,7 +1473,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('center-y')}
             >
               <span>중앙 정렬</span>
@@ -1327,7 +1481,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={selectedEntityIds.length < 2}
+              disabled={selectedEntityIds.length < 2 || activeReadonly}
               onClick={() => alignSelectedEntities('bottom')}
             >
               <span>아래 정렬</span>
@@ -1336,7 +1490,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!cadClipboard}
+              disabled={!cadClipboard || activeReadonly}
               onClick={pasteEntities}
             >
               <ClipboardPaste size={16} />
@@ -1345,7 +1499,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!cadClipboard?.sourceBasePoint}
+              disabled={!cadClipboard?.sourceBasePoint || activeReadonly}
               onClick={startReferencePaste}
             >
               <Crosshair size={16} />
@@ -1358,6 +1512,7 @@ export function App() {
                   type="button"
                   role="menuitem"
                   className="danger"
+                  disabled={activeReadonly}
                   onClick={deleteSelectedEntity}
                 >
                   <Trash2 size={16} />
@@ -1405,6 +1560,7 @@ export function App() {
                   <dd className="property-control">
                     <select
                       value={selectedEntity.layerId}
+                      disabled={activeReadonly}
                       onChange={(event) => updateSelectedEntity({ layerId: event.target.value })}
                     >
                       {document.layers.map((layer) => (
@@ -1421,6 +1577,7 @@ export function App() {
                     <input
                       type="color"
                       value={selectedEntity.strokeColor}
+                      disabled={activeReadonly}
                       onChange={(event) => updateSelectedEntity({ strokeColor: event.target.value })}
                     />
                     <span>{selectedEntity.strokeColor}</span>
@@ -1434,6 +1591,7 @@ export function App() {
                       max="12"
                       type="number"
                       value={selectedEntity.strokeWidth}
+                      disabled={activeReadonly}
                       onChange={(event) =>
                         updateSelectedEntity({ strokeWidth: Number(event.target.value) || 1 })
                       }
@@ -1445,6 +1603,7 @@ export function App() {
                   <dd className="property-control">
                     <select
                       value={selectedEntity.strokeStyle ?? 'solid'}
+                      disabled={activeReadonly}
                       onChange={(event) =>
                         updateSelectedEntity({
                           strokeStyle: event.target.value as 'solid' | 'dashed',
@@ -1464,6 +1623,7 @@ export function App() {
                         <input
                           type="text"
                           value={selectedEntity.label}
+                          disabled={activeReadonly}
                           onChange={(event) =>
                             updateSelectedEntity({
                               label: event.target.value,
@@ -1479,6 +1639,7 @@ export function App() {
                         <input
                           type="number"
                           value={selectedEntity.labelOffset ?? -24}
+                          disabled={activeReadonly}
                           onChange={(event) =>
                             updateSelectedEntity({
                               labelOffset: Number(event.target.value) || 0,
@@ -1492,6 +1653,7 @@ export function App() {
                       <dd className="property-control">
                         <button
                           className={`mini-button ${selectedEntity.labelMode !== 'manual' ? 'active' : ''}`}
+                          disabled={activeReadonly}
                           onClick={() =>
                             updateSelectedEntity({
                               label: formatDimensionLabel(selectedEntity),
@@ -1520,29 +1682,30 @@ export function App() {
               <div className="transform-panel">
                 <p className="empty-state">{selectedEntityIds.length}개 객체가 선택되었습니다.</p>
                 <div className="transform-actions">
-                  <button className="mini-button" disabled={selectedEntityIds.length < 2} onClick={groupSelectedEntities}>
+                  <button className="mini-button" disabled={selectedEntityIds.length < 2 || activeReadonly} onClick={groupSelectedEntities}>
                     그룹화
                   </button>
-                  <button className="mini-button" disabled={!selectionHasGroup} onClick={ungroupSelectedEntities}>
+                  <button className="mini-button" disabled={!selectionHasGroup || activeReadonly} onClick={ungroupSelectedEntities}>
                     그룹 해제
                   </button>
                 </div>
                 <div className="align-grid">
-                  <button className="mini-button" onClick={() => alignSelectedEntities('left')}>왼쪽</button>
-                  <button className="mini-button" onClick={() => alignSelectedEntities('center-x')}>가운데</button>
-                  <button className="mini-button" onClick={() => alignSelectedEntities('right')}>오른쪽</button>
-                  <button className="mini-button" onClick={() => alignSelectedEntities('top')}>위</button>
-                  <button className="mini-button" onClick={() => alignSelectedEntities('center-y')}>중앙</button>
-                  <button className="mini-button" onClick={() => alignSelectedEntities('bottom')}>아래</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('left')}>왼쪽</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('center-x')}>가운데</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('right')}>오른쪽</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('top')}>위</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('center-y')}>중앙</button>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => alignSelectedEntities('bottom')}>아래</button>
                 </div>
                 <div className="transform-inline">
                   <label>회전</label>
                   <input
                     type="number"
                     value={rotationDegrees}
+                    disabled={activeReadonly}
                     onChange={(event) => setRotationDegrees(event.target.value)}
                   />
-                  <button className="mini-button" onClick={() => rotateSelectedEntities()}>
+                  <button className="mini-button" disabled={activeReadonly} onClick={() => rotateSelectedEntities()}>
                     적용
                   </button>
                 </div>
@@ -1555,7 +1718,7 @@ export function App() {
           <div className="panel-section">
             <div className="panel-heading">
               <h2>레이어</h2>
-              <button className="mini-button" onClick={addLayer}>
+              <button className="mini-button" disabled={activeReadonly} onClick={addLayer}>
                 추가
               </button>
             </div>
@@ -1566,21 +1729,25 @@ export function App() {
                     type="color"
                     value={layer.color}
                     title="레이어 색상"
+                    disabled={activeReadonly}
                     onChange={(event) => updateLayer(layer.id, { color: event.target.value })}
                   />
                   <input
                     className="layer-name-input"
                     value={layer.name}
+                    disabled={activeReadonly}
                     onChange={(event) => updateLayer(layer.id, { name: event.target.value })}
                   />
                   <button
                     className={`mini-button ${layer.visible ? 'active' : ''}`}
+                    disabled={activeReadonly}
                     onClick={() => updateLayer(layer.id, { visible: !layer.visible })}
                   >
                     {layer.visible ? '표시' : '숨김'}
                   </button>
                   <button
                     className={`mini-button ${layer.locked ? 'active' : ''}`}
+                    disabled={activeReadonly}
                     onClick={() => updateLayer(layer.id, { locked: !layer.locked })}
                   >
                     {layer.locked ? '잠금' : '열림'}

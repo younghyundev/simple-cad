@@ -22,6 +22,7 @@ import { clampScale, screenToWorld, worldToScreen, zoomAt } from '../cad/viewpor
 type CadCanvasProps = {
   document: CadDocument;
   activeTool: ToolId;
+  readonly?: boolean;
   viewport: Viewport;
   selectedEntityIds: string[];
   previewEntities?: CadEntity[];
@@ -58,6 +59,7 @@ type TextDraft = {
 export function CadCanvas({
   document,
   activeTool,
+  readonly = false,
   viewport,
   selectedEntityIds,
   previewEntities = [],
@@ -245,6 +247,10 @@ export function CadCanvas({
   }, [textDraft?.entityId, textDraft?.screenPoint.x, textDraft?.screenPoint.y]);
 
   const commitTextDraft = () => {
+    if (readonly) {
+      updateTextDraft(null);
+      return;
+    }
     const draft = textDraftRef.current;
     updateTextDraft(null);
 
@@ -274,6 +280,7 @@ export function CadCanvas({
   };
 
   const openTextEditor = (entity: CadEntity) => {
+    if (readonly) return;
     if (entity.type !== 'text') return;
     const worldPoint = { x: entity.x, y: entity.y };
     updateTextDraft({
@@ -290,6 +297,7 @@ export function CadCanvas({
       const isEditingText =
         target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
       if (isEditingText) return;
+      if (readonly) return;
       if ((event.key !== 'Delete' && event.key !== 'Backspace') || !selectedPolylinePoint) return;
 
       event.preventDefault();
@@ -308,7 +316,7 @@ export function CadCanvas({
 
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, [onDocumentChange, selectedPolylinePoint]);
+  }, [onDocumentChange, readonly, selectedPolylinePoint]);
 
   return (
     <section className="canvas-stage" data-testid="canvas-stage">
@@ -343,7 +351,7 @@ export function CadCanvas({
             return;
           }
 
-          if (activeTool === 'text') {
+          if (!readonly && activeTool === 'text') {
             pendingTextDraftRef.current = {
               screenPoint: localPoint,
               worldPoint,
@@ -363,7 +371,7 @@ export function CadCanvas({
 
           if (activeTool === 'select') {
             const handleId = findResizeHandleAt(worldPoint);
-            if (handleId && selectedEntityId) {
+            if (!readonly && handleId && selectedEntityId) {
               if (handleId.startsWith('point-')) {
                 setSelectedPolylinePoint({
                   entityId: selectedEntityId,
@@ -385,16 +393,18 @@ export function CadCanvas({
               if (!selectedEntityIds.includes(entityId)) {
                 onSelectedEntityChange([entityId]);
               }
-              movingEntityRef.current = true;
-              movedEntityRef.current = false;
-              onDocumentBatchStart(document);
+              if (!readonly) {
+                movingEntityRef.current = true;
+                movedEntityRef.current = false;
+                onDocumentBatchStart(document);
+              }
             } else {
               onSelectedEntityChange([]);
               setSelectionBox({ start: localPoint, end: localPoint });
             }
           }
 
-          if (activeTool === 'erase') {
+          if (!readonly && activeTool === 'erase') {
             const entityId = findEntityAt(worldPoint);
             if (!entityId) return;
             onDocumentChange((current) => ({
@@ -405,11 +415,12 @@ export function CadCanvas({
           }
 
           if (
-            activeTool === 'line' ||
+            !readonly &&
+            (activeTool === 'line' ||
             activeTool === 'rect' ||
             activeTool === 'circle' ||
             activeTool === 'polyline' ||
-            activeTool === 'dimension'
+            activeTool === 'dimension')
           ) {
             const entity = createEntity(activeTool, worldPoint, worldPoint, currentLayerId);
             updateDraftEntity(entity);
@@ -447,7 +458,7 @@ export function CadCanvas({
             return;
           }
 
-          if (activeTool === 'select' && selectedEntityIds.length && lastWorldPoint) {
+          if (!readonly && activeTool === 'select' && selectedEntityIds.length && lastWorldPoint) {
             const handleId = resizingHandleRef.current;
             if (handleId && selectedEntityId) {
               resizedEntityRef.current = true;
@@ -485,12 +496,13 @@ export function CadCanvas({
           }
 
           if (
-            (activeTool === 'line' ||
+            !readonly &&
+            ((activeTool === 'line' ||
               activeTool === 'rect' ||
               activeTool === 'circle' ||
               activeTool === 'polyline' ||
               activeTool === 'dimension') &&
-            drawingStart
+              drawingStart)
           ) {
             updateDraftEntity(createEntity(activeTool, drawingStart, worldPoint, currentLayerId));
           }
@@ -499,7 +511,7 @@ export function CadCanvas({
           setLastWorldPoint(worldPoint);
         }}
         onPointerUp={() => {
-          if (activeTool === 'text' && pendingTextDraftRef.current) {
+          if (!readonly && activeTool === 'text' && pendingTextDraftRef.current) {
             updateTextDraft(pendingTextDraftRef.current);
             pendingTextDraftRef.current = null;
             setSnapMarker(null);
@@ -513,7 +525,7 @@ export function CadCanvas({
           }
 
           const entity = draftEntityRef.current;
-          if (entity && isMeaningfulEntity(entity)) {
+          if (!readonly && entity && isMeaningfulEntity(entity)) {
             onDocumentChange((current) => ({
               ...current,
               entities: [...current.entities, entity],
@@ -545,7 +557,7 @@ export function CadCanvas({
           const entityId = findEntityAt(worldPoint);
           const entity = document.entities.find((item) => item.id === entityId);
           if (entity?.type === 'text') openTextEditor(entity);
-          if (entity?.type === 'polyline') {
+          if (!readonly && entity?.type === 'polyline') {
             onDocumentChange((current) => ({
               ...current,
               entities: current.entities.map((item) =>
