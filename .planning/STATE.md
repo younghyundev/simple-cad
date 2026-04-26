@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Production CAD Workflow and Collaboration
-status: milestone_complete
-last_updated: "2026-04-26T09:51:18Z"
-last_activity: 2026-04-26 -- Phase 15 completed
+status: completed
+last_updated: "2026-04-26T10:01:44Z"
+last_activity: 2026-04-26 -- v1.2 milestone archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** v1.2 — Production CAD Workflow and Collaboration complete
+**Current focus:** Planning next milestone
 
 ## Current Position
 
 Phase: 15 — Sharing and Review Collaboration
 Plan: 4/4 complete
 Status: Milestone complete
-Last activity: 2026-04-26 -- Phase 15 completed
+Last activity: 2026-04-26 -- v1.2 milestone archived
 
 ## Current Status
 
@@ -49,6 +49,7 @@ Last activity: 2026-04-26 -- Phase 15 completed
 - Phase 14 completed: GitHub Actions quality-gates workflow, Node 22/npm ci/Playwright install, command logs, Playwright artifacts, job summary, README CI docs, and local `npm run verify`.
 - Phase 15 planning artifacts are ready: research, UI spec, patterns, and 4 execution plans for sharing/review collaboration.
 - Phase 15 completed: local mock server save/open, share links, read-only shared documents, coordinate/entity review comments, review panel, E2E coverage, README docs, and clean code review.
+- v1.2 archive created in `.planning/milestones/`.
 
 ## Accumulated Context
 
@@ -65,6 +66,7 @@ Last activity: 2026-04-26 -- Phase 15 completed
 
 ## Next Action
 
-Run `$gsd-complete-milestone` to archive v1.2, or `$gsd-new-milestone` to start the next milestone.
+Run `$gsd-new-milestone` to start the next milestone.
 
 **Completed Phase:** 15 (Sharing and Review Collaboration) — 4/4 plans — 2026-04-26
+**Completed Milestone:** v1.2 (Production CAD Workflow and Collaboration) — archived 2026-04-26

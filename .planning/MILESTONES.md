@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.2 Production CAD Workflow and Collaboration (Shipped: 2026-04-26)
+
+**Status:** Shipped
+**Completed:** 2026-04-26
+**Archive:** [v1.2 ROADMAP](milestones/v1.2-ROADMAP.md), [v1.2 REQUIREMENTS](milestones/v1.2-REQUIREMENTS.md)
+**Phases completed:** 4 phases, 15 plans
+
+### Delivered
+
+- Production DWG conversion API contract with configurable base URL, timeouts, async job polling, typed failures, and mock/production mode documentation.
+- Advanced DXF preservation for native ELLIPSE/SPLINE, HATCH, LEADER/MLEADER fallback, ATTRIB/ATTDEF fallback, BLOCK/INSERT warning detail, and document metadata.
+- GitHub Actions quality gates running build, E2E, CAD fidelity, performance baseline, and conversion regression with artifacts and job summary.
+- localStorage mock collaboration repository for server save/open, share links, read-only shared documents, coordinate/entity review comments, and review panel.
+- Collaboration E2E coverage and README documentation for server save, share links, read-only mode, and comments.
+
+### Known Deferred Items
+
+- Real production DWG conversion server deployment and credentials.
+- Real backend replacement for localStorage collaboration storage.
+- Secure share-link permissions, expiration, and audit history.
+
+---
+
 ## v1.0 — SimpleCAD MVP
 
 **Status:** Shipped
