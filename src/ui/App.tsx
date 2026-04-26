@@ -86,6 +86,19 @@ function formatDimensionLabel(entity: DimensionEntity): string {
   ).toFixed(1);
 }
 
+function toReferencePreviewEntity(entity: CadEntity): CadEntity {
+  return {
+    ...entity,
+    id: `reference-preview-${entity.id}`,
+    strokeColor: '#0f766e',
+    fillColor: entity.type === 'text' || entity.type === 'dimension'
+      ? '#0f766e'
+      : 'rgba(15, 118, 110, 0.08)',
+    strokeStyle: 'dashed',
+    locked: true,
+  } as CadEntity;
+}
+
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
   const {
@@ -112,6 +125,7 @@ export function App() {
   const [cadClipboard, setCadClipboard] = useState<CadClipboardPayload | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [referenceMode, setReferenceMode] = useState<ReferenceMode>(null);
+  const [referencePreviewPoint, setReferencePreviewPoint] = useState<CadPoint | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedEntity = useMemo(
     () =>
@@ -130,6 +144,16 @@ export function App() {
     }
     return [...groups.values()];
   }, [document.importWarnings]);
+  const referencePreviewEntities = useMemo(() => {
+    if (referenceMode !== 'paste-base' || !cadClipboard?.sourceBasePoint || !referencePreviewPoint) {
+      return [];
+    }
+
+    return pasteClipboardPayload(cadClipboard, {
+      destinationDocument: document,
+      destinationBasePoint: referencePreviewPoint,
+    }).entities.map(toReferencePreviewEntity);
+  }, [cadClipboard, document, referenceMode, referencePreviewPoint]);
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
 
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
@@ -346,6 +370,7 @@ export function App() {
     }
 
     closeContextMenu();
+    setReferencePreviewPoint(null);
     setReferenceMode('copy-base');
     setFileMessage('참조할 다른 객체의 중심점, 끝점, 교차점을 선택하세요.');
   }, [closeContextMenu, selectedEntityIds.length]);
@@ -355,8 +380,13 @@ export function App() {
       setFileMessage('복사된 객체가 없습니다.');
       return;
     }
+    if (!cadClipboard.sourceBasePoint) {
+      setFileMessage('참조 기준점이 없는 복사본입니다. 참조 복사를 먼저 실행하세요.');
+      return;
+    }
 
     closeContextMenu();
+    setReferencePreviewPoint(null);
     setReferenceMode('paste-base');
     setFileMessage('붙여넣을 파일에서 대응되는 중심점, 끝점, 교차점을 선택하세요.');
   }, [cadClipboard, closeContextMenu]);
@@ -367,12 +397,14 @@ export function App() {
         const selectedEntities = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
         if (!selectedEntities.length) {
           setReferenceMode(null);
+          setReferencePreviewPoint(null);
           setFileMessage('복사할 객체를 선택하세요.');
           return;
         }
 
         setCadClipboard(createClipboardPayload(selectedEntities, point));
         setReferenceMode(null);
+        setReferencePreviewPoint(null);
         setFileMessage('참조 기준점과 함께 복사했습니다.');
         return;
       }
@@ -380,7 +412,14 @@ export function App() {
       if (referenceMode === 'paste-base') {
         if (!cadClipboard) {
           setReferenceMode(null);
+          setReferencePreviewPoint(null);
           setFileMessage('복사된 객체가 없습니다.');
+          return;
+        }
+        if (!cadClipboard.sourceBasePoint) {
+          setReferenceMode(null);
+          setReferencePreviewPoint(null);
+          setFileMessage('참조 기준점이 없는 복사본입니다. 참조 복사를 먼저 실행하세요.');
           return;
         }
 
@@ -394,6 +433,7 @@ export function App() {
         }));
         setSelectedEntityIds(pasted.entityIds);
         setReferenceMode(null);
+        setReferencePreviewPoint(null);
         setFileMessage('참조 위치에 붙여넣었습니다.');
       }
     },
@@ -486,11 +526,13 @@ export function App() {
   useEffect(() => {
     setContextMenu(null);
     setReferenceMode(null);
+    setReferencePreviewPoint(null);
   }, [activeTabId]);
 
   useEffect(() => {
     setContextMenu(null);
     setReferenceMode(null);
+    setReferencePreviewPoint(null);
   }, [activeTool]);
 
   useEffect(() => {
@@ -517,6 +559,7 @@ export function App() {
         if (referenceMode) {
           event.preventDefault();
           setReferenceMode(null);
+          setReferencePreviewPoint(null);
           setContextMenu(null);
           setFileMessage('참조 작업을 취소했습니다.');
           return;
@@ -745,6 +788,7 @@ export function App() {
           activeTool={activeTool}
           viewport={viewport}
           selectedEntityIds={selectedEntityIds}
+          previewEntities={referencePreviewEntities}
           gridVisible={gridVisible}
           snapEnabled={snapEnabled}
           onViewportChange={setViewport}
@@ -756,6 +800,9 @@ export function App() {
           onReady={setCanvasApi}
           referencePickMode={referenceMode !== null}
           referenceSnapExcludeEntityIds={referenceMode === 'copy-base' ? selectedEntityIds : []}
+          onReferencePointPreview={
+            referenceMode === 'paste-base' ? setReferencePreviewPoint : undefined
+          }
           onReferencePointPick={handleReferencePointPick}
           onCanvasContextMenu={openCanvasContextMenu}
         />
@@ -797,7 +844,7 @@ export function App() {
             <button
               type="button"
               role="menuitem"
-              disabled={!cadClipboard}
+              disabled={!cadClipboard?.sourceBasePoint}
               onClick={startReferencePaste}
             >
               <Crosshair size={16} />

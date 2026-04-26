@@ -23,6 +23,7 @@ type CadCanvasProps = {
   activeTool: ToolId;
   viewport: Viewport;
   selectedEntityIds: string[];
+  previewEntities?: CadEntity[];
   gridVisible: boolean;
   snapEnabled: boolean;
   onViewportChange: (viewport: Viewport) => void;
@@ -37,6 +38,7 @@ type CadCanvasProps = {
   onReady: (api: { zoomBy: (factor: number) => void }) => void;
   referencePickMode?: boolean;
   referenceSnapExcludeEntityIds?: string[];
+  onReferencePointPreview?: (point: CadPoint) => void;
   onReferencePointPick?: (point: CadPoint) => void;
   onCanvasContextMenu?: (payload: {
     screenPoint: CadPoint;
@@ -57,6 +59,7 @@ export function CadCanvas({
   activeTool,
   viewport,
   selectedEntityIds,
+  previewEntities = [],
   gridVisible,
   snapEnabled,
   onViewportChange,
@@ -68,6 +71,7 @@ export function CadCanvas({
   onReady,
   referencePickMode = false,
   referenceSnapExcludeEntityIds = [],
+  onReferencePointPreview,
   onReferencePointPick,
   onCanvasContextMenu,
 }: CadCanvasProps) {
@@ -106,14 +110,26 @@ export function CadCanvas({
     }
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+    const renderModel =
+      draftEntity || previewEntities.length
+        ? {
+            ...document,
+            entities: [
+              ...document.entities,
+              ...(draftEntity ? [draftEntity] : []),
+              ...previewEntities,
+            ],
+          }
+        : document;
+
     renderDocument(
       context,
-      draftEntity ? { ...document, entities: [...document.entities, draftEntity] } : document,
+      renderModel,
       viewport,
       selectedEntityIds,
       { showGrid: gridVisible },
     );
-  }, [document, draftEntity, gridVisible, selectedEntityIds, viewport]);
+  }, [document, draftEntity, gridVisible, previewEntities, selectedEntityIds, viewport]);
 
   useEffect(() => {
     render();
@@ -391,6 +407,7 @@ export function CadCanvas({
           const worldPoint = snap.point;
           setSnapMarker(snap.type === 'none' ? null : snap);
           onCursorChange(worldPoint);
+          if (referencePickMode) onReferencePointPreview?.(worldPoint);
 
           if (!dragStart) return;
 

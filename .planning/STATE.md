@@ -59,6 +59,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Phase 7 executed: CAD clipboard helpers, context menu, keyboard copy/paste, and reference-point copy/paste workflow are implemented.
 - Phase 7 reference copy corrected: reference copy now treats another object's center/endpoint/intersection as the anchor by excluding copied entities from source anchor snapping.
 - Phase 7 code review completed: fixed reference hover snap mismatch so visible snap markers and stored anchor points use the same external-anchor exclusion rules.
+- Phase 7 reference paste improved: copied geometry now renders as a dashed preview overlay while choosing the destination anchor, with the cursor located at the referenced paste point.
 
 ## Decisions
 
@@ -76,6 +77,6 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 
 ## Next Action
 
-Verify Phase 7 in browser: test same-tab and cross-tab copy/paste, right-click menu commands, reference copy/paste with snap, Escape cancellation, and text-editing copy/paste safety.
+Verify Phase 7 in browser: test same-tab and cross-tab copy/paste, right-click menu commands, reference copy/paste with snap and overlay preview, Escape cancellation, and text-editing copy/paste safety.
 
 **Planned Phase:** 07 (cross-tab-reference-copy-and-paste) — 3 plans — 2026-04-25T16:26:57.264Z
