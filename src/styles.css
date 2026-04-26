@@ -324,6 +324,32 @@ button {
   pointer-events: none;
 }
 
+.comment-overlay {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 284px;
+  bottom: 0;
+  left: 86px;
+  pointer-events: none;
+}
+
+.comment-marker {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25);
+  transform: translate(-50%, -50%);
+}
+
+.comment-marker.resolved {
+  background: #64748b;
+  opacity: 0.7;
+}
+
 .cad-canvas {
   width: 100%;
   height: 100%;
@@ -481,6 +507,43 @@ button {
 
 .panel-heading h2 {
   margin: 0;
+}
+
+.review-count {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.review-list {
+  display: grid;
+  gap: 8px;
+}
+
+.review-comment {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  background: #fff7ed;
+}
+
+.review-comment.resolved {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.review-comment p {
+  margin: 0;
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.review-comment small {
+  color: #6b7280;
+  font-size: 11px;
 }
 
 .property-list {
@@ -741,6 +804,11 @@ button {
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 76px 1fr 244px;
+  }
+
+  .comment-overlay {
+    right: 244px;
+    left: 76px;
   }
 
   .brand {

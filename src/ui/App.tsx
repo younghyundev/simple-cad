@@ -30,7 +30,7 @@ import type { ComponentType } from 'react';
 import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
 import type { CadClipboardPayload } from '../cad/clipboard';
 import { LocalCollaborationRepository } from '../cad/collaboration';
-import type { CollaborationState, ServerDocumentRecord } from '../cad/collaboration';
+import type { CollaborationState, ReviewComment, ServerDocumentRecord } from '../cad/collaboration';
 import {
   alignEntities,
   type AlignMode,
@@ -52,6 +52,7 @@ import { sampleDocument } from '../cad/sampleDocument';
 import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
 import { useDocumentHistory } from '../cad/useDocumentHistory';
 import type { DocumentHistorySnapshot } from '../cad/useDocumentHistory';
+import { worldToScreen } from '../cad/viewport';
 import { CadCanvas } from './CadCanvas';
 
 const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: number }> }> = [
@@ -105,6 +106,7 @@ type ContextMenuState = {
   x: number;
   y: number;
   worldPoint: CadPoint;
+  entityId: string | null;
 };
 
 type ReferenceMode = 'copy-base' | 'paste-base' | null;
@@ -162,6 +164,7 @@ export function App() {
   const [serverDocuments, setServerDocuments] = useState<ServerDocumentRecord[]>(() =>
     collaborationRepository.listDocuments(),
   );
+  const [reviewComments, setReviewComments] = useState<ReviewComment[]>([]);
   const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
   const [collaborationState, setCollaborationState] = useState<CollaborationState>(() => createCollaborationState());
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
@@ -206,6 +209,7 @@ export function App() {
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
   const serverStatus = formatServerState(collaborationState, saveState.revision);
   const activeReadonly = collaborationState.readonly;
+  const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
 
   const markDirty = useCallback(() => {
     setSaveState((current) => ({
@@ -594,6 +598,7 @@ export function App() {
     });
     setCollaborationState(nextCollaborationState);
     setServerDocuments(collaborationRepository.listDocuments());
+    setReviewComments(collaborationRepository.listComments(record.id));
     persistRecentDocument(record.title, record.document);
     setFileMessage(`${record.title} 서버 저장됨`);
     return record;
@@ -662,6 +667,7 @@ export function App() {
         readonly: serverRecord.readonly ?? false,
       }),
     );
+    setReviewComments(collaborationRepository.listComments(serverRecord.id));
     setFileMessage(`${serverRecord.title} 서버 도면을 열었습니다.`);
   }, [createTab]);
 
@@ -692,6 +698,7 @@ export function App() {
         readonly: true,
       }),
     );
+    setReviewComments(collaborationRepository.listComments(sharedRecord.id));
     setActiveTool('select');
     setFileMessage('읽기 전용 공유 문서를 열었습니다.');
   }, [createTab]);
@@ -699,6 +706,62 @@ export function App() {
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
+
+  const refreshReviewComments = useCallback((serverDocumentId?: string) => {
+    setReviewComments(serverDocumentId ? collaborationRepository.listComments(serverDocumentId) : []);
+  }, []);
+
+  useEffect(() => {
+    refreshReviewComments(collaborationState.serverDocumentId);
+  }, [collaborationState.serverDocumentId, refreshReviewComments]);
+
+  const addReviewComment = useCallback(() => {
+    if (collaborationState.readonly || !contextMenu) {
+      setFileMessage('읽기 전용 공유 문서에는 주석을 추가할 수 없습니다.');
+      return;
+    }
+    const message = window.prompt('주석 내용을 입력하세요.');
+    if (!message?.trim()) {
+      closeContextMenu();
+      return;
+    }
+
+    const record = collaborationState.serverDocumentId
+      ? collaborationRepository.openDocument(collaborationState.serverDocumentId)
+      : saveDocumentToServer();
+    if (!record) {
+      setFileMessage('주석을 저장할 서버 도면을 만들 수 없습니다.');
+      closeContextMenu();
+      return;
+    }
+
+    collaborationRepository.addComment({
+      documentId: record.id,
+      entityId: contextMenu.entityId ?? undefined,
+      point: contextMenu.worldPoint,
+      message: message.trim(),
+      author: 'Reviewer',
+    });
+    refreshReviewComments(record.id);
+    closeContextMenu();
+    setFileMessage('주석을 추가했습니다.');
+  }, [
+    closeContextMenu,
+    collaborationState.readonly,
+    collaborationState.serverDocumentId,
+    contextMenu,
+    refreshReviewComments,
+    saveDocumentToServer,
+  ]);
+
+  const toggleReviewCommentResolved = useCallback((commentId: string) => {
+    if (collaborationState.readonly || !collaborationState.serverDocumentId) {
+      setFileMessage('읽기 전용 공유 문서에서는 주석 상태를 바꿀 수 없습니다.');
+      return;
+    }
+    collaborationRepository.toggleCommentResolved(collaborationState.serverDocumentId, commentId);
+    refreshReviewComments(collaborationState.serverDocumentId);
+  }, [collaborationState.readonly, collaborationState.serverDocumentId, refreshReviewComments]);
 
   const selectTool = useCallback((toolId: ToolId) => {
     setActiveTool(toolId);
@@ -837,15 +900,16 @@ export function App() {
       if (payload.entityId && !selectedEntityIds.includes(payload.entityId)) {
         setSelectedEntityIds([payload.entityId]);
       }
-      if (!payload.entityId && !selectedEntityIds.length && !cadClipboard) return;
+      if (!payload.entityId && !selectedEntityIds.length && !cadClipboard && collaborationState.readonly) return;
 
       setContextMenu({
         x: Math.min(payload.screenPoint.x, window.innerWidth - 220),
         y: Math.max(8, Math.min(payload.screenPoint.y, window.innerHeight - 420)),
         worldPoint: payload.worldPoint,
+        entityId: payload.entityId,
       });
     },
-    [activeTabId, cadClipboard, selectedEntityIds],
+    [activeTabId, cadClipboard, collaborationState.readonly, selectedEntityIds],
   );
 
   const deleteSelectedEntity = useCallback(() => {
@@ -1388,6 +1452,22 @@ export function App() {
           </div>
         ) : null}
 
+        <div className="comment-overlay" aria-hidden="true">
+          {reviewComments.slice(0, 200).map((comment) => {
+            if (!comment.point) return null;
+            const screenPoint = worldToScreen(comment.point, viewport);
+            return (
+              <span
+                className={`comment-marker ${comment.resolved ? 'resolved' : ''}`}
+                data-testid="comment-marker"
+                key={comment.id}
+                style={{ left: screenPoint.x, top: screenPoint.y }}
+                title={comment.message}
+              />
+            );
+          })}
+        </div>
+
         {contextMenu ? (
           <div
             className="cad-context-menu"
@@ -1412,6 +1492,15 @@ export function App() {
             >
               <Crosshair size={16} />
               <span>참조 복사</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="add-comment-button"
+              disabled={activeReadonly}
+              onClick={addReviewComment}
+            >
+              <span>주석 추가</span>
             </button>
             <div className="cad-context-menu-divider" />
             <button
@@ -1712,6 +1801,35 @@ export function App() {
               </div>
             ) : (
               <p className="empty-state">선택된 객체가 없습니다.</p>
+            )}
+          </div>
+
+          <div className="panel-section">
+            <div className="panel-heading">
+              <h2>검토</h2>
+              <span className="review-count">{unresolvedComments.length}개 미해결</span>
+            </div>
+            {reviewComments.length ? (
+              <div className="review-list">
+                {reviewComments.map((comment) => (
+                  <div className={`review-comment ${comment.resolved ? 'resolved' : ''}`} key={comment.id}>
+                    <p>{comment.message}</p>
+                    <small>
+                      {comment.entityId ? `${comment.entityId} · ` : ''}
+                      {comment.point ? `X ${comment.point.x.toFixed(1)} / Y ${comment.point.y.toFixed(1)}` : '좌표 없음'}
+                    </small>
+                    <button
+                      className="mini-button"
+                      disabled={activeReadonly}
+                      onClick={() => toggleReviewCommentResolved(comment.id)}
+                    >
+                      {comment.resolved ? '미해결' : '해결됨'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">등록된 주석이 없습니다.</p>
             )}
           </div>
 
