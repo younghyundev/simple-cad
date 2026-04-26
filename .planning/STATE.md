@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Share Link Management and Review Workflow
 status: planning
-last_updated: "2026-04-26T10:35:00Z"
-last_activity: 2026-04-26 -- v1.3 milestone started
+last_updated: "2026-04-26T11:10:00Z"
+last_activity: 2026-04-26 -- Phase 16 completed
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 16 — Share Link Registry and Lifecycle
+Phase: 17 — Share Creation Options
 Plan: Not started
-Status: Roadmap ready
-Last activity: 2026-04-26 -- v1.3 milestone started
+Status: Phase 16 complete
+Last activity: 2026-04-26 -- Phase 16 completed
 
 ## Current Status
 
@@ -51,6 +51,7 @@ Last activity: 2026-04-26 -- v1.3 milestone started
 - Phase 15 completed: local mock server save/open, share links, read-only shared documents, coordinate/entity review comments, review panel, E2E coverage, README docs, and clean code review.
 - v1.2 archive created in `.planning/milestones/`.
 - v1.3 started with a browser-only collaboration scope: share link management, share options, review comment workflow polish, and regression documentation.
+- Phase 16 completed: local share link registry, right-panel link list, copy/delete actions, local deleted/expired guards, README limitation note, and collaboration E2E coverage.
 
 ## Accumulated Context
 
@@ -67,7 +68,8 @@ Last activity: 2026-04-26 -- v1.3 milestone started
 
 ## Next Action
 
-Run `$gsd-plan-phase 16` to plan share link registry and lifecycle work.
+Run `$gsd-plan-phase 17` to plan share creation options.
 
-**Next Phase:** 16 (Share Link Registry and Lifecycle)
+**Completed Phase:** 16 (Share Link Registry and Lifecycle)
+**Next Phase:** 17 (Share Creation Options)
 **Current Milestone:** v1.3 (Share Link Management and Review Workflow)

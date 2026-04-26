@@ -16,6 +16,7 @@ import {
   Redo2,
   Save,
   Share2,
+  Link2,
   Square,
   Trash2,
   Type,
@@ -29,8 +30,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
 import type { CadClipboardPayload } from '../cad/clipboard';
-import { LocalCollaborationRepository } from '../cad/collaboration';
-import type { CollaborationState, ReviewComment, ServerDocumentRecord } from '../cad/collaboration';
+import { isShareLinkExpired, LocalCollaborationRepository } from '../cad/collaboration';
+import type { CollaborationState, ReviewComment, ServerDocumentRecord, ShareLink } from '../cad/collaboration';
 import {
   alignEntities,
   type AlignMode,
@@ -170,6 +171,7 @@ export function App() {
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
   const [reviewComments, setReviewComments] = useState<ReviewComment[]>([]);
+  const [shareLinks, setShareLinks] = useState<ShareLink[]>(() => collaborationRepository.listShareLinks());
   const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
   const [collaborationState, setCollaborationState] = useState<CollaborationState>(() => createCollaborationState());
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
@@ -215,6 +217,11 @@ export function App() {
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
   const activeReadonly = collaborationState.readonly;
   const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
+  const activeShareLinks = shareLinks.filter((link) => !link.deletedAt);
+
+  const refreshShareLinks = useCallback(() => {
+    setShareLinks(collaborationRepository.listShareLinks());
+  }, []);
 
   useEffect(() => {
     reviewCommentsRef.current = reviewComments;
@@ -650,6 +657,12 @@ export function App() {
       shareToken: encoded,
       readonly: false,
     }));
+    collaborationRepository.saveShareLink({
+      token: encoded,
+      documentId: activeTabId,
+      title: payload.title,
+    });
+    refreshShareLinks();
     window.history.replaceState(null, '', shareUrl);
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
@@ -660,8 +673,28 @@ export function App() {
     collaborationState.readonly,
     collaborationState.serverDocumentId,
     document,
+    refreshShareLinks,
     saveState.targetName,
   ]);
+
+  const copyShareLink = useCallback(async (token: string) => {
+    const shareUrl = new URL(window.location.href);
+    shareUrl.search = '';
+    shareUrl.hash = `share=${token}`;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
+    }
+    setFileMessage('공유 링크를 복사했습니다.');
+  }, []);
+
+  const deleteShareLink = useCallback((token: string) => {
+    collaborationRepository.deleteShareLink(token);
+    refreshShareLinks();
+    if (collaborationState.shareToken === token) {
+      setCollaborationState((current) => ({ ...current, shareToken: undefined }));
+    }
+    setFileMessage('공유 링크를 삭제했습니다.');
+  }, [collaborationState.shareToken, refreshShareLinks]);
 
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -669,6 +702,15 @@ export function App() {
     if (embeddedShare) {
       if (loadedShareRef.current === embeddedShare) return;
       loadedShareRef.current = embeddedShare;
+      const registeredLink = collaborationRepository.findShareLink(embeddedShare);
+      if (registeredLink?.deletedAt) {
+        setFileMessage('삭제된 공유 링크입니다.');
+        return;
+      }
+      if (registeredLink && isShareLinkExpired(registeredLink)) {
+        setFileMessage('만료된 공유 링크입니다.');
+        return;
+      }
       const payload = decodeSharedDocumentPayload(embeddedShare);
       if (!payload) {
         setFileMessage('공유 링크 도면을 열 수 없습니다.');
@@ -1849,6 +1891,47 @@ export function App() {
 
           <div className="panel-section">
             <div className="panel-heading">
+              <h2>공유 링크</h2>
+              <span className="review-count">{activeShareLinks.length}개</span>
+            </div>
+            {activeShareLinks.length ? (
+              <div className="share-link-list">
+                {activeShareLinks.map((link) => (
+                  <div className={`share-link-item ${isShareLinkExpired(link) ? 'expired' : ''}`} key={link.token}>
+                    <div className="share-link-title">
+                      <Link2 size={14} />
+                      <span>{link.title || '공유 도면'}</span>
+                    </div>
+                    <small>
+                      {formatShareLinkStatus(link)} · {new Date(link.createdAt).toLocaleString()}
+                    </small>
+                    <div className="share-link-actions">
+                      <button
+                        className="mini-button"
+                        data-testid="copy-share-link-button"
+                        disabled={isShareLinkExpired(link)}
+                        onClick={() => void copyShareLink(link.token)}
+                      >
+                        복사
+                      </button>
+                      <button
+                        className="mini-button"
+                        data-testid="delete-share-link-button"
+                        onClick={() => deleteShareLink(link.token)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">생성된 공유 링크가 없습니다.</p>
+            )}
+          </div>
+
+          <div className="panel-section">
+            <div className="panel-heading">
               <h2>레이어</h2>
               <button className="mini-button" disabled={activeReadonly} onClick={addLayer}>
                 추가
@@ -2063,6 +2146,12 @@ function formatConversionError(error: unknown, fallback: string): string {
     return `${fallback}: ${conversionErrorLabel(error.category)} - ${error.message}`;
   }
   return error instanceof Error ? error.message : fallback;
+}
+
+function formatShareLinkStatus(link: ShareLink): string {
+  if (isShareLinkExpired(link)) return '만료됨';
+  if (!link.expiresAt) return '만료 없음';
+  return `${new Date(link.expiresAt).toLocaleDateString()} 만료`;
 }
 
 function conversionErrorLabel(category: string): string {

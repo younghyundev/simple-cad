@@ -6,8 +6,8 @@
 
 ## Share Link Management
 
-- [ ] **SHARE-01**: 사용자는 생성된 공유 링크 목록에서 링크 제목, 생성 시각, 만료 상태, 복사 액션을 확인할 수 있다.
-- [ ] **SHARE-02**: 사용자는 기존 공유 링크를 다시 복사하거나 삭제할 수 있고, 삭제된 링크는 다시 열리지 않는다.
+- [x] **SHARE-01**: 사용자는 생성된 공유 링크 목록에서 링크 제목, 생성 시각, 만료 상태, 복사 액션을 확인할 수 있다.
+- [x] **SHARE-02**: 사용자는 기존 공유 링크를 다시 복사하거나 삭제할 수 있고, 삭제된 링크는 로컬 레지스트리 기준으로 다시 열리지 않는다.
 - [ ] **SHARE-03**: 사용자는 공유 링크 생성 시 제목, 설명, 만료일을 지정할 수 있다.
 - [ ] **SHARE-04**: 공유 링크를 여는 사용자는 읽기 전용 문서에서 공유 제목, 설명, 만료 상태를 확인할 수 있다.
 
@@ -41,8 +41,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHARE-01 | Phase 16 | Planned |
-| SHARE-02 | Phase 16 | Planned |
+| SHARE-01 | Phase 16 | Complete |
+| SHARE-02 | Phase 16 | Complete |
 | SHARE-03 | Phase 17 | Planned |
 | SHARE-04 | Phase 17 | Planned |
 | REVIEW-01 | Phase 18 | Planned |

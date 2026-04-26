@@ -13,11 +13,13 @@
 
 ## Phases
 
-### Phase 16 — Share Link Registry and Lifecycle
+### Phase 16 — Share Link Registry and Lifecycle ✅
 
 **Goal:** 사용자가 생성한 공유 링크를 목록에서 확인하고 복사, 삭제, 만료 상태를 관리할 수 있게 한다.
 
 **Requirements:** SHARE-01, SHARE-02
+
+**Status:** Complete — see [Phase 16 summary](phases/16-share-link-registry-and-lifecycle/16-SUMMARY.md).
 
 **Success criteria:**
 

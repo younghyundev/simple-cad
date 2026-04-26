@@ -26,6 +26,9 @@ export type ShareLink = {
   documentId: string;
   readonly: true;
   createdAt: string;
+  title?: string;
+  expiresAt?: string;
+  deletedAt?: string;
 };
 
 export type CollaborationState = {
@@ -43,6 +46,13 @@ export type SaveServerDocumentInput = {
 };
 
 export type AddReviewCommentInput = Omit<ReviewComment, 'id' | 'createdAt' | 'resolved'>;
+
+export type SaveShareLinkInput = {
+  token: string;
+  documentId: string;
+  title: string;
+  expiresAt?: string;
+};
 
 const serverDocumentsKey = 'simplecad.serverDocuments';
 const shareLinksKey = 'simplecad.shareLinks';
@@ -85,7 +95,10 @@ const isShareLink = (value: unknown): value is ShareLink =>
   isString(value.token) &&
   isString(value.documentId) &&
   value.readonly === true &&
-  isString(value.createdAt);
+  isString(value.createdAt) &&
+  (value.title === undefined || isString(value.title)) &&
+  (value.expiresAt === undefined || isString(value.expiresAt)) &&
+  (value.deletedAt === undefined || isString(value.deletedAt));
 
 const isReviewComment = (value: unknown): value is ReviewComment =>
   isRecord(value) &&
@@ -162,6 +175,47 @@ export class LocalCollaborationRepository {
     return document ? { ...document, document: cloneDocument(document.document) } : null;
   }
 
+  listShareLinks(): ShareLink[] {
+    return readCollection(shareLinksKey, isShareLink)
+      .filter((link) => !link.deletedAt)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  findShareLink(token: string): ShareLink | null {
+    return readCollection(shareLinksKey, isShareLink).find((link) => link.token === token) ?? null;
+  }
+
+  saveShareLink(input: SaveShareLinkInput): ShareLink {
+    const links = readCollection(shareLinksKey, isShareLink);
+    const existing = links.find((link) => link.token === input.token);
+    const link: ShareLink = {
+      token: input.token,
+      documentId: input.documentId,
+      readonly: true,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+      title: input.title.trim() || 'Untitled',
+      expiresAt: input.expiresAt,
+      deletedAt: undefined,
+    };
+    writeCollection(shareLinksKey, existing
+      ? links.map((item) => (item.token === input.token ? link : item))
+      : [...links, link]);
+    return link;
+  }
+
+  deleteShareLink(token: string): void {
+    const deletedAt = new Date().toISOString();
+    const links = readCollection(shareLinksKey, isShareLink);
+    writeCollection(shareLinksKey, links.map((link) =>
+      link.token === token ? { ...link, deletedAt } : link,
+    ));
+
+    const documents = readCollection(serverDocumentsKey, isServerDocumentRecord);
+    writeCollection(serverDocumentsKey, documents.map((document) =>
+      document.shareToken === token ? { ...document, shareToken: undefined } : document,
+    ));
+  }
+
   createShareLink(documentId: string): ShareLink {
     const documents = readCollection(serverDocumentsKey, isServerDocumentRecord);
     const document = documents.find((record) => record.id === documentId);
@@ -177,6 +231,7 @@ export class LocalCollaborationRepository {
         documentId,
         readonly: true,
         createdAt: new Date().toISOString(),
+        title: document.title,
       };
     if (!existing) {
       writeCollection(shareLinksKey, [...links, link]);
@@ -191,7 +246,7 @@ export class LocalCollaborationRepository {
 
   resolveShareLink(token: string): ServerDocumentRecord | null {
     const link = readCollection(shareLinksKey, isShareLink).find((item) => item.token === token);
-    if (!link) return null;
+    if (!link || link.deletedAt || isShareLinkExpired(link)) return null;
     const document = this.openDocument(link.documentId);
     return document ? { ...document, readonly: true, shareToken: token } : null;
   }
@@ -227,4 +282,8 @@ export class LocalCollaborationRepository {
     writeCollection(reviewCommentsKey, nextComments);
     return updated;
   }
+}
+
+export function isShareLinkExpired(link: ShareLink, now = new Date()): boolean {
+  return Boolean(link.expiresAt && Number.isFinite(Date.parse(link.expiresAt)) && Date.parse(link.expiresAt) <= now.getTime());
 }

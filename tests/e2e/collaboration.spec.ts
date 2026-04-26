@@ -31,6 +31,9 @@ test('creates an embedded share link, opens it read-only, and preserves comments
 
   await page.getByTestId('share-link-button').click();
   await expect(page.getByTestId('statusbar')).toContainText('공유 링크를 만들었습니다.');
+  await expect(page.getByTestId('copy-share-link-button')).toBeVisible();
+  await page.getByTestId('copy-share-link-button').click();
+  await expect(page.getByTestId('statusbar')).toContainText('공유 링크를 복사했습니다.');
   const shareHash = new URL(page.url()).hash;
   expect(shareHash).toContain('share=');
 
@@ -40,6 +43,27 @@ test('creates an embedded share link, opens it read-only, and preserves comments
   await expect(page.getByTestId('share-link-button')).toBeDisabled();
   await expect(page.getByTestId('comment-marker')).toBeVisible();
   await expect(page.getByText('검토 메모')).toBeVisible();
+});
+
+test('deletes a locally registered embedded share link', async ({ page }) => {
+  await page.getByTestId('start-new-drawing').click();
+  await expect(page.getByTestId('cad-canvas')).toBeVisible();
+
+  await page.getByTestId('share-link-button').click();
+  await expect(page.getByTestId('copy-share-link-button')).toBeVisible();
+  const shareHash = new URL(page.url()).hash;
+
+  await page.getByTestId('delete-share-link-button').click();
+  await expect(page.getByTestId('statusbar')).toContainText('공유 링크를 삭제했습니다.');
+  await expect(page.getByText('생성된 공유 링크가 없습니다.')).toBeVisible();
+  await expect(page.evaluate((hash) => {
+    const token = hash.replace(/^#share=/, '');
+    const links = JSON.parse(localStorage.getItem('simplecad.shareLinks') ?? '[]') as Array<{
+      token: string;
+      deletedAt?: string;
+    }>;
+    return links.some((link) => link.token === token && Boolean(link.deletedAt));
+  }, shareHash)).resolves.toBe(true);
 });
 
 async function dragOnCanvas(

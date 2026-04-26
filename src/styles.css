@@ -540,6 +540,47 @@ button {
   font-size: 11px;
 }
 
+.share-link-list {
+  display: grid;
+  gap: 8px;
+}
+
+.share-link-item {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  background: #eff6ff;
+}
+
+.share-link-item.expired {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.share-link-title,
+.share-link-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.share-link-title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #111827;
+  font-size: 13px;
+}
+
+.share-link-item small {
+  color: #6b7280;
+  font-size: 11px;
+}
+
 .property-list {
   display: grid;
   gap: 10px;
