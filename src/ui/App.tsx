@@ -618,8 +618,11 @@ export function App() {
 
   const createShareLink = useCallback(async () => {
     if (!activeTabId || collaborationState.readonly) return;
+    const needsServerSave =
+      !collaborationState.serverDocumentId ||
+      collaborationState.serverSavedRevision !== saveState.revision;
     const savedRecord =
-      collaborationState.serverDocumentId
+      !needsServerSave && collaborationState.serverDocumentId
         ? collaborationRepository.openDocument(collaborationState.serverDocumentId)
         : saveDocumentToServer();
     const record = savedRecord ?? saveDocumentToServer();
@@ -642,7 +645,14 @@ export function App() {
       await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
     }
     setFileMessage('공유 링크를 만들었습니다.');
-  }, [activeTabId, collaborationState.readonly, collaborationState.serverDocumentId, saveDocumentToServer]);
+  }, [
+    activeTabId,
+    collaborationState.readonly,
+    collaborationState.serverDocumentId,
+    collaborationState.serverSavedRevision,
+    saveDocumentToServer,
+    saveState.revision,
+  ]);
 
   const openServerDocument = useCallback((record: ServerDocumentRecord) => {
     const serverRecord = collaborationRepository.openDocument(record.id);
