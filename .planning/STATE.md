@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Share Link Management and Review Workflow
-status: completed
-last_updated: "2026-04-26T12:35:00Z"
-last_activity: 2026-04-26 -- v1.3 milestone archived
+milestone: v1.4
+milestone_name: Advanced CAD Compatibility Expansion
+status: planning
+last_updated: "2026-04-26T12:50:00Z"
+last_activity: 2026-04-26 -- v1.4 milestone started
 progress:
   total_phases: 4
-  completed_phases: 4
+  completed_phases: 0
   total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SimpleCAD
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** Planning next milestone for broader DXF/DWG compatibility
+**Current focus:** v1.4 broader DXF/DWG compatibility
 
 ## Current Position
 
-Phase: 19 — Collaboration Regression Coverage and Docs
-Plan: Complete
-Status: Milestone archived
-Last activity: 2026-04-26 -- v1.3 milestone archived
+Phase: 20 — Layer and Style Fidelity
+Plan: Not started
+Status: Roadmap ready
+Last activity: 2026-04-26 -- v1.4 milestone started
 
 ## Current Status
 
@@ -56,6 +56,7 @@ Last activity: 2026-04-26 -- v1.3 milestone archived
 - Phase 18 completed: review filters for all/unresolved/resolved/selected entity, comment focus navigation, active comment styling, and collaboration E2E coverage.
 - Phase 19 completed: expired share link regression, README review workflow documentation, and full `npm run verify`.
 - v1.3 archive created in `.planning/milestones/`.
+- v1.4 started for broader DXF/DWG compatibility: layer/style fidelity, annotation/block fallback, layout/reference classification, and advanced regression docs.
 
 ## Accumulated Context
 
@@ -72,7 +73,7 @@ Last activity: 2026-04-26 -- v1.3 milestone archived
 
 ## Next Action
 
-Start v1.4 for broader DXF/DWG compatibility.
+Run `$gsd-plan-phase 20` to plan layer and style fidelity.
 
-**Completed Phase:** 19 (Collaboration Regression Coverage and Docs)
-**Completed Milestone:** v1.3 (Share Link Management and Review Workflow) — archived 2026-04-26
+**Next Phase:** 20 (Layer and Style Fidelity)
+**Current Milestone:** v1.4 (Advanced CAD Compatibility Expansion)
