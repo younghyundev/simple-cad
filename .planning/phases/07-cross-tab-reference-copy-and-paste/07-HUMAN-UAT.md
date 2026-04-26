@@ -8,10 +8,10 @@ updated: 2026-04-26
 
 ## Current Test
 
-number: 3
-name: Right-click context menu
+number: 4
+name: Reference copy/paste using another object's anchor
 expected: |
-  Right-click selected geometry and see `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, and `삭제` according to clipboard/selection state.
+  `참조 복사` stores a clicked snapped point from another object, such as that object's center, and both `붙여넣기`/Ctrl/Cmd+V and `참조 붙여넣기` enter reference paste mode. The copied geometry shows as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
 awaiting: user response
 
 ## Tests
@@ -27,7 +27,7 @@ result: pass
 
 ### 3. Right-click context menu
 expected: Right-click selected geometry and see `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, and `삭제` according to clipboard/selection state.
-result: [pending]
+result: pass
 
 ### 4. Reference copy/paste using another object's anchor
 expected: `참조 복사` stores a clicked snapped point from another object, such as that object's center, and both `붙여넣기`/Ctrl/Cmd+V and `참조 붙여넣기` enter reference paste mode. The copied geometry shows as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
@@ -44,9 +44,9 @@ result: [pending]
 ## Summary
 
 total: 6
-passed: 2
+passed: 3
 issues: 0
-pending: 4
+pending: 3
 skipped: 0
 blocked: 0
 
