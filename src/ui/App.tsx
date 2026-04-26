@@ -28,6 +28,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
 import type { CadClipboardPayload } from '../cad/clipboard';
+import {
+  alignEntities,
+  type AlignMode,
+  createGroupEntity,
+  getBoundsCenter,
+  getSelectionBounds,
+  rotateEntity,
+} from '../cad/entityTransform';
 import { summarizeConversionWarnings } from '../cad/io/conversionWarnings';
 import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
@@ -78,6 +86,7 @@ type ContextMenuState = {
 type ReferenceMode = 'copy-base' | 'paste-base' | null;
 
 type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
+type GroupEntity = Extract<CadEntity, { type: 'group' }>;
 type CadEntityPatch = Partial<CadEntity> & Partial<DimensionEntity>;
 
 function formatDimensionLabel(entity: DimensionEntity): string {
@@ -88,6 +97,15 @@ function formatDimensionLabel(entity: DimensionEntity): string {
 }
 
 function toReferencePreviewEntity(entity: CadEntity): CadEntity {
+  if (entity.type === 'group') {
+    return {
+      ...entity,
+      id: `reference-preview-${entity.id}`,
+      locked: true,
+      children: entity.children.map(toReferencePreviewEntity),
+    };
+  }
+
   return {
     ...entity,
     id: `reference-preview-${entity.id}`,
@@ -127,7 +145,12 @@ export function App() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [referenceMode, setReferenceMode] = useState<ReferenceMode>(null);
   const [referencePreviewPoint, setReferencePreviewPoint] = useState<CadPoint | null>(null);
+  const [rotationDegrees, setRotationDegrees] = useState('15');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedEntities = useMemo(
+    () => document.entities.filter((entity) => selectedEntityIds.includes(entity.id)),
+    [document.entities, selectedEntityIds],
+  );
   const selectedEntity = useMemo(
     () =>
       selectedEntityIds.length === 1
@@ -136,6 +159,7 @@ export function App() {
     [document.entities, selectedEntityIds],
   );
   const conversionWarnings = useMemo(() => summarizeConversionWarnings(document), [document]);
+  const selectionHasGroup = selectedEntities.some((entity) => entity.type === 'group');
   const referencePreviewEntities = useMemo(() => {
     if (referenceMode !== 'paste-base' || !cadClipboard?.sourceBasePoint || !referencePreviewPoint) {
       return [];
@@ -457,7 +481,7 @@ export function App() {
 
       setContextMenu({
         x: Math.min(payload.screenPoint.x, window.innerWidth - 220),
-        y: Math.min(payload.screenPoint.y, window.innerHeight - 180),
+        y: Math.max(8, Math.min(payload.screenPoint.y, window.innerHeight - 420)),
         worldPoint: payload.worldPoint,
       });
     },
@@ -473,6 +497,87 @@ export function App() {
     setSelectedEntityIds([]);
     closeContextMenu();
   }, [closeContextMenu, selectedEntityIds, updateDocument]);
+
+  const groupSelectedEntities = useCallback(() => {
+    const selected = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
+    if (selected.length < 2) {
+      setFileMessage('그룹화할 객체를 2개 이상 선택하세요.');
+      return;
+    }
+
+    const group = createGroupEntity(selected, selected[0]?.layerId ?? document.layers[0]?.id ?? '0');
+    updateDocument((current) => ({
+      ...current,
+      entities: [
+        ...current.entities.filter((entity) => !selectedEntityIds.includes(entity.id)),
+        group,
+      ],
+    }));
+    setSelectedEntityIds([group.id]);
+    closeContextMenu();
+    setFileMessage(`${selected.length}개 객체를 그룹화했습니다.`);
+  }, [closeContextMenu, document.entities, document.layers, selectedEntityIds, updateDocument]);
+
+  const ungroupSelectedEntities = useCallback(() => {
+    const groups = document.entities.filter(
+      (entity): entity is GroupEntity => selectedEntityIds.includes(entity.id) && entity.type === 'group',
+    );
+    if (!groups.length) {
+      setFileMessage('해제할 그룹을 선택하세요.');
+      return;
+    }
+
+    updateDocument((current) => ({
+      ...current,
+      entities: current.entities.flatMap((entity) => {
+        if (!selectedEntityIds.includes(entity.id) || entity.type !== 'group') return [entity];
+        return entity.children;
+      }),
+    }));
+    setSelectedEntityIds(groups.flatMap((group) => group.children.map((child) => child.id)));
+    closeContextMenu();
+    setFileMessage('그룹을 해제했습니다.');
+  }, [closeContextMenu, document.entities, selectedEntityIds, updateDocument]);
+
+  const rotateSelectedEntities = useCallback(
+    (degrees?: number) => {
+      const amount = degrees ?? Number(rotationDegrees);
+      const selected = document.entities.filter((entity) => selectedEntityIds.includes(entity.id));
+      const bounds = getSelectionBounds(selected);
+      if (!bounds || !Number.isFinite(amount) || amount === 0) {
+        setFileMessage('회전할 객체와 각도를 확인하세요.');
+        return;
+      }
+
+      const pivot = getBoundsCenter(bounds);
+      updateDocument((current) => ({
+        ...current,
+        entities: current.entities.map((entity) =>
+          selectedEntityIds.includes(entity.id) ? rotateEntity(entity, pivot, amount) : entity,
+        ),
+      }));
+      closeContextMenu();
+      setFileMessage(`선택 객체를 ${amount}도 회전했습니다.`);
+    },
+    [closeContextMenu, document.entities, rotationDegrees, selectedEntityIds, updateDocument],
+  );
+
+  const alignSelectedEntities = useCallback(
+    (mode: AlignMode) => {
+      if (selectedEntityIds.length < 2) {
+        setFileMessage('정렬할 객체를 2개 이상 선택하세요.');
+        return;
+      }
+
+      updateDocument((current) => ({
+        ...current,
+        entities: alignEntities(current.entities, selectedEntityIds, mode),
+      }));
+      closeContextMenu();
+      setFileMessage('선택 객체를 정렬했습니다.');
+    },
+    [closeContextMenu, selectedEntityIds, updateDocument],
+  );
 
   const updateSelectedEntity = useCallback(
     (patch: CadEntityPatch) => {
@@ -842,6 +947,79 @@ export function App() {
             <button
               type="button"
               role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={groupSelectedEntities}
+            >
+              <span>그룹화</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!selectionHasGroup}
+              onClick={ungroupSelectedEntities}
+            >
+              <span>그룹 해제</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!selectedEntityIds.length}
+              onClick={() => rotateSelectedEntities(15)}
+            >
+              <span>15도 회전</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('left')}
+            >
+              <span>왼쪽 정렬</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('center-x')}
+            >
+              <span>가운데 정렬</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('right')}
+            >
+              <span>오른쪽 정렬</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('top')}
+            >
+              <span>위 정렬</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('center-y')}
+            >
+              <span>중앙 정렬</span>
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={selectedEntityIds.length < 2}
+              onClick={() => alignSelectedEntities('bottom')}
+            >
+              <span>아래 정렬</span>
+            </button>
+            <div className="cad-context-menu-divider" />
+            <button
+              type="button"
+              role="menuitem"
               disabled={!cadClipboard}
               onClick={pasteEntities}
             >
@@ -885,7 +1063,26 @@ export function App() {
                 </div>
                 <div>
                   <dt>유형</dt>
-                  <dd>{selectedEntity.type}</dd>
+                  <dd>{selectedEntity.type === 'group' ? 'group' : selectedEntity.type}</dd>
+                </div>
+                {selectedEntity.type === 'group' ? (
+                  <div>
+                    <dt>객체 수</dt>
+                    <dd>{selectedEntity.children.length}개</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>회전</dt>
+                  <dd className="property-control transform-inline">
+                    <input
+                      type="number"
+                      value={rotationDegrees}
+                      onChange={(event) => setRotationDegrees(event.target.value)}
+                    />
+                    <button className="mini-button" onClick={() => rotateSelectedEntities()}>
+                      적용
+                    </button>
+                  </dd>
                 </div>
                 <div>
                   <dt>레이어</dt>
@@ -992,9 +1189,48 @@ export function App() {
                     </div>
                   </>
                 ) : null}
+                {selectedEntity.type === 'group' ? (
+                  <div>
+                    <dt>그룹</dt>
+                    <dd className="property-control">
+                      <button className="mini-button" onClick={ungroupSelectedEntities}>
+                        그룹 해제
+                      </button>
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
             ) : selectedEntityIds.length ? (
-              <p className="empty-state">{selectedEntityIds.length}개 객체가 선택되었습니다.</p>
+              <div className="transform-panel">
+                <p className="empty-state">{selectedEntityIds.length}개 객체가 선택되었습니다.</p>
+                <div className="transform-actions">
+                  <button className="mini-button" disabled={selectedEntityIds.length < 2} onClick={groupSelectedEntities}>
+                    그룹화
+                  </button>
+                  <button className="mini-button" disabled={!selectionHasGroup} onClick={ungroupSelectedEntities}>
+                    그룹 해제
+                  </button>
+                </div>
+                <div className="align-grid">
+                  <button className="mini-button" onClick={() => alignSelectedEntities('left')}>왼쪽</button>
+                  <button className="mini-button" onClick={() => alignSelectedEntities('center-x')}>가운데</button>
+                  <button className="mini-button" onClick={() => alignSelectedEntities('right')}>오른쪽</button>
+                  <button className="mini-button" onClick={() => alignSelectedEntities('top')}>위</button>
+                  <button className="mini-button" onClick={() => alignSelectedEntities('center-y')}>중앙</button>
+                  <button className="mini-button" onClick={() => alignSelectedEntities('bottom')}>아래</button>
+                </div>
+                <div className="transform-inline">
+                  <label>회전</label>
+                  <input
+                    type="number"
+                    value={rotationDegrees}
+                    onChange={(event) => setRotationDegrees(event.target.value)}
+                  />
+                  <button className="mini-button" onClick={() => rotateSelectedEntities()}>
+                    적용
+                  </button>
+                </div>
+              </div>
             ) : (
               <p className="empty-state">선택된 객체가 없습니다.</p>
             )}

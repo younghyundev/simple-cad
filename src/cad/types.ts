@@ -81,6 +81,12 @@ export type DimensionEntity = CadEntityBase & {
   labelOffset?: number;
 };
 
+export type GroupEntity = CadEntityBase & {
+  type: 'group';
+  name?: string;
+  children: CadEntity[];
+};
+
 export type CadEntity =
   | LineEntity
   | RectEntity
@@ -88,7 +94,8 @@ export type CadEntity =
   | ArcEntity
   | PolylineEntity
   | TextEntity
-  | DimensionEntity;
+  | DimensionEntity
+  | GroupEntity;
 
 export type UnsupportedCadEntity = {
   sourceType: string;

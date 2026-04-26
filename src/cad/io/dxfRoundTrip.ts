@@ -1,9 +1,10 @@
 import type { CadDocument, CadEntity, CadLayer, CadWarning } from '../types';
+import { flattenEntities } from '../entityTransform';
 import { ExportService } from './exportService';
 import { ImportService } from './importService';
 
 export type DxfRoundTripSummary = {
-  entityCounts: Record<CadEntity['type'], number>;
+  entityCounts: Record<FlatEntityType, number>;
   layerSummary: Array<Pick<CadLayer, 'id' | 'name' | 'color' | 'visible' | 'locked'>>;
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
   strokeStyles: Record<string, number>;
@@ -22,7 +23,9 @@ export type DxfRoundTripResult = {
   drift: string[];
 };
 
-const ENTITY_TYPES: CadEntity['type'][] = [
+type FlatEntityType = Exclude<CadEntity['type'], 'group'>;
+
+const ENTITY_TYPES: FlatEntityType[] = [
   'line',
   'rect',
   'circle',
@@ -54,7 +57,7 @@ export async function runDxfRoundTrip(fixtureText: string): Promise<DxfRoundTrip
 
 export function summarizeCadDocument(document: CadDocument): DxfRoundTripSummary {
   return {
-    entityCounts: countEntities(document.entities),
+    entityCounts: countEntities(flattenEntities(document.entities)),
     layerSummary: document.layers
       .map((layer) => ({
         id: layer.id,
@@ -66,15 +69,15 @@ export function summarizeCadDocument(document: CadDocument): DxfRoundTripSummary
       .sort((a, b) => a.id.localeCompare(b.id)),
     bounds: documentBounds(document.entities),
     strokeStyles: countValues(
-      document.entities.map((entity) =>
+      flattenEntities(document.entities).map((entity) =>
         [entity.strokeColor, entity.strokeStyle ?? 'solid', round(entity.strokeWidth, 2)].join('|'),
       ),
     ),
-    textContents: document.entities
+    textContents: flattenEntities(document.entities)
       .filter((entity): entity is Extract<CadEntity, { type: 'text' }> => entity.type === 'text')
       .map((entity) => entity.content)
       .sort(),
-    dimensionLabels: document.entities
+    dimensionLabels: flattenEntities(document.entities)
       .filter(
         (entity): entity is Extract<CadEntity, { type: 'dimension' }> => entity.type === 'dimension',
       )
@@ -105,13 +108,13 @@ export function compareRoundTripSummaries(
   return drift;
 }
 
-function countEntities(entities: CadEntity[]): Record<CadEntity['type'], number> {
+function countEntities(entities: CadEntity[]): Record<FlatEntityType, number> {
   return ENTITY_TYPES.reduce(
     (counts, type) => ({
       ...counts,
       [type]: entities.filter((entity) => entity.type === type).length,
     }),
-    {} as Record<CadEntity['type'], number>,
+    {} as Record<FlatEntityType, number>,
   );
 }
 
@@ -135,6 +138,7 @@ function documentBounds(entities: CadEntity[]): DxfRoundTripSummary['bounds'] {
 }
 
 function entityPoints(entity: CadEntity): Array<{ x: number; y: number }> {
+  if (entity.type === 'group') return entity.children.flatMap(entityPoints);
   if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
   if (entity.type === 'rect') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.width, y: entity.y + entity.height }];
   if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];

@@ -1,4 +1,4 @@
-import { translateEntity } from './entityGeometry';
+import { cloneEntity, translateEntity } from './entityTransform';
 import type { CadDocument, CadEntity, CadPoint } from './types';
 
 export type CadClipboardPayload = {
@@ -53,6 +53,14 @@ export function pasteClipboardPayload(
 }
 
 function withCopyId(entity: CadEntity, index: number): CadEntity {
+  if (entity.type === 'group') {
+    return {
+      ...entity,
+      id: `copy-${entity.type}-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+      children: entity.children.map((child, childIndex) => withCopyId(child, childIndex)),
+    };
+  }
+
   return {
     ...entity,
     id: `copy-${entity.type}-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
@@ -67,31 +75,6 @@ function withDestinationLayer(entity: CadEntity, destinationDocument: CadDocumen
     ...entity,
     layerId: destinationDocument.layers[0]?.id ?? 'layer-0',
   } as CadEntity;
-}
-
-function cloneEntity(entity: CadEntity): CadEntity {
-  if (entity.type === 'line') return { ...entity };
-  if (entity.type === 'rect') return { ...entity };
-  if (entity.type === 'circle') return { ...entity };
-  if (entity.type === 'arc') return { ...entity };
-  if (entity.type === 'text') return { ...entity };
-
-  if (entity.type === 'polyline') {
-    return {
-      ...entity,
-      points: entity.points.map((point) => clonePoint(point)),
-    };
-  }
-
-  if (entity.type === 'dimension') {
-    return {
-      ...entity,
-      startPoint: clonePoint(entity.startPoint),
-      endPoint: clonePoint(entity.endPoint),
-    };
-  }
-
-  throw new Error(`Unsupported entity type: ${(entity as CadEntity).type}`);
 }
 
 function clonePoint(point: CadPoint): CadPoint {

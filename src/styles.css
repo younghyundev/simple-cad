@@ -531,6 +531,46 @@ button {
   font-size: 13px;
 }
 
+.transform-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.transform-actions,
+.transform-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.transform-inline label {
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.transform-inline input {
+  min-width: 0;
+  width: 72px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+}
+
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.align-grid .mini-button {
+  width: 100%;
+}
+
 .layer-list {
   display: grid;
   gap: 8px;

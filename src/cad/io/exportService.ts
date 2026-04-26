@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity } from '../types';
+import { flattenEntities } from '../entityTransform';
 import { hexToDxfAci } from './dxfColor';
 import { strokeStyleToDxfLineType, strokeWidthToDxfLineWeight } from './dxfStyle';
 import { encodeDxfText } from './dxfText';
@@ -18,7 +19,7 @@ export class ExportService {
     const width = Math.max(400, bounds.maxX - bounds.minX + padding * 2);
     const height = Math.max(300, bounds.maxY - bounds.minY + padding * 2);
 
-    const body = document.entities
+    const body = flattenEntities(document.entities)
       .filter((entity) => entity.visible)
       .map((entity) => entityToSvg(entity))
       .filter(Boolean)
@@ -48,7 +49,7 @@ export class ExportService {
       'ENTITIES',
     ];
 
-    for (const entity of document.entities) {
+    for (const entity of flattenEntities(document.entities)) {
       if (!entity.visible) continue;
       lines.push(...entityToDxf(entity));
     }
@@ -59,6 +60,8 @@ export class ExportService {
 }
 
 function entityToSvg(entity: CadEntity): string {
+  if (entity.type === 'group') return flattenEntities(entity.children).map(entityToSvg).join('\n  ');
+
   const strokeDasharray = entity.strokeStyle === 'dashed' ? '8 6' : undefined;
   const common = `stroke="${escapeXml(entity.strokeColor)}" stroke-width="${entity.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="${escapeXml(entity.fillColor)}"${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ''}`;
 
@@ -115,6 +118,8 @@ function entityToSvg(entity: CadEntity): string {
 }
 
 function entityToDxf(entity: CadEntity): string[] {
+  if (entity.type === 'group') return flattenEntities(entity.children).flatMap(entityToDxf);
+
   const header = entityHeader(entity);
 
   if (entity.type === 'line') {
@@ -406,7 +411,7 @@ function entityBoundsPoints(entity: CadEntity) {
 }
 
 function getDocumentBounds(document: CadDocument) {
-  const points = document.entities.flatMap((entity) => {
+  const points = flattenEntities(document.entities).flatMap((entity) => {
     if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
     if (entity.type === 'rect') return [{ x: entity.x, y: entity.y }, { x: entity.x + entity.width, y: entity.y + entity.height }];
     if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];

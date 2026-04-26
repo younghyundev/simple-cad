@@ -1,5 +1,6 @@
 import type { CadDocument, CadEntity, Viewport } from './types';
 import { getResizeHandles } from './entityGeometry';
+import { getDimensionGeometry, getEntityBounds } from './entityTransform';
 import { worldToScreen } from './viewport';
 
 const majorGridEvery = 5;
@@ -81,6 +82,14 @@ function drawEntity(
   viewport: Viewport,
   selected: boolean,
 ): void {
+  if (entity.type === 'group') {
+    for (const child of entity.children) {
+      drawEntity(context, child, viewport, false);
+    }
+    if (selected) drawSelection(context, entity, viewport);
+    return;
+  }
+
   context.save();
   context.strokeStyle = entity.strokeColor;
   context.fillStyle = entity.fillColor;
@@ -149,6 +158,16 @@ function drawEntity(
     const lineHeight = fontSize * 1.25;
     context.fillStyle = entity.fillColor;
     context.font = `${fontSize}px Inter, system-ui, sans-serif`;
+    if (entity.rotation) {
+      context.translate(point.x, point.y);
+      context.rotate(degreesToRadians(entity.rotation));
+      getTextLines(entity.content).forEach((line, index) => {
+        context.fillText(line, 0, index * lineHeight);
+      });
+      if (selected) drawSelection(context, entity, viewport);
+      context.restore();
+      return;
+    }
     getTextLines(entity.content).forEach((line, index) => {
       context.fillText(line, point.x, point.y + index * lineHeight);
     });
@@ -207,28 +226,6 @@ function drawDimension(
   context.restore();
 }
 
-function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {
-  const dx = entity.endPoint.x - entity.startPoint.x;
-  const dy = entity.endPoint.y - entity.startPoint.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const offset = entity.labelOffset ?? -24;
-  const normal = {
-    x: -dy / length,
-    y: dx / length,
-  };
-
-  return {
-    dimensionStart: {
-      x: entity.startPoint.x + normal.x * offset,
-      y: entity.startPoint.y + normal.y * offset,
-    },
-    dimensionEnd: {
-      x: entity.endPoint.x + normal.x * offset,
-      y: entity.endPoint.y + normal.y * offset,
-    },
-  };
-}
-
 function drawArrowHead(
   context: CanvasRenderingContext2D,
   point: { x: number; y: number },
@@ -277,87 +274,6 @@ function drawSelection(
   }
 
   context.restore();
-}
-
-function getEntityBounds(entity: CadEntity): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} {
-  if (entity.type === 'line') {
-    const x = Math.min(entity.x1, entity.x2);
-    const y = Math.min(entity.y1, entity.y2);
-    return {
-      x,
-      y,
-      width: Math.max(1, Math.abs(entity.x2 - entity.x1)),
-      height: Math.max(1, Math.abs(entity.y2 - entity.y1)),
-    };
-  }
-
-  if (entity.type === 'rect') {
-    return { x: entity.x, y: entity.y, width: entity.width, height: entity.height };
-  }
-
-  if (entity.type === 'circle') {
-    return {
-      x: entity.cx - entity.radius,
-      y: entity.cy - entity.radius,
-      width: entity.radius * 2,
-      height: entity.radius * 2,
-    };
-  }
-
-  if (entity.type === 'arc') {
-    return {
-      x: entity.cx - entity.radius,
-      y: entity.cy - entity.radius,
-      width: entity.radius * 2,
-      height: entity.radius * 2,
-    };
-  }
-
-  if (entity.type === 'polyline') {
-    const xs = entity.points.map((point) => point.x);
-    const ys = entity.points.map((point) => point.y);
-    const x = Math.min(...xs);
-    const y = Math.min(...ys);
-    return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
-  }
-
-  if (entity.type === 'text') {
-    const lines = getTextLines(entity.content);
-    const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
-    return {
-      x: entity.x,
-      y: entity.y - entity.fontSize,
-      width: maxLineLength * entity.fontSize * 0.6,
-      height: entity.fontSize * (lines.length + 0.2),
-    };
-  }
-
-  const geometry = getDimensionGeometry(entity);
-  const xs = [
-    entity.startPoint.x,
-    entity.endPoint.x,
-    geometry.dimensionStart.x,
-    geometry.dimensionEnd.x,
-  ];
-  const ys = [
-    entity.startPoint.y,
-    entity.endPoint.y,
-    geometry.dimensionStart.y,
-    geometry.dimensionEnd.y,
-  ];
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return {
-    x,
-    y,
-    width: Math.max(1, Math.max(...xs) - x),
-    height: Math.max(1, Math.max(...ys) - y),
-  };
 }
 
 function modulo(value: number, size: number): number {

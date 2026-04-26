@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, CadPoint } from './types';
+import { getEntityBounds, getDimensionGeometry } from './entityTransform';
 
 export type SnapResult = {
   point: CadPoint;
@@ -69,6 +70,14 @@ function getSnapCandidates(
 }
 
 function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
+  if (entity.type === 'group') {
+    const bounds = getEntityBounds(entity);
+    return [
+      { point: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }, type: 'center' },
+      ...entity.children.flatMap((child) => entitySnapCandidates(child)),
+    ];
+  }
+
   if (entity.type === 'line') {
     return [
       { point: { x: entity.x1, y: entity.y1 }, type: 'endpoint' },
@@ -146,6 +155,10 @@ function getIntersectionCandidates(entities: CadEntity[]): SnapCandidate[] {
 }
 
 function entitySegments(entity: CadEntity): Segment[] {
+  if (entity.type === 'group') {
+    return entity.children.flatMap((child) => entitySegments(child));
+  }
+
   if (entity.type === 'line') {
     return [
       {
@@ -182,7 +195,12 @@ function entitySegments(entity: CadEntity): Segment[] {
   }
 
   if (entity.type === 'dimension') {
-    return [{ entityId: entity.id, start: entity.startPoint, end: entity.endPoint }];
+    const geometry = getDimensionGeometry(entity);
+    return [
+      { entityId: entity.id, start: entity.startPoint, end: geometry.dimensionStart },
+      { entityId: entity.id, start: entity.endPoint, end: geometry.dimensionEnd },
+      { entityId: entity.id, start: geometry.dimensionStart, end: geometry.dimensionEnd },
+    ];
   }
 
   return [];

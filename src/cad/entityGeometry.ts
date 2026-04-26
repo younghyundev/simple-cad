@@ -1,4 +1,7 @@
 import type { CadEntity, CadEntityBase, CadPoint, ToolId } from './types';
+import { getDimensionGeometry, translateEntity } from './entityTransform';
+
+export { translateEntity } from './entityTransform';
 
 const hitTolerance = 5;
 
@@ -102,49 +105,6 @@ export function createTextEntity(point: CadPoint, content: string, layerId: stri
     y: point.y,
     content,
     fontSize: 18,
-  };
-}
-
-export function translateEntity(entity: CadEntity, delta: CadPoint): CadEntity {
-  if (entity.locked) return entity;
-
-  if (entity.type === 'line') {
-    return {
-      ...entity,
-      x1: entity.x1 + delta.x,
-      y1: entity.y1 + delta.y,
-      x2: entity.x2 + delta.x,
-      y2: entity.y2 + delta.y,
-    };
-  }
-
-  if (entity.type === 'rect') {
-    return { ...entity, x: entity.x + delta.x, y: entity.y + delta.y };
-  }
-
-  if (entity.type === 'circle') {
-    return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
-  }
-
-  if (entity.type === 'arc') {
-    return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
-  }
-
-  if (entity.type === 'polyline') {
-    return {
-      ...entity,
-      points: entity.points.map((point) => ({ x: point.x + delta.x, y: point.y + delta.y })),
-    };
-  }
-
-  if (entity.type === 'text') {
-    return { ...entity, x: entity.x + delta.x, y: entity.y + delta.y };
-  }
-
-  return {
-    ...entity,
-    startPoint: { x: entity.startPoint.x + delta.x, y: entity.startPoint.y + delta.y },
-    endPoint: { x: entity.endPoint.x + delta.x, y: entity.endPoint.y + delta.y },
   };
 }
 
@@ -340,6 +300,9 @@ export function removePolylinePoint(entity: CadEntity, pointIndex: number): CadE
 
 export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number): boolean {
   const tolerance = hitTolerance / scale;
+  if (entity.type === 'group') {
+    return entity.children.some((child) => hitTestEntity(child, point, scale));
+  }
 
   if (entity.type === 'line') {
     return (
@@ -398,12 +361,16 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
     );
   }
 
-  const geometry = getDimensionGeometry(entity);
-  return (
-    pointToSegmentDistance(point, entity.startPoint, geometry.dimensionStart) <= tolerance ||
-    pointToSegmentDistance(point, entity.endPoint, geometry.dimensionEnd) <= tolerance ||
-    pointToSegmentDistance(point, geometry.dimensionStart, geometry.dimensionEnd) <= tolerance
-  );
+  if (entity.type === 'dimension') {
+    const geometry = getDimensionGeometry(entity);
+    return (
+      pointToSegmentDistance(point, entity.startPoint, geometry.dimensionStart) <= tolerance ||
+      pointToSegmentDistance(point, entity.endPoint, geometry.dimensionEnd) <= tolerance ||
+      pointToSegmentDistance(point, geometry.dimensionStart, geometry.dimensionEnd) <= tolerance
+    );
+  }
+
+  return false;
 }
 
 export function isMeaningfulEntity(entity: CadEntity): boolean {
@@ -413,6 +380,7 @@ export function isMeaningfulEntity(entity: CadEntity): boolean {
   if (entity.type === 'rect') return entity.width > 2 && entity.height > 2;
   if (entity.type === 'circle') return entity.radius > 2;
   if (entity.type === 'arc') return entity.radius > 2;
+  if (entity.type === 'group') return entity.children.some(isMeaningfulEntity);
   return true;
 }
 
@@ -426,28 +394,6 @@ function formatDistance(a: CadPoint, b: CadPoint): string {
 
 function getTextLines(value: string): string[] {
   return value.split(/\r\n|\r|\n/);
-}
-
-function getDimensionGeometry(entity: Extract<CadEntity, { type: 'dimension' }>) {
-  const dx = entity.endPoint.x - entity.startPoint.x;
-  const dy = entity.endPoint.y - entity.startPoint.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const offset = entity.labelOffset ?? -24;
-  const normal = {
-    x: -dy / length,
-    y: dx / length,
-  };
-
-  return {
-    dimensionStart: {
-      x: entity.startPoint.x + normal.x * offset,
-      y: entity.startPoint.y + normal.y * offset,
-    },
-    dimensionEnd: {
-      x: entity.endPoint.x + normal.x * offset,
-      y: entity.endPoint.y + normal.y * offset,
-    },
-  };
 }
 
 function pointToSegmentDistance(point: CadPoint, start: CadPoint, end: CadPoint): number {

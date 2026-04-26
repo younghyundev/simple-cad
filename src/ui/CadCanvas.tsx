@@ -15,6 +15,7 @@ import {
 } from '../cad/entityGeometry';
 import { renderDocument } from '../cad/render';
 import { snapPoint, type SnapResult } from '../cad/snap';
+import { getEntityBoundsPoints } from '../cad/entityTransform';
 import type { CadDocument, CadEntity, CadPoint, ToolId, Viewport } from '../cad/types';
 import { clampScale, screenToWorld, worldToScreen, zoomAt } from '../cad/viewport';
 
@@ -650,7 +651,7 @@ function rectsIntersect(
 }
 
 function entityScreenRect(entity: CadEntity, viewport: Viewport) {
-  const points = entityBoundsPoints(entity);
+  const points = getEntityBoundsPoints(entity);
   const screenPoints = points.map((point) => worldToScreen(point, viewport));
   const xs = screenPoints.map((point) => point.x);
   const ys = screenPoints.map((point) => point.y);
@@ -662,34 +663,4 @@ function entityScreenRect(entity: CadEntity, viewport: Viewport) {
     width: Math.max(1, Math.max(...xs) - x),
     height: Math.max(1, Math.max(...ys) - y),
   };
-}
-
-function entityBoundsPoints(entity: CadEntity): CadPoint[] {
-  if (entity.type === 'line') return [{ x: entity.x1, y: entity.y1 }, { x: entity.x2, y: entity.y2 }];
-  if (entity.type === 'rect') {
-    return [
-      { x: entity.x, y: entity.y },
-      { x: entity.x + entity.width, y: entity.y + entity.height },
-    ];
-  }
-  if (entity.type === 'circle' || entity.type === 'arc') {
-    return [
-      { x: entity.cx - entity.radius, y: entity.cy - entity.radius },
-      { x: entity.cx + entity.radius, y: entity.cy + entity.radius },
-    ];
-  }
-  if (entity.type === 'polyline') return entity.points;
-  if (entity.type === 'text') {
-    const lines = entity.content.split(/\r\n|\r|\n/);
-    const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
-    return [
-      { x: entity.x, y: entity.y - entity.fontSize },
-      {
-        x: entity.x + maxLineLength * entity.fontSize * 0.6,
-        y: entity.y + entity.fontSize * (lines.length - 1) * 1.25,
-      },
-    ];
-  }
-
-  return [entity.startPoint, entity.endPoint];
 }
