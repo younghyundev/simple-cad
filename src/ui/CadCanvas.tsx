@@ -77,6 +77,7 @@ export function CadCanvas({
 }: CadCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const textInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingTextDraftRef = useRef<TextDraft | null>(null);
   const draftEntityRef = useRef<CadEntity | null>(null);
   const textDraftRef = useRef<TextDraft | null>(null);
   const movingEntityRef = useRef(false);
@@ -234,9 +235,12 @@ export function CadCanvas({
 
   useEffect(() => {
     if (!textDraft) return;
-    const input = textInputRef.current;
-    input?.focus();
-    input?.select();
+    const frame = window.requestAnimationFrame(() => {
+      const input = textInputRef.current;
+      input?.focus();
+      input?.select();
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [textDraft?.entityId, textDraft?.screenPoint.x, textDraft?.screenPoint.y]);
 
   const commitTextDraft = () => {
@@ -337,6 +341,20 @@ export function CadCanvas({
             return;
           }
 
+          if (activeTool === 'text') {
+            pendingTextDraftRef.current = {
+              screenPoint: localPoint,
+              worldPoint,
+              value: '',
+            };
+            updateDraftEntity(null);
+            setDragStart(null);
+            setDrawingStart(null);
+            setLastWorldPoint(null);
+            onSelectedEntityChange([]);
+            return;
+          }
+
           setDragStart(localPoint);
           setDrawingStart(worldPoint);
           setLastWorldPoint(worldPoint);
@@ -382,16 +400,6 @@ export function CadCanvas({
               entities: current.entities.filter((entity) => entity.id !== entityId),
             }));
             onSelectedEntityChange([]);
-          }
-
-          if (activeTool === 'text') {
-            updateTextDraft({
-              screenPoint: localPoint,
-              worldPoint,
-              value: '',
-            });
-            onSelectedEntityChange([]);
-            return;
           }
 
           if (
@@ -489,6 +497,13 @@ export function CadCanvas({
           setLastWorldPoint(worldPoint);
         }}
         onPointerUp={() => {
+          if (activeTool === 'text' && pendingTextDraftRef.current) {
+            updateTextDraft(pendingTextDraftRef.current);
+            pendingTextDraftRef.current = null;
+            setSnapMarker(null);
+            return;
+          }
+
           if (selectionBox) {
             const selectedIds = findEntitiesInSelectionBox(selectionBox);
             onSelectedEntityChange(selectedIds);
