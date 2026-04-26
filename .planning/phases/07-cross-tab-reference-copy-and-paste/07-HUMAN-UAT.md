@@ -1,5 +1,5 @@
 ---
-status: partial
+status: testing
 phase: 07-cross-tab-reference-copy-and-paste
 source: [07-VERIFICATION.md]
 started: 2026-04-26
@@ -8,13 +8,18 @@ updated: 2026-04-26
 
 ## Current Test
 
-Awaiting browser verification for Phase 7 CAD copy/paste interactions.
+number: 2
+name: Destination-tab undo
+expected: |
+  Undo in tab B removes the pasted batch while tab A remains unchanged.
+awaiting: user response
 
 ## Tests
 
 ### 1. Cross-tab standard copy/paste
 expected: Select multiple entities in tab A, copy with Ctrl/Cmd+C, switch to tab B, paste with Ctrl/Cmd+V, and see newly selected pasted entities.
-result: [pending]
+result: pass
+note: "사용자는 통과를 확인했고, 별도 UX 문제로 선택 히트박스가 커서 드래그 선택이 객체 이동으로 오인된다고 보고함."
 
 ### 2. Destination-tab undo
 expected: Undo in tab B removes the pasted batch while tab A remains unchanged.
@@ -39,9 +44,9 @@ result: [pending]
 ## Summary
 
 total: 6
-passed: 0
+passed: 1
 issues: 0
-pending: 6
+pending: 5
 skipped: 0
 blocked: 0
 

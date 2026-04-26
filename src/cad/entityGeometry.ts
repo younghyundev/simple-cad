@@ -1,6 +1,6 @@
 import type { CadEntity, CadEntityBase, CadPoint, ToolId } from './types';
 
-const hitTolerance = 8;
+const hitTolerance = 5;
 
 export type ResizeHandleId =
   | 'start'
@@ -349,16 +349,27 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
   }
 
   if (entity.type === 'rect') {
+    const left = entity.x;
+    const right = entity.x + entity.width;
+    const top = entity.y;
+    const bottom = entity.y + entity.height;
+    const edges = [
+      [{ x: left, y: top }, { x: right, y: top }],
+      [{ x: right, y: top }, { x: right, y: bottom }],
+      [{ x: right, y: bottom }, { x: left, y: bottom }],
+      [{ x: left, y: bottom }, { x: left, y: top }],
+    ] as const;
     return (
-      point.x >= entity.x - tolerance &&
-      point.x <= entity.x + entity.width + tolerance &&
-      point.y >= entity.y - tolerance &&
-      point.y <= entity.y + entity.height + tolerance
+      point.x >= left - tolerance &&
+      point.x <= right + tolerance &&
+      point.y >= top - tolerance &&
+      point.y <= bottom + tolerance &&
+      edges.some(([start, end]) => pointToSegmentDistance(point, start, end) <= tolerance)
     );
   }
 
   if (entity.type === 'circle') {
-    return distance(point, { x: entity.cx, y: entity.cy }) <= entity.radius + tolerance;
+    return Math.abs(distance(point, { x: entity.cx, y: entity.cy }) - entity.radius) <= tolerance;
   }
 
   if (entity.type === 'arc') {

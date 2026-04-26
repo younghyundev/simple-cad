@@ -61,6 +61,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Phase 7 code review completed: fixed reference hover snap mismatch so visible snap markers and stored anchor points use the same external-anchor exclusion rules.
 - Phase 7 reference paste improved: copied geometry now renders as a dashed preview overlay while choosing the destination anchor, with the cursor located at the referenced paste point.
 - Phase 7 paste routing improved: when the clipboard came from reference copy, regular paste and Ctrl/Cmd+V now enter reference paste mode instead of offset pasting.
+- Selection hit testing refined during UAT: rectangle and circle selection now targets outlines instead of filled interiors, and generic hit tolerance is reduced so drag marquee selection is easier to start near objects.
 
 ## Decisions
 
