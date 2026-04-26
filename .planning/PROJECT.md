@@ -23,6 +23,17 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
 - 시작 페이지, 최근 열기, 다중 도면 탭
 - 탭 간 복사/붙여넣기와 참조점 기반 복사/붙여넣기
 
+## Current Milestone: v1.1 File Fidelity and Editing Productivity
+
+**Goal:** 실무 도면 파일을 더 안정적으로 다루고, 반복 편집 작업을 줄이는 생산성 기능을 추가합니다.
+
+**Target features:**
+
+- DXF/DWG import/export 품질과 변환 경고 UX 개선
+- 그룹/회전/정렬 같은 기본 transform 편집 도구 추가
+- 파일 저장 UX 개선: dirty 상태, 기존 파일 형식 저장, Save As 흐름
+- 핵심 CAD 워크플로우 자동 브라우저 테스트와 성능 기준 추가
+
 ## Core Value
 
 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
@@ -87,16 +98,16 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
 
 ## Next Milestone Goals
 
-v1.1 후보 목표:
+v1.1 목표:
 
-- 실무 DXF/DWG 파일 호환성 개선
-- DWG 변환 서버 실제 연결
-- 편집 도구 고도화
-- 자동 브라우저 테스트와 성능 검증 강화
+- 실무 파일 호환성 강화
+- 반복 편집 생산성 개선
+- 저장/파일 상태 UX 개선
+- 자동 검증과 성능 기준 도입
 
 ## Evolution
 
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after v1.0 milestone*
+*Last updated: 2026-04-26 after starting v1.1 milestone*
