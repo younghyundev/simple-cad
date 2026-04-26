@@ -23,8 +23,8 @@
 
 ## Regression and Documentation
 
-- [ ] **COMPAT-09**: 고급 호환성 fixture가 layer/style, annotation, block fallback, layout/external reference 분류를 검증한다.
-- [ ] **COMPAT-10**: README와 conversion docs는 v1.4에서 보존되는 항목과 여전히 제한되는 항목을 명확히 설명한다.
+- [x] **COMPAT-09**: 고급 호환성 fixture가 layer/style, annotation, block fallback, layout/external reference 분류를 검증한다.
+- [x] **COMPAT-10**: README와 conversion docs는 v1.4에서 보존되는 항목과 여전히 제한되는 항목을 명확히 설명한다.
 
 ## Future Requirements
 
@@ -51,5 +51,5 @@
 | COMPAT-06 | Phase 21 | Complete |
 | COMPAT-07 | Phase 22 | Complete |
 | COMPAT-08 | Phase 22 | Complete |
-| COMPAT-09 | Phase 23 | Planned |
-| COMPAT-10 | Phase 23 | Planned |
+| COMPAT-09 | Phase 23 | Complete |
+| COMPAT-10 | Phase 23 | Complete |

@@ -4,13 +4,13 @@ milestone: v1.4
 milestone_name: Advanced CAD Compatibility Expansion
 status: planning
 last_updated: "2026-04-26T13:10:00Z"
-last_activity: 2026-04-26 -- Phase 22 completed
+last_activity: 2026-04-26 -- Phase 23 completed
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 23 — Advanced Compatibility Fixtures and Docs
-Plan: Not started
-Status: Phase 22 complete
-Last activity: 2026-04-26 -- Phase 22 completed
+Phase: v1.4 completion review
+Plan: Complete milestone
+Status: Phase 23 complete
+Last activity: 2026-04-26 -- Phase 23 completed
 
 ## Current Status
 
@@ -60,6 +60,7 @@ Last activity: 2026-04-26 -- Phase 22 completed
 - Phase 20 completed: DXF layer visibility/lock/linetype/lineweight import/export preservation, round-trip summaries, conversion regression, and README update.
 - Phase 21 completed: TEXT/MTEXT rotation/alignment/height preservation, DIMENSION fallback detail enrichment, BLOCK/INSERT transform detail enrichment, and conversion regression coverage.
 - Phase 22 completed: DXF layout/model-paper space metadata, viewport classification, IMAGE/XREF/UNDERLAY external reference classification, and regression coverage.
+- Phase 23 completed: v1.4 compatibility fixture, CAD fidelity assertions, README/conversion docs, and final verification.
 
 ## Accumulated Context
 
@@ -76,8 +77,8 @@ Last activity: 2026-04-26 -- Phase 22 completed
 
 ## Next Action
 
-Run `$gsd-plan-phase 23` to plan advanced compatibility fixtures and documentation.
+Run `$gsd-complete-milestone` to archive v1.4 when ready.
 
-**Completed Phase:** 22 (Layout and External Reference Classification)
-**Next Phase:** 23 (Advanced Compatibility Fixtures and Docs)
+**Completed Phase:** 23 (Advanced Compatibility Fixtures and Docs)
+**Next Phase:** v1.4 milestone completion
 **Current Milestone:** v1.4 (Advanced CAD Compatibility Expansion)

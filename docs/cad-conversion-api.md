@@ -222,7 +222,14 @@ server conversion path is configured.
 
 Conversion warnings can include these categories:
 
+- `preserved`: CAD metadata or entities were retained directly or classified without becoming editable geometry.
 - `approximated`: curves or CAD entities were sampled or simplified.
 - `unsupported`: entities were skipped.
 - `conversion`: the server or importer transformed data into SimpleCAD objects.
 - `mock`: development-only responses that do not represent real file conversion.
+
+For v1.4 compatibility, clients may receive preserved warnings for layer/style metadata,
+TEXT/MTEXT details, DIMENSION fallback details, exploded BLOCK/INSERT context, layouts,
+viewports, IMAGE references, XREFs, and PDF/DGN/DWF underlays. External referenced files are
+not bundled by the browser editor; backends should return enough metadata for the UI to show
+what was classified and what still requires the original reference files.

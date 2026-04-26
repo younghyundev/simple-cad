@@ -59,11 +59,13 @@
 3. IMAGE/XREF/UNDERLAY는 외부 참조 warning으로 분류된다.
 4. 사용자가 편집 가능한 객체와 보존만 되는 정보를 구분할 수 있다.
 
-### Phase 23 — Advanced Compatibility Fixtures and Docs
+### Phase 23 — Advanced Compatibility Fixtures and Docs ✅
 
 **Goal:** v1.4 호환성 범위를 fixture, regression, README/docs로 고정한다.
 
 **Requirements:** COMPAT-09, COMPAT-10
+
+**Status:** Complete — see [Phase 23 summary](phases/23-advanced-compatibility-fixtures-and-docs/23-SUMMARY.md).
 
 **Success criteria:**
 
