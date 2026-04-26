@@ -81,7 +81,7 @@ export const sampleDocument: CadDocument = {
       locked: false,
       x: -155,
       y: 110,
-      content: 'Web CAD 샘플 도면',
+      content: 'SimpleCAD 샘플 도면',
       fontSize: 18,
     },
   ],

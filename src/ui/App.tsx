@@ -49,7 +49,7 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 
 const fileManager = new FileManager();
 const maxAutosaveEntities = 4000;
-const recentStorageKey = 'webcad.recentDocuments';
+const recentStorageKey = 'simplecad.recentDocuments';
 
 type WorkspaceTab = {
   id: string;
@@ -531,7 +531,7 @@ export function App() {
         setFileMessage(`큰 도면: 자동 저장 생략됨 (${document.entities.length}개 객체)`);
         return;
       }
-      localStorage.setItem('webcad.autosave', JSON.stringify(document));
+      localStorage.setItem('simplecad.autosave', JSON.stringify(document));
       setFileMessage(`자동 저장됨 ${new Date().toLocaleTimeString()}`);
     }, 400);
 
@@ -640,8 +640,8 @@ export function App() {
           }}
         />
         <div className="brand">
-          <span className="brand-mark">WC</span>
-          <span>Web CAD</span>
+          <span className="brand-mark">SC</span>
+          <span>SimpleCAD</span>
         </div>
         <div className="toolbar-group">
           <button className="tool-button wide" title="새 도면" onClick={createNewDrawing}>
@@ -1076,9 +1076,9 @@ export function App() {
         <section className="start-page">
           <div className="start-page-inner">
             <div className="start-heading">
-              <span className="brand-mark">WC</span>
+              <span className="brand-mark">SC</span>
               <div>
-                <h1>Web CAD</h1>
+                <h1>SimpleCAD</h1>
                 <p>도면을 열거나 새 작업을 시작하세요.</p>
               </div>
             </div>

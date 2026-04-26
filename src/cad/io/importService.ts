@@ -560,7 +560,7 @@ function importDxfEntity(
     result.entities.push(entity);
     result.importWarnings.push({
       code: 'DXF_DIMENSION_IMPORTED',
-      message: 'DIMENSION 엔티티를 편집 가능한 Web CAD 치수 객체로 가져왔습니다.',
+      message: 'DIMENSION 엔티티를 편집 가능한 SimpleCAD 치수 객체로 가져왔습니다.',
       entityId: entity.id,
     });
   } else {
