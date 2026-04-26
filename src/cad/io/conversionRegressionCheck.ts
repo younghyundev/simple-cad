@@ -1,4 +1,5 @@
 import { ConversionApiClient, ConversionApiError } from './conversionApiClient';
+import { ExportService } from './exportService';
 import { ImportService } from './importService';
 import { runDxfRoundTrip } from './dxfRoundTrip';
 
@@ -16,6 +17,18 @@ async function main(): Promise<void> {
     malformedDocument.entities.length === 0,
     'Malformed DXF text should not create accidental entities.',
   );
+
+  const layerStyleDocument = await importer.fromDxf(layerStyleDxfFixture());
+  const hiddenLayer = layerStyleDocument.layers.find((layer) => layer.id === 'hidden_dash');
+  assert(hiddenLayer?.visible === false, 'Negative DXF layer color should import as hidden layer.');
+  assert(hiddenLayer?.locked === true, 'DXF layer lock flag should be preserved.');
+  assert(hiddenLayer?.lineType === 'DASHED', 'DXF layer linetype should be preserved.');
+  assert(hiddenLayer?.lineWeight === 211, 'DXF layer lineweight should be preserved.');
+  const exportedLayerStyle = await new ExportService().toDxf(layerStyleDocument).text();
+  assert(exportedLayerStyle.includes('hidden_dash'), 'DXF export should include imported layer name.');
+  assert(exportedLayerStyle.includes('-3'), 'DXF export should preserve hidden layer color sign.');
+  assert(exportedLayerStyle.includes('DASHED'), 'DXF export should include imported layer linetype.');
+  assert(exportedLayerStyle.includes('211'), 'DXF export should include imported layer lineweight.');
 
   const roundTrip = await runDxfRoundTrip(splineDxfFixture());
   assert(
@@ -90,6 +103,57 @@ async function main(): Promise<void> {
   console.log(`preserved spline warnings: ${roundTrip.firstImport.importWarnings?.length ?? 0}`);
   console.log('mock DWG import/export mode: passed');
   console.log('async job import/export: passed');
+}
+
+function layerStyleDxfFixture(): string {
+  return [
+    '0',
+    'SECTION',
+    '2',
+    'TABLES',
+    '0',
+    'TABLE',
+    '2',
+    'LAYER',
+    '70',
+    '1',
+    '0',
+    'LAYER',
+    '2',
+    'hidden_dash',
+    '70',
+    '4',
+    '62',
+    '-3',
+    '6',
+    'DASHED',
+    '370',
+    '211',
+    '0',
+    'ENDTAB',
+    '0',
+    'ENDSEC',
+    '0',
+    'SECTION',
+    '2',
+    'ENTITIES',
+    '0',
+    'LINE',
+    '8',
+    'hidden_dash',
+    '10',
+    '0',
+    '20',
+    '0',
+    '11',
+    '100',
+    '21',
+    '0',
+    '0',
+    'ENDSEC',
+    '0',
+    'EOF',
+  ].join('\n');
 }
 
 function installMockFetch(): () => void {

@@ -13,6 +13,8 @@ export type CadLayer = {
   color: string;
   visible: boolean;
   locked: boolean;
+  lineType?: string;
+  lineWeight?: number;
 };
 
 export type CadEntityBase = {

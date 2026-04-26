@@ -6,9 +6,9 @@
 
 ## Layer and Style Fidelity
 
-- [ ] **COMPAT-01**: 사용자는 DXF import 후 layer 이름, 색상, 표시/잠금 상태, lineweight/linetype 관련 정보를 가능한 범위에서 유지할 수 있다.
-- [ ] **COMPAT-02**: 사용자는 DXF export 후 SimpleCAD layer/style 정보가 다시 DXF layer와 entity 속성으로 반영되는 것을 기대할 수 있다.
-- [ ] **COMPAT-03**: 지원하지 못한 linetype/lineweight/style 정보는 구조화된 warning detail로 확인할 수 있다.
+- [x] **COMPAT-01**: 사용자는 DXF import 후 layer 이름, 색상, 표시/잠금 상태, lineweight/linetype 관련 정보를 가능한 범위에서 유지할 수 있다.
+- [x] **COMPAT-02**: 사용자는 DXF export 후 SimpleCAD layer/style 정보가 다시 DXF layer와 entity 속성으로 반영되는 것을 기대할 수 있다.
+- [x] **COMPAT-03**: 지원하지 못한 linetype/lineweight/style 정보는 구조화된 warning detail로 확인할 수 있다.
 
 ## Annotation and Block Fallbacks
 
@@ -43,9 +43,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMPAT-01 | Phase 20 | Planned |
-| COMPAT-02 | Phase 20 | Planned |
-| COMPAT-03 | Phase 20 | Planned |
+| COMPAT-01 | Phase 20 | Complete |
+| COMPAT-02 | Phase 20 | Complete |
+| COMPAT-03 | Phase 20 | Complete |
 | COMPAT-04 | Phase 21 | Planned |
 | COMPAT-05 | Phase 21 | Planned |
 | COMPAT-06 | Phase 21 | Planned |

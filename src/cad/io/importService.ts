@@ -13,6 +13,14 @@ import { dxfAciToHex } from './dxfColor';
 import { dxfLineTypeToStrokeStyle, dxfLineWeightToStrokeWidth } from './dxfStyle';
 import { decodeDxfText } from './dxfText';
 
+type DxfLayerDefinition = {
+  color?: string;
+  lineType?: string;
+  lineWeight?: string;
+  visible?: boolean;
+  locked?: boolean;
+};
+
 export class ImportService {
   async fromJson(text: string): Promise<CadDocument> {
     return JSON.parse(text) as CadDocument;
@@ -49,8 +57,10 @@ export class ImportService {
       id: name,
       name,
       color: layerDefinitions.get(name)?.color ?? (index === 0 ? '#2563eb' : '#7c3aed'),
-      visible: true,
-      locked: false,
+      visible: layerDefinitions.get(name)?.visible ?? true,
+      locked: layerDefinitions.get(name)?.locked ?? false,
+      lineType: layerDefinitions.get(name)?.lineType,
+      lineWeight: dxfLayerLineWeightToNumber(layerDefinitions.get(name)?.lineWeight),
     }));
 
     return {
@@ -314,21 +324,36 @@ function collectBlockDefinitions(pairs: DxfPair[]): Map<string, DxfBlockDefiniti
 
 function parseLayerDefinitions(
   pairs: DxfPair[],
-): Map<string, { color?: string; lineType?: string; lineWeight?: string }> {
-  const layers = new Map<string, { color?: string; lineType?: string; lineWeight?: string }>();
+): Map<string, DxfLayerDefinition> {
+  const layers = new Map<string, DxfLayerDefinition>();
 
   for (let index = 0; index < pairs.length; index += 1) {
     if (pairs[index].code !== '0' || pairs[index].value !== 'LAYER') continue;
 
     const chunk = readChunk(pairs, index + 1);
     const name = valueFor(chunk, '2');
-    const color = dxfAciToHex(valueFor(chunk, '62'));
+    const rawColor = valueFor(chunk, '62');
+    const color = dxfAciToHex(rawColor);
+    const flags = Number(valueFor(chunk, '70') ?? 0);
     const lineType = valueFor(chunk, '6');
     const lineWeight = valueFor(chunk, '370');
-    if (name) layers.set(name, { color: color ?? undefined, lineType, lineWeight });
+    if (name) {
+      layers.set(name, {
+        color: color ?? undefined,
+        lineType,
+        lineWeight,
+        visible: Number(rawColor ?? 7) >= 0,
+        locked: Number.isFinite(flags) ? (flags & 4) === 4 : false,
+      });
+    }
   }
 
   return layers;
+}
+
+function dxfLayerLineWeightToNumber(value: string | undefined): number | undefined {
+  const lineWeight = Number(value);
+  return Number.isFinite(lineWeight) && lineWeight > 0 ? lineWeight : undefined;
 }
 
 function readChunk(pairs: DxfPair[], startIndex: number): DxfPair[] {
@@ -481,7 +506,7 @@ function bulgeSegmentPoints(start: CadPoint, end: CadPoint, bulge: number): CadP
 function importDxfEntity(
   entityType: string,
   chunk: DxfPair[],
-  layerDefinitions: Map<string, { color?: string; lineType?: string; lineWeight?: string }>,
+  layerDefinitions: Map<string, DxfLayerDefinition>,
   transform?: InsertTransform,
 ): ImportEntityResult {
   const sourceLayerId = valueFor(chunk, '8') || '0';
@@ -839,7 +864,7 @@ function hatchFillKind(pairs: DxfPair[]): 'solid' | 'pattern' | 'gradient' | 'un
 
 function importInsertEntity(
   chunk: DxfPair[],
-  layerDefinitions: Map<string, { color?: string; lineType?: string; lineWeight?: string }>,
+  layerDefinitions: Map<string, DxfLayerDefinition>,
   blockDefinitions: Map<string, DxfBlockDefinition>,
   nestedDepth: number,
 ): ImportEntityResult {

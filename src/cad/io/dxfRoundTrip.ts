@@ -6,7 +6,7 @@ import { ImportService } from './importService';
 
 export type DxfRoundTripSummary = {
   entityCounts: Record<FlatEntityType, number>;
-  layerSummary: Array<Pick<CadLayer, 'id' | 'name' | 'color' | 'visible' | 'locked'>>;
+  layerSummary: Array<Pick<CadLayer, 'id' | 'name' | 'color' | 'visible' | 'locked' | 'lineType' | 'lineWeight'>>;
   bounds: { minX: number; minY: number; maxX: number; maxY: number };
   strokeStyles: Record<string, number>;
   textContents: string[];
@@ -76,6 +76,8 @@ export function summarizeCadDocument(document: CadDocument): DxfRoundTripSummary
         color: normalizeColor(layer.color),
         visible: layer.visible,
         locked: layer.locked,
+        lineType: layer.lineType,
+        lineWeight: layer.lineWeight,
       }))
       .sort((a, b) => a.id.localeCompare(b.id)),
     bounds: documentBounds(document.entities),

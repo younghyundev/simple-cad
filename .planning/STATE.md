@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Advanced CAD Compatibility Expansion
 status: planning
-last_updated: "2026-04-26T12:50:00Z"
-last_activity: 2026-04-26 -- v1.4 milestone started
+last_updated: "2026-04-26T13:10:00Z"
+last_activity: 2026-04-26 -- Phase 20 completed
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 25
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 20 — Layer and Style Fidelity
+Phase: 21 — Annotation and Block Fallbacks
 Plan: Not started
-Status: Roadmap ready
-Last activity: 2026-04-26 -- v1.4 milestone started
+Status: Phase 20 complete
+Last activity: 2026-04-26 -- Phase 20 completed
 
 ## Current Status
 
@@ -57,6 +57,7 @@ Last activity: 2026-04-26 -- v1.4 milestone started
 - Phase 19 completed: expired share link regression, README review workflow documentation, and full `npm run verify`.
 - v1.3 archive created in `.planning/milestones/`.
 - v1.4 started for broader DXF/DWG compatibility: layer/style fidelity, annotation/block fallback, layout/reference classification, and advanced regression docs.
+- Phase 20 completed: DXF layer visibility/lock/linetype/lineweight import/export preservation, round-trip summaries, conversion regression, and README update.
 
 ## Accumulated Context
 
@@ -73,7 +74,8 @@ Last activity: 2026-04-26 -- v1.4 milestone started
 
 ## Next Action
 
-Run `$gsd-plan-phase 20` to plan layer and style fidelity.
+Run `$gsd-plan-phase 21` to plan annotation and block fallback improvements.
 
-**Next Phase:** 20 (Layer and Style Fidelity)
+**Completed Phase:** 20 (Layer and Style Fidelity)
+**Next Phase:** 21 (Annotation and Block Fallbacks)
 **Current Milestone:** v1.4 (Advanced CAD Compatibility Expansion)

@@ -478,20 +478,21 @@ function layersToDxf(document: CadDocument): string[] {
     'LAYER',
     '70',
     `${document.layers.length}`,
-    ...document.layers.flatMap((layer) => [
-      '0',
-      'LAYER',
-      '2',
-      layer.id,
-      '70',
-      layer.locked ? '4' : '0',
-      '62',
-      `${hexToDxfAci(layer.color)}`,
-      '6',
-      'CONTINUOUS',
-      '370',
-      '50',
-    ]),
+    ...document.layers.flatMap((layer) => {
+      const entries = [
+        '0',
+        'LAYER',
+        '2',
+        layer.id,
+        '70',
+        layer.locked ? '4' : '0',
+        '62',
+        `${layer.visible === false ? -hexToDxfAci(layer.color) : hexToDxfAci(layer.color)}`,
+        '6',
+        layer.lineType ?? 'CONTINUOUS',
+      ];
+      return layer.lineWeight ? [...entries, '370', `${layer.lineWeight}`] : entries;
+    }),
     '0',
     'ENDTAB',
   ];

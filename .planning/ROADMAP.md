@@ -14,11 +14,13 @@
 
 ## Phases
 
-### Phase 20 — Layer and Style Fidelity
+### Phase 20 — Layer and Style Fidelity ✅
 
 **Goal:** DXF layer, color, linetype, lineweight 정보를 import/export와 warning detail에 더 안정적으로 보존한다.
 
 **Requirements:** COMPAT-01, COMPAT-02, COMPAT-03
+
+**Status:** Complete — see [Phase 20 summary](phases/20-layer-and-style-fidelity/20-SUMMARY.md).
 
 **Success criteria:**
 
