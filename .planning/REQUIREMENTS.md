@@ -16,11 +16,11 @@
 
 ### Editing Productivity
 
-- [ ] **EDIT-11**: 사용자는 선택 객체를 그룹화하고 그룹을 해제할 수 있다.
-- [ ] **EDIT-12**: 사용자는 선택 객체 또는 그룹을 기준점 중심으로 회전할 수 있다.
-- [ ] **EDIT-13**: 사용자는 여러 객체를 좌/우/상/하/중앙 기준으로 정렬할 수 있다.
-- [ ] **EDIT-14**: 사용자는 객체 복사, 참조 복사, 그룹, 회전, 정렬 작업을 undo/redo로 되돌릴 수 있다.
-- [ ] **EDIT-15**: 선택/스냅/히트 테스트는 그룹과 회전된 객체에서도 예측 가능하게 동작한다.
+- [x] **EDIT-11**: 사용자는 선택 객체를 그룹화하고 그룹을 해제할 수 있다.
+- [x] **EDIT-12**: 사용자는 선택 객체 또는 그룹을 기준점 중심으로 회전할 수 있다.
+- [x] **EDIT-13**: 사용자는 여러 객체를 좌/우/상/하/중앙 기준으로 정렬할 수 있다.
+- [x] **EDIT-14**: 사용자는 객체 복사, 참조 복사, 그룹, 회전, 정렬 작업을 undo/redo로 되돌릴 수 있다.
+- [x] **EDIT-15**: 선택/스냅/히트 테스트는 그룹과 회전된 객체에서도 예측 가능하게 동작한다.
 
 ### Save Workflow
 
@@ -65,11 +65,11 @@
 | FID-03 | Phase 8 | Complete |
 | FID-04 | Phase 8 | Complete |
 | FID-05 | Phase 8 | Complete |
-| EDIT-11 | Phase 9 | Pending |
-| EDIT-12 | Phase 9 | Pending |
-| EDIT-13 | Phase 9 | Pending |
-| EDIT-14 | Phase 9 | Pending |
-| EDIT-15 | Phase 9 | Pending |
+| EDIT-11 | Phase 9 | Complete |
+| EDIT-12 | Phase 9 | Complete |
+| EDIT-13 | Phase 9 | Complete |
+| EDIT-14 | Phase 9 | Complete |
+| EDIT-15 | Phase 9 | Complete |
 | SAVE-01 | Phase 10 | Pending |
 | SAVE-02 | Phase 10 | Pending |
 | SAVE-03 | Phase 10 | Pending |
@@ -85,4 +85,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after Phase 8 completion*
+*Last updated: 2026-04-26 after Phase 9 completion*

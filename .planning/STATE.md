@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: File Fidelity and Editing Productivity
 status: active
 last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- Phase 9 planned
+last_activity: 2026-04-26 -- Phase 9 completed
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 3
-  percent: 25
+  completed_plans: 7
+  percent: 50
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 9 — Transform Productivity Tools
-Plan: 4 plans created
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 9 planned
+Phase: 10 — Save Workflow and File State
+Plan: Not planned
+Status: Ready to plan
+Last activity: 2026-04-26 -- Phase 9 completed
 
 ## Current Status
 
@@ -36,6 +36,7 @@ Last activity: 2026-04-26 -- Phase 9 planned
 - v1.1 requirements and roadmap are defined.
 - Phase 8 completed: DXF round-trip fixture/check, structured conversion warnings, and explicit DWG mock/server mode metadata.
 - Phase 9 planning artifacts are ready: context, research, UI-SPEC, patterns, and 4 execution plans.
+- Phase 9 completed: group/ungroup, rotation, alignment, group-aware selection/snap/export, and transform UI controls.
 
 ## Accumulated Context
 
@@ -52,4 +53,4 @@ Last activity: 2026-04-26 -- Phase 9 planned
 
 ## Next Action
 
-Run `$gsd-execute-phase 9` to execute Transform Productivity Tools.
+Run `$gsd-plan-phase 10` to plan Save Workflow and File State.
