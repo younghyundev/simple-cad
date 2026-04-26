@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-26에 완료되어 SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름을 갖춘 상태입니다.
+v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-26에 완료되어 SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름을 갖춘 상태입니다. v1.3은 실제 백엔드 전환 없이 브라우저 기반 공유 링크와 검토 UX를 더 실무적으로 관리하는 데 집중합니다.
 
 현재 구현된 핵심 범위:
 
@@ -32,16 +32,16 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 - GitHub Actions quality-gates job, `npm run verify`, CI logs/artifacts/job summary
 - localStorage mock 서버 저장/다시 열기, 공유 링크, 읽기 전용 공유 문서, 좌표/객체 검토 주석
 
-## Current Milestone: v1.2 Production CAD Workflow and Collaboration — Complete
+## Current Milestone: v1.3 Share Link Management and Review Workflow
 
-**Goal:** SimpleCAD를 실무 파일 변환과 협업 흐름까지 이어지는 production-ready CAD workflow로 확장합니다.
+**Goal:** 백엔드 저장소 도입 없이도 공유 링크를 만들고, 관리하고, 검토 상태를 추적할 수 있는 브라우저 기반 협업 흐름을 완성합니다.
 
 **Target features:**
 
-- 실제 DWG 변환 서버 연결
-- 더 많은 DXF/DWG 엔티티 native 보존
-- CI에서 E2E/성능/변환 회귀 검증 자동화
-- 서버 저장, 공유 링크, 주석 같은 협업 흐름
+- 공유 링크 목록, 복사, 삭제, 만료 상태 관리
+- 링크 생성 시 제목, 설명, 만료일 같은 공유 옵션 설정
+- 검토 주석 필터링, 선택 연동, 해결 상태 추적 개선
+- 공유/검토 상태의 localStorage 회귀 테스트와 README 문서화
 
 ## Core Value
 
@@ -80,7 +80,10 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 
 ### Active
 
-- [ ] 실제 DWG 변환 서버를 운영 환경에 배포하고 `VITE_CAD_CONVERSION_API_BASE_URL`로 연결한다.
+- [ ] 공유 링크를 목록으로 관리하고 복사/삭제/만료 상태를 확인할 수 있다.
+- [ ] 공유 링크 생성 시 제목, 설명, 만료일 같은 기본 옵션을 지정할 수 있다.
+- [ ] 검토 주석을 미해결/해결/선택 객체 기준으로 필터링하고 캔버스 위치와 연동할 수 있다.
+- [ ] 공유 링크와 검토 상태가 브라우저 저장소에서 안정적으로 보존되고 회귀 테스트로 검증된다.
 
 ### Out of Scope
 
@@ -128,7 +131,6 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 
 - 실제 DWG 변환 서버 운영 배포와 인증/파일 제한 정책
 - localStorage mock 협업 저장소를 실제 서버 API로 교체
-- 공유 링크 권한/만료/버전 이력
 - 더 넓은 DXF/DWG 고급 호환성
 
 ## Evolution
@@ -136,4 +138,4 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0/v1.1의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after Phase 15 execution*
+*Last updated: 2026-04-26 starting v1.3 milestone*

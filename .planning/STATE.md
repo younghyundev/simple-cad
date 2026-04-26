@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Production CAD Workflow and Collaboration
-status: completed
-last_updated: "2026-04-26T10:01:44Z"
-last_activity: 2026-04-26 -- v1.2 milestone archived
+milestone: v1.3
+milestone_name: Share Link Management and Review Workflow
+status: planning
+last_updated: "2026-04-26T10:35:00Z"
+last_activity: 2026-04-26 -- v1.3 milestone started
 progress:
   total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SimpleCAD
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 공유 링크 관리와 검토 워크플로우
 
 ## Current Position
 
-Phase: 15 — Sharing and Review Collaboration
-Plan: 4/4 complete
-Status: Milestone complete
-Last activity: 2026-04-26 -- v1.2 milestone archived
+Phase: 16 — Share Link Registry and Lifecycle
+Plan: Not started
+Status: Roadmap ready
+Last activity: 2026-04-26 -- v1.3 milestone started
 
 ## Current Status
 
@@ -50,6 +50,7 @@ Last activity: 2026-04-26 -- v1.2 milestone archived
 - Phase 15 planning artifacts are ready: research, UI spec, patterns, and 4 execution plans for sharing/review collaboration.
 - Phase 15 completed: local mock server save/open, share links, read-only shared documents, coordinate/entity review comments, review panel, E2E coverage, README docs, and clean code review.
 - v1.2 archive created in `.planning/milestones/`.
+- v1.3 started with a browser-only collaboration scope: share link management, share options, review comment workflow polish, and regression documentation.
 
 ## Accumulated Context
 
@@ -66,7 +67,7 @@ Last activity: 2026-04-26 -- v1.2 milestone archived
 
 ## Next Action
 
-Run `$gsd-new-milestone` to start the next milestone.
+Run `$gsd-plan-phase 16` to plan share link registry and lifecycle work.
 
-**Completed Phase:** 15 (Sharing and Review Collaboration) — 4/4 plans — 2026-04-26
-**Completed Milestone:** v1.2 (Production CAD Workflow and Collaboration) — archived 2026-04-26
+**Next Phase:** 16 (Share Link Registry and Lifecycle)
+**Current Milestone:** v1.3 (Share Link Management and Review Workflow)
