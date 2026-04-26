@@ -169,9 +169,6 @@ export function App() {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
-  const [serverDocuments, setServerDocuments] = useState<ServerDocumentRecord[]>(() =>
-    collaborationRepository.listDocuments(),
-  );
   const [reviewComments, setReviewComments] = useState<ReviewComment[]>([]);
   const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
   const [collaborationState, setCollaborationState] = useState<CollaborationState>(() => createCollaborationState());
@@ -216,7 +213,6 @@ export function App() {
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
   const activeDirty = isSaveStateDirty(saveState);
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
-  const serverStatus = formatServerState(collaborationState, saveState.revision);
   const activeReadonly = collaborationState.readonly;
   const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
 
@@ -615,7 +611,6 @@ export function App() {
       serverSavedRevision: saveState.revision,
     });
     setCollaborationState(nextCollaborationState);
-    setServerDocuments(collaborationRepository.listDocuments());
     setReviewComments(collaborationRepository.listComments(record.id));
     persistRecentDocument(record.title, record.document);
     setFileMessage(`${record.title} 서버 저장됨`);
@@ -667,33 +662,6 @@ export function App() {
     document,
     saveState.targetName,
   ]);
-
-  const openServerDocument = useCallback((record: ServerDocumentRecord) => {
-    const serverRecord = collaborationRepository.openDocument(record.id);
-    if (!serverRecord) {
-      setServerDocuments(collaborationRepository.listDocuments());
-      setFileMessage('서버 도면을 열 수 없습니다.');
-      return;
-    }
-    createTab(
-      serverRecord.title,
-      {
-        ...serverRecord.document,
-        id: `server-${Date.now()}`,
-        name: serverRecord.document.name || serverRecord.title,
-      },
-      createSaveState(serverRecord.document, serverRecord.title),
-      createCollaborationState({
-        serverDocumentId: serverRecord.id,
-        shareToken: serverRecord.shareToken,
-        lastServerSavedAt: serverRecord.updatedAt,
-        serverSavedRevision: 0,
-        readonly: serverRecord.readonly ?? false,
-      }),
-    );
-    setReviewComments(collaborationRepository.listComments(serverRecord.id));
-    setFileMessage(`${serverRecord.title} 서버 도면을 열었습니다.`);
-  }, [createTab]);
 
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -786,7 +754,7 @@ export function App() {
       ? collaborationRepository.openDocument(collaborationState.serverDocumentId)
       : saveDocumentToServer();
     if (!record) {
-      setFileMessage('주석을 저장할 서버 도면을 만들 수 없습니다.');
+      setFileMessage('주석을 저장할 수 없습니다.');
       closeContextMenu();
       return;
     }
@@ -2006,27 +1974,6 @@ export function App() {
                 <p className="empty-state">최근에 연 도면이 없습니다.</p>
               )}
             </section>
-            <section className="server-panel">
-              <h2>서버 도면</h2>
-              {serverDocuments.length ? (
-                <div className="server-document-list">
-                  {serverDocuments.map((serverDocument) => (
-                    <button
-                      className="server-document"
-                      data-testid="server-document-item"
-                      key={serverDocument.id}
-                      onClick={() => openServerDocument(serverDocument)}
-                    >
-                      <FileText size={17} />
-                      <span>{serverDocument.title}</span>
-                      <small>{new Date(serverDocument.updatedAt).toLocaleString()}</small>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="empty-state">서버에 저장된 도면이 없습니다.</p>
-              )}
-            </section>
           </div>
         </section>
       )}
@@ -2044,9 +1991,6 @@ export function App() {
         <span>도구: {tools.find((tool) => tool.id === activeTool)?.label}</span>
         <span className={activeDirty ? 'save-state save-state-dirty' : 'save-state'}>
           {formatSaveState(saveState)}
-        </span>
-        <span className={serverStatus.dirty ? 'save-state save-state-dirty' : 'save-state'}>
-          {serverStatus.label}
         </span>
         {conversionProgress ? (
           <span className="conversion-status" data-testid="conversion-status">
@@ -2102,22 +2046,6 @@ function formatSaveState(saveState: SaveState): string {
   const handleLabel = saveState.fileHandleAvailable ? '파일 직접 저장' : '다운로드 저장';
   if (!saveState.lastSavedAt) return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${handleLabel}`;
   return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${new Date(saveState.lastSavedAt).toLocaleTimeString()}`;
-}
-
-function formatServerState(
-  collaborationState: CollaborationState,
-  revision: number,
-): { label: string; dirty: boolean } {
-  if (!collaborationState.serverDocumentId) {
-    return { label: '서버 미저장', dirty: false };
-  }
-  const dirty = collaborationState.serverSavedRevision !== revision;
-  if (dirty) return { label: '서버 변경 있음', dirty: true };
-  if (!collaborationState.lastServerSavedAt) return { label: '서버 저장됨', dirty: false };
-  return {
-    label: `서버 저장됨 · ${new Date(collaborationState.lastServerSavedAt).toLocaleTimeString()}`,
-    dirty: false,
-  };
 }
 
 function formatConversionProgress(progress: ConversionProgress): string {
