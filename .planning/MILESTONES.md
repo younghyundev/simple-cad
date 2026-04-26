@@ -1,5 +1,28 @@
 # Milestones
 
+## v1.4 Advanced CAD Compatibility Expansion (Shipped: 2026-04-26)
+
+**Status:** Shipped
+**Completed:** 2026-04-26
+**Archive:** [v1.4 ROADMAP](milestones/v1.4-ROADMAP.md), [v1.4 REQUIREMENTS](milestones/v1.4-REQUIREMENTS.md)
+**Phases completed:** 4 phases, 4 plans
+
+### Delivered
+
+- DXF layer visibility, lock, linetype, and lineweight preservation during import/export.
+- TEXT/MTEXT rotation, alignment, height, and multiline preservation as editable text objects.
+- DIMENSION, ATTRIB/ATTDEF, and BLOCK/INSERT fallback warnings with richer measured value, transform, and attribute details.
+- Layout, paper space, viewport, IMAGE, XREF, and UNDERLAY classification as metadata/preserved warnings.
+- Dedicated v1.4 compatibility fixture and CAD fidelity assertions covering the expanded compatibility scope.
+
+### Known Deferred Items
+
+- Referenced IMAGE/XREF/UNDERLAY files are classified but not rendered or bundled.
+- Full AutoCAD dimension style editing and annotative scale support.
+- Production DWG conversion server deployment.
+
+---
+
 ## v1.3 Share Link Management and Review Workflow (Shipped: 2026-04-26)
 
 **Status:** Shipped

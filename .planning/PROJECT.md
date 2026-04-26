@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.1, v1.2, v1.3이 2026-04-26에 shipped 상태로 완료되었습니다. SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름, 브라우저 기반 공유 링크 관리와 검토 UX를 갖춘 상태입니다.
+v1.1, v1.2, v1.3, v1.4가 2026-04-26에 shipped 상태로 완료되었습니다. SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선, 운영 DWG 변환 API 계약, 고급 DXF 엔티티 보존 흐름, GitHub Actions 품질 게이트, 서버 저장/공유/검토 주석 흐름, 브라우저 기반 공유 링크 관리와 검토 UX, 더 넓은 DXF/DWG 호환성 분류를 갖춘 상태입니다.
 
 현재 구현된 핵심 범위:
 
@@ -32,17 +32,13 @@ v1.1, v1.2, v1.3이 2026-04-26에 shipped 상태로 완료되었습니다. Simpl
 - GitHub Actions quality-gates job, `npm run verify`, CI logs/artifacts/job summary
 - localStorage mock 서버 저장/다시 열기, 공유 링크, 읽기 전용 공유 문서, 좌표/객체 검토 주석
 - 공유 링크 목록/복사/삭제/만료 관리, 공유 제목/설명/만료일 옵션, 검토 주석 필터와 위치 이동
+- DXF layer/style metadata 보존, TEXT/MTEXT/DIMENSION/BLOCK fallback detail 보존
+- layout, paper space, viewport, IMAGE/XREF/UNDERLAY metadata/warning 분류
+- v1.4 전용 CAD compatibility fixture와 회귀 검증
 
-## Current Milestone: v1.4 Advanced CAD Compatibility Expansion
+## Current Milestone
 
-**Goal:** 실제 도면에서 더 자주 만나는 DXF/DWG 표현을 가능한 범위에서 보존하고, 손실되는 정보는 더 정확히 분류해 사용자가 파일 호환성을 신뢰할 수 있게 합니다.
-
-**Target features:**
-
-- DXF layer metadata, color/linetype/lineweight 보존 강화
-- 더 많은 텍스트/치수/블록 속성 fallback 보존
-- viewport/layout/paperspace 관련 메타데이터 분류
-- 고급 호환성 fixture와 regression coverage 확장
+No active milestone is defined. Start the next milestone with `$gsd-new-milestone`.
 
 ## Core Value
 
@@ -82,13 +78,14 @@ v1.1, v1.2, v1.3이 2026-04-26에 shipped 상태로 완료되었습니다. Simpl
 - ✓ 공유 링크 생성 시 제목, 설명, 만료일 같은 기본 옵션을 지정할 수 있다. — v1.3 Phase 17
 - ✓ 검토 주석을 미해결/해결/선택 객체 기준으로 필터링하고 캔버스 위치와 연동할 수 있다. — v1.3 Phase 18
 - ✓ 공유 링크와 검토 상태가 브라우저 저장소에서 안정적으로 보존되고 회귀 테스트로 검증된다. — v1.3 Phase 19
+- ✓ DXF layer, color, linetype, lineweight 정보를 import/export 과정에서 더 안정적으로 보존한다. — v1.4 Phase 20
+- ✓ TEXT/MTEXT, DIMENSION, ATTRIB 계열의 fallback 정보를 더 읽기 쉬운 editable 객체나 warning detail로 보존한다. — v1.4 Phase 21
+- ✓ layout, paperspace, viewport, image/xref 같은 비편집 CAD 정보를 명확히 분류하고 사용자에게 경고한다. — v1.4 Phase 22
+- ✓ 고급 호환성 fixture와 regression check가 새 보존/분류 동작을 검증한다. — v1.4 Phase 23
 
 ### Active
 
-- [ ] DXF layer, color, linetype, lineweight 정보를 import/export 과정에서 더 안정적으로 보존한다.
-- [ ] TEXT/MTEXT, DIMENSION, ATTRIB 계열의 fallback 정보를 더 읽기 쉬운 editable 객체나 warning detail로 보존한다.
-- [ ] layout, paperspace, viewport, image/xref 같은 비편집 CAD 정보를 명확히 분류하고 사용자에게 경고한다.
-- [ ] 고급 호환성 fixture와 regression check가 새 보존/분류 동작을 검증한다.
+No active milestone requirements. Define the next set with `$gsd-new-milestone`.
 
 ### Out of Scope
 
@@ -136,11 +133,12 @@ v1.1, v1.2, v1.3이 2026-04-26에 shipped 상태로 완료되었습니다. Simpl
 
 - 실제 DWG 변환 서버 운영 배포와 인증/파일 제한 정책
 - localStorage mock 협업 저장소를 실제 서버 API로 교체
-- 더 넓은 DXF/DWG 고급 호환성
+- IMAGE/XREF/UNDERLAY 파일 렌더링, 업로드 번들링, export 보존
+- AutoCAD dimension style과 annotative scale 호환성 확장
 
 ## Evolution
 
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0/v1.1의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 starting v1.4 milestone*
+*Last updated: 2026-04-26 after shipping v1.4 milestone*

@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Advanced CAD Compatibility Expansion
-status: planning
+milestone: none
+milestone_name: none
+status: between_milestones
 last_updated: "2026-04-26T13:10:00Z"
-last_activity: 2026-04-26 -- Phase 23 completed
+last_activity: 2026-04-26 -- v1.4 archived
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SimpleCAD
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** v1.4 broader DXF/DWG compatibility
+**Current focus:** between milestones
 
 ## Current Position
 
-Phase: v1.4 completion review
-Plan: Complete milestone
-Status: Phase 23 complete
-Last activity: 2026-04-26 -- Phase 23 completed
+Phase: next milestone definition
+Plan: Not started
+Status: v1.4 archived
+Last activity: 2026-04-26 -- v1.4 archived
 
 ## Current Status
 
@@ -61,12 +61,13 @@ Last activity: 2026-04-26 -- Phase 23 completed
 - Phase 21 completed: TEXT/MTEXT rotation/alignment/height preservation, DIMENSION fallback detail enrichment, BLOCK/INSERT transform detail enrichment, and conversion regression coverage.
 - Phase 22 completed: DXF layout/model-paper space metadata, viewport classification, IMAGE/XREF/UNDERLAY external reference classification, and regression coverage.
 - Phase 23 completed: v1.4 compatibility fixture, CAD fidelity assertions, README/conversion docs, and final verification.
+- v1.4 archive created in `.planning/milestones/`.
 
 ## Accumulated Context
 
 - v1.0 delivered the browser CAD editor, file flows, workspace tabs, and reference copy/paste.
-- v1.1 should improve trust in real-world files and reduce repeated editing work.
-- DWG remains server-converted; production backend connection is in scope for v1.1 planning but can be phased behind mock/production mode separation.
+- v1.4 improved trust in real-world files by preserving more DXF metadata and classifying non-editable CAD references.
+- DWG remains server-converted; production backend connection is still a candidate for a future milestone.
 - Any public GitHub sync should continue excluding `.planning`.
 
 ## Decisions
@@ -77,8 +78,8 @@ Last activity: 2026-04-26 -- Phase 23 completed
 
 ## Next Action
 
-Run `$gsd-complete-milestone` to archive v1.4 when ready.
+Run `$gsd-new-milestone` to define the next milestone.
 
-**Completed Phase:** 23 (Advanced Compatibility Fixtures and Docs)
-**Next Phase:** v1.4 milestone completion
-**Current Milestone:** v1.4 (Advanced CAD Compatibility Expansion)
+**Completed Milestone:** v1.4 (Advanced CAD Compatibility Expansion)
+**Next Phase:** next milestone definition
+**Current Milestone:** none
