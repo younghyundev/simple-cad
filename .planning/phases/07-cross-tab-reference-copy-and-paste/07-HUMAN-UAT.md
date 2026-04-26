@@ -8,10 +8,10 @@ updated: 2026-04-26
 
 ## Current Test
 
-number: 2
-name: Destination-tab undo
+number: 3
+name: Right-click context menu
 expected: |
-  Undo in tab B removes the pasted batch while tab A remains unchanged.
+  Right-click selected geometry and see `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, and `삭제` according to clipboard/selection state.
 awaiting: user response
 
 ## Tests
@@ -23,7 +23,7 @@ note: "사용자는 통과를 확인했고, 별도 UX 문제로 선택 히트박
 
 ### 2. Destination-tab undo
 expected: Undo in tab B removes the pasted batch while tab A remains unchanged.
-result: [pending]
+result: pass
 
 ### 3. Right-click context menu
 expected: Right-click selected geometry and see `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, and `삭제` according to clipboard/selection state.
@@ -44,9 +44,9 @@ result: [pending]
 ## Summary
 
 total: 6
-passed: 1
+passed: 2
 issues: 0
-pending: 5
+pending: 4
 skipped: 0
 blocked: 0
 
