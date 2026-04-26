@@ -349,6 +349,13 @@ export function App() {
       setFileMessage('복사된 객체가 없습니다.');
       return;
     }
+    if (cadClipboard.sourceBasePoint) {
+      closeContextMenu();
+      setReferencePreviewPoint(null);
+      setReferenceMode('paste-base');
+      setFileMessage('참조 복사된 객체입니다. 붙여넣을 대응 기준점을 선택하세요.');
+      return;
+    }
 
     const pasted = pasteClipboardPayload(cadClipboard, {
       destinationDocument: document,

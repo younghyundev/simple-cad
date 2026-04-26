@@ -37,6 +37,7 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 | Reference copy stores an external anchor point | AUTOMATED PASS + HUMAN NEEDED | `createClipboardPayload(selectedEntities, point)` used in `App.tsx`; `referenceSnapExcludeEntityIds` excludes copied entities so another object's center/endpoint/intersection can be used as the anchor |
 | Reference paste applies destination-source anchor delta | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload(... destinationBasePoint: point)` used in `App.tsx`; visual placement against another file's corresponding center/endpoint/intersection needs browser UAT |
 | Reference paste previews copied geometry at cursor anchor | AUTOMATED PASS + HUMAN NEEDED | `referencePreviewEntities` uses `destinationBasePoint: referencePreviewPoint`; visual overlay movement needs browser UAT |
+| Reference clipboard forces reference paste | AUTOMATED PASS + HUMAN NEEDED | `pasteEntities` checks `cadClipboard.sourceBasePoint` and enters `paste-base` mode, so Ctrl/Cmd+V and regular context-menu paste use reference placement |
 | Text input copy/paste safety | HUMAN NEEDED | Requires inline canvas text editor interaction |
 | Undo/redo scoped to active tab | HUMAN NEEDED | Requires browser tab workflow confirmation |
 
@@ -45,7 +46,7 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 1. Create two tabs, select multiple entities in tab A, press Ctrl/Cmd+C, switch to tab B, press Ctrl/Cmd+V, and confirm pasted entities appear selected.
 2. In tab B, press undo and confirm the pasted batch disappears while tab A remains unchanged.
 3. Right-click selected geometry and confirm menu items: `복사`, `참조 복사`, `붙여넣기`, `참조 붙여넣기`, `삭제`.
-4. Use `참조 복사`, click a snapped point on another nearby object such as its center, then use `참조 붙여넣기` in another file/tab; confirm a dashed preview follows the mouse with the cursor at the destination anchor, then click the corresponding snapped center point and confirm copied entities keep the same relative offset from that anchor.
+4. Use `참조 복사`, click a snapped point on another nearby object such as its center, then press Ctrl/Cmd+V or click `붙여넣기` in another file/tab; confirm it enters reference paste mode, a dashed preview follows the mouse with the cursor at the destination anchor, then click the corresponding snapped center point and confirm copied entities keep the same relative offset from that anchor.
 5. Press Escape while waiting for a reference point and confirm the status changes to `참조 작업을 취소했습니다.`.
 6. Edit a text entity and confirm native Ctrl/Cmd+C and Ctrl/Cmd+V operate on text content rather than the CAD clipboard.
 

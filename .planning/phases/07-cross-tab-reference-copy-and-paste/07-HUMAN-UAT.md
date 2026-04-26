@@ -25,7 +25,7 @@ expected: Right-click selected geometry and see `복사`, `참조 복사`, `붙�
 result: [pending]
 
 ### 4. Reference copy/paste using another object's anchor
-expected: `참조 복사` stores a clicked snapped point from another object, such as that object's center, and `참조 붙여넣기` shows copied geometry as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
+expected: `참조 복사` stores a clicked snapped point from another object, such as that object's center, and both `붙여넣기`/Ctrl/Cmd+V and `참조 붙여넣기` enter reference paste mode. The copied geometry shows as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
 result: [pending]
 
 ### 5. Escape cancellation
