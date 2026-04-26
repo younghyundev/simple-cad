@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: File Fidelity and Editing Productivity
-status: active
+status: complete
 last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- Phase 11 completed
+last_activity: 2026-04-26 -- v1.1 milestone archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** v1.1 — File Fidelity and Editing Productivity
+**Current focus:** Ready for next milestone
 
 ## Current Position
 
-Phase: 11 — Workflow QA and Performance Baseline
-Plan: 4 plans completed
-Status: Complete
-Last activity: 2026-04-26 -- Phase 11 completed
+Phase: none
+Plan: none
+Status: v1.1 archived
+Last activity: 2026-04-26 -- v1.1 milestone archived
 
 ## Current Status
 
@@ -39,6 +39,7 @@ Last activity: 2026-04-26 -- Phase 11 completed
 - Phase 9 completed: group/ungroup, rotation, alignment, group-aware selection/snap/export, and transform UI controls.
 - Phase 10 completed: dirty tracking, Save/Save As semantics, File System Access API helper/fallback, unsaved-change guards, and README updates.
 - Phase 11 completed: Playwright E2E harness, core workflow browser tests, large drawing performance baseline, and conversion failure/warning regression checks.
+- v1.1 archive created in `.planning/milestones/`.
 
 ## Accumulated Context
 
@@ -55,4 +56,4 @@ Last activity: 2026-04-26 -- Phase 11 completed
 
 ## Next Action
 
-Run `$gsd-complete-milestone` to archive v1.1 or start the next milestone.
+Run `$gsd-new-milestone` to define the next milestone.

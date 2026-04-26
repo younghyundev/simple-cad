@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Phase 9, Phase 10, Phase 11도 완료되어 DXF round-trip 검증, 구조화된 변환 경고, DWG mock/server 모드 구분, 그룹/회전/정렬 transform 도구, 저장 상태/Save As/File System Access API 흐름, 자동 QA/성능 기준선이 추가되었습니다.
+v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. SimpleCAD는 기본 2D 편집, 파일 입출력, 탭/참조 복사, DXF fidelity 검증, transform 생산성 도구, 저장 상태 UX, 자동 QA/성능 기준선을 갖춘 상태입니다.
 
 현재 구현된 핵심 범위:
 
@@ -28,16 +28,9 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 - 탭 dirty marker, 상태바 저장 상태, Save/Save As, 브라우저 파일 직접 저장 fallback
 - Playwright E2E, CAD fidelity, 성능 기준선, 변환 회귀 검증 스크립트
 
-## Current Milestone: v1.1 File Fidelity and Editing Productivity
+## Current Milestone
 
-**Goal:** 실무 도면 파일을 더 안정적으로 다루고, 반복 편집 작업을 줄이는 생산성 기능을 추가합니다.
-
-**Target features:**
-
-- DXF/DWG import/export 품질과 변환 경고 UX 개선
-- 그룹/회전/정렬 같은 기본 transform 편집 도구 추가
-- 파일 저장 UX 개선: dirty 상태, 기존 파일 형식 저장, Save As 흐름 — 완료
-- 핵심 CAD 워크플로우 자동 브라우저 테스트와 성능 기준 추가 — 완료
+없음. 다음 작업은 새 마일스톤 정의입니다.
 
 ## Core Value
 
@@ -65,9 +58,6 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 ### Active
 
 - [ ] 실제 DWG 변환 서버를 연결한다.
-- [x] 저장 UX를 개선하고 File System Access API 지원을 검토한다.
-- [x] 주요 CAD 워크플로우에 자동 브라우저 테스트를 추가한다.
-- [x] 큰 도면 렌더링/스냅/선택 성능 기준선을 추가한다.
 
 ### Out of Scope
 
@@ -111,16 +101,16 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8, Pha
 
 ## Next Milestone Goals
 
-v1.1 목표:
+다음 마일스톤 후보:
 
-- 실무 파일 호환성 강화
-- 반복 편집 생산성 개선
-- 저장/파일 상태 UX 개선
-- 자동 검증과 성능 기준 도입
+- 실제 DWG 변환 서버 연결
+- 더 많은 DXF/DWG 엔티티 native 보존
+- CI에서 E2E/성능/변환 회귀 검증 자동화
+- 공유, 주석, 서버 저장 같은 협업 흐름 검토
 
 ## Evolution
 
-이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
+이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0/v1.1의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after Phase 11 completion*
+*Last updated: 2026-04-26 after v1.1 milestone completion*
