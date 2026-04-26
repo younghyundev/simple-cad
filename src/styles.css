@@ -709,6 +709,10 @@ button {
   color: #fbbf24;
 }
 
+.conversion-status {
+  color: #5eead4;
+}
+
 @media (max-width: 1180px) {
   .workspace {
     grid-template-columns: 76px 1fr 244px;

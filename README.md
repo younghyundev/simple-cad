@@ -78,6 +78,19 @@ npm run test:performance
 npm run test:conversion
 ```
 
+## DWG 변환 API 설정
+
+DWG import/export는 브라우저 단독 변환이 아니라 서버 변환 API를 호출합니다. 운영 환경에서는 실제 CAD 변환 서버를 준비하고 다음 환경 변수로 연결합니다.
+
+```bash
+VITE_CAD_CONVERSION_API_BASE_URL=https://your-converter.example.com/api/cad
+VITE_CAD_CONVERSION_TIMEOUT_MS=60000
+VITE_CAD_CONVERSION_POLL_MS=1000
+VITE_CAD_CONVERSION_JOB_TIMEOUT_MS=180000
+```
+
+응답 계약과 mock 시나리오는 [docs/cad-conversion-api.md](docs/cad-conversion-api.md)에 정리되어 있습니다.
+
 ## 저장 방식
 
 상단의 `저장`은 현재 탭의 저장 대상 형식과 파일명을 기준으로 동작합니다. `JSON`, `DXF`, `DWG` 버튼은 다른 이름 저장처럼 대상 형식을 바꾸며, `SVG`는 도면 원본 형식을 바꾸지 않는 내보내기로 처리됩니다.
@@ -114,7 +127,7 @@ SimpleCAD 내부 도면 모델을 그대로 저장하고 다시 불러오는 기
 
 DWG는 브라우저에서 직접 안정적으로 파싱하기 어려운 포맷이므로 서버 변환 API를 전제로 합니다. 프로젝트에는 `/api/cad/import`, `/api/cad/export`, `/api/cad/validate` 형태의 변환 클라이언트와 개발용 mock API 구조가 포함되어 있습니다.
 
-개발 서버의 DWG 응답은 `mock` 모드로 표시됩니다. 실제 DWG 변환은 별도 서버가 `server` 모드 응답을 반환하도록 연결해야 하며, UI의 변환 상태 패널에서 mock/server 여부와 근사/미지원/변환 경고 개수를 확인할 수 있습니다.
+개발 서버의 DWG 응답은 `mock` 모드로 표시됩니다. 실제 DWG 변환은 별도 서버가 `server` 모드 응답을 반환하도록 연결해야 하며, UI의 변환 상태 표시에서 요청, 대기, 진행, 완료, 실패 상태를 확인할 수 있습니다.
 
 ## 프로젝트 구조
 

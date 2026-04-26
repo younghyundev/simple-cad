@@ -37,6 +37,7 @@ import {
   rotateEntity,
 } from '../cad/entityTransform';
 import { summarizeConversionWarnings } from '../cad/io/conversionWarnings';
+import { ConversionApiError, type ConversionProgress } from '../cad/io/conversionApiClient';
 import { FileManager } from '../cad/io/fileManager';
 import {
   canUseFileSystemAccess,
@@ -160,6 +161,7 @@ export function App() {
   const [gridVisible, setGridVisible] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [fileMessage, setFileMessage] = useState('자동 저장 준비됨');
+  const [conversionProgress, setConversionProgress] = useState<ConversionProgress | null>(null);
   const [cadClipboard, setCadClipboard] = useState<CadClipboardPayload | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [referenceMode, setReferenceMode] = useState<ReferenceMode>(null);
@@ -252,16 +254,25 @@ export function App() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const handleConversionProgress = useCallback((progress: ConversionProgress) => {
+    setConversionProgress(progress);
+    if (progress.message) setFileMessage(progress.message);
+  }, []);
+
   const saveCurrentDocument = useCallback(async () => {
     if (!activeTabId) return;
 
     try {
       setSaveState((current) => ({ ...current, isSaving: true }));
       setFileMessage(`${saveState.targetType.toUpperCase()} 파일을 저장하는 중...`);
-      const blob = await fileManager.save(document, {
-        fileName: saveState.targetName,
-        type: saveState.targetType,
-      });
+      const blob = await fileManager.save(
+        document,
+        {
+          fileName: saveState.targetName,
+          type: saveState.targetType,
+        },
+        saveState.targetType === 'dwg' ? { onProgress: handleConversionProgress } : undefined,
+      );
       let wroteToHandle = false;
       if (saveState.fileHandle) {
         try {
@@ -296,11 +307,13 @@ export function App() {
           ? `${saveState.targetType.toUpperCase()} 파일에 저장했습니다.`
           : `${saveState.targetType.toUpperCase()} 파일을 다운로드로 저장했습니다.`,
       );
+      setConversionProgress(null);
     } catch (error) {
       setSaveState((current) => ({ ...current, isSaving: false }));
-      setFileMessage(error instanceof Error ? error.message : '저장에 실패했습니다.');
+      setConversionProgress(null);
+      setFileMessage(formatConversionError(error, '저장에 실패했습니다.'));
     }
-  }, [activeTabId, document, downloadBlob, persistRecentDocument, saveState, updateHistoryDocument]);
+  }, [activeTabId, document, downloadBlob, handleConversionProgress, persistRecentDocument, saveState, updateHistoryDocument]);
 
   const saveAs = useCallback(
     async (type: CadFileType) => {
@@ -309,10 +322,14 @@ export function App() {
         setSaveState((current) => ({ ...current, isSaving: true }));
         setFileMessage(`${type.toUpperCase()} 파일을 준비하는 중...`);
         const suggestedName = withExtension(saveState.targetName || document.name, type);
-        const blob = await fileManager.save(document, {
-          fileName: suggestedName,
-          type,
-        });
+        const blob = await fileManager.save(
+          document,
+          {
+            fileName: suggestedName,
+            type,
+          },
+          type === 'dwg' ? { onProgress: handleConversionProgress } : undefined,
+        );
         let handle: SimpleFileHandle | undefined;
         let wroteToHandle = false;
         if (canUseFileSystemAccess()) {
@@ -364,12 +381,14 @@ export function App() {
             ? `${type.toUpperCase()} 파일에 저장했습니다.`
             : `${type.toUpperCase()} 파일을 다운로드로 저장했습니다.`,
         );
+        setConversionProgress(null);
       } catch (error) {
         setSaveState((current) => ({ ...current, isSaving: false }));
-        setFileMessage(error instanceof Error ? error.message : `${type.toUpperCase()} 내보내기에 실패했습니다.`);
+        setConversionProgress(null);
+        setFileMessage(formatConversionError(error, `${type.toUpperCase()} 내보내기에 실패했습니다.`));
       }
     },
-    [activeTabId, document, downloadBlob, persistRecentDocument, saveState.targetName, updateHistoryDocument],
+    [activeTabId, document, downloadBlob, handleConversionProgress, persistRecentDocument, saveState.targetName, updateHistoryDocument],
   );
 
   const activateTab = useCallback((tabId: string) => {
@@ -462,23 +481,29 @@ export function App() {
 
   const openFile = useCallback(async (file: File) => {
     try {
-      const nextDocument = await fileManager.open(file);
+      const fileType = fileTypeFromName(file.name);
+      const nextDocument = await fileManager.open(
+        file,
+        fileType === 'dwg' ? { onProgress: handleConversionProgress } : undefined,
+      );
       const openedDocument = {
         ...nextDocument,
         name: nextDocument.name || file.name,
         sourceFile: {
           name: file.name,
-          type: fileTypeFromName(file.name),
+          type: fileType,
           lastSavedAt: new Date().toISOString(),
           fileHandleAvailable: false,
         },
       };
       createTab(file.name, openedDocument);
       setFileMessage(`${file.name} 파일을 열었습니다.`);
+      setConversionProgress(null);
     } catch (error) {
-      setFileMessage(error instanceof Error ? error.message : '파일을 열 수 없습니다.');
+      setConversionProgress(null);
+      setFileMessage(formatConversionError(error, '파일을 열 수 없습니다.'));
     }
-  }, [createTab]);
+  }, [createTab, handleConversionProgress]);
 
   useEffect(() => {
     if (!activeTabId) return;
@@ -1592,6 +1617,11 @@ export function App() {
         <span className={activeDirty ? 'save-state save-state-dirty' : 'save-state'}>
           {formatSaveState(saveState)}
         </span>
+        {conversionProgress ? (
+          <span className="conversion-status" data-testid="conversion-status">
+            {formatConversionProgress(conversionProgress)}
+          </span>
+        ) : null}
         <span>{fileMessage}</span>
       </footer>
     </main>
@@ -1634,6 +1664,32 @@ function formatSaveState(saveState: SaveState): string {
   const handleLabel = saveState.fileHandleAvailable ? '파일 직접 저장' : '다운로드 저장';
   if (!saveState.lastSavedAt) return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${handleLabel}`;
   return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${new Date(saveState.lastSavedAt).toLocaleTimeString()}`;
+}
+
+function formatConversionProgress(progress: ConversionProgress): string {
+  if (progress.message) return progress.message;
+  const percent = typeof progress.progress === 'number' ? ` ${Math.round(progress.progress * 100)}%` : '';
+  if (progress.status === 'queued') return `DWG 변환 대기 중${percent}`;
+  if (progress.status === 'running') return `DWG 변환 진행 중${percent}`;
+  if (progress.status === 'complete') return 'DWG 변환 완료';
+  if (progress.status === 'failed') return 'DWG 변환 실패';
+  return 'DWG 변환 요청 중...';
+}
+
+function formatConversionError(error: unknown, fallback: string): string {
+  if (error instanceof ConversionApiError) {
+    return `${fallback}: ${conversionErrorLabel(error.category)} - ${error.message}`;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
+
+function conversionErrorLabel(category: string): string {
+  if (category === 'network') return '네트워크 오류';
+  if (category === 'server') return '서버 오류';
+  if (category === 'unsupported') return '지원하지 않는 파일';
+  if (category === 'timeout') return '시간 초과';
+  if (category === 'invalid-response') return '잘못된 서버 응답';
+  return '변환 실패';
 }
 
 function withSourceFile(

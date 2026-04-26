@@ -4,13 +4,13 @@ milestone: v1.2
 milestone_name: Production CAD Workflow and Collaboration
 status: active
 last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- Phase 12 planned
+last_activity: 2026-04-26 -- Phase 12 completed
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 4
+  percent: 25
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 12 — Production DWG Conversion Backend
+Phase: 13 — Advanced CAD Entity Preservation
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-26 -- Phase 12 planned
+Status: Ready to plan
+Last activity: 2026-04-26 -- Phase 12 completed
 
 ## Current Status
 
@@ -42,6 +42,7 @@ Last activity: 2026-04-26 -- Phase 12 planned
 - v1.1 archive created in `.planning/milestones/`.
 - v1.2 requirements and roadmap are defined in the requested order: DWG server, advanced CAD preservation, CI gates, sharing/review collaboration.
 - Phase 12 planning artifacts are ready: context, research, UI spec, patterns, and 4 execution plans.
+- Phase 12 completed: configurable DWG conversion API endpoint, typed conversion errors, async job polling, status UI, deterministic mock scenarios, and conversion API docs.
 
 ## Accumulated Context
 
@@ -58,4 +59,4 @@ Last activity: 2026-04-26 -- Phase 12 planned
 
 ## Next Action
 
-Run `$gsd-execute-phase 12` to execute Production DWG Conversion Backend.
+Run `$gsd-plan-phase 13` to plan Advanced CAD Entity Preservation.

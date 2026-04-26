@@ -1,18 +1,78 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+type MockScenario = 'immediate' | 'async-success' | 'async-failure' | 'unsupported' | 'server-error';
+
 export default defineConfig({
   plugins: [
     react(),
     {
       name: 'mock-cad-conversion-api',
       configureServer(server) {
+        server.middlewares.use('/api/cad/jobs', async (req, res) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+
+          const path = req.url ?? '';
+          const jobId = path.split('?')[0]?.split('/').filter(Boolean).at(-1) ?? '';
+
+          if (path.includes('/result') || path.endsWith('/result')) {
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('X-CAD-Conversion-Mode', 'mock');
+            res.end('Mock async DWG export result\n');
+            return;
+          }
+
+          res.setHeader('Content-Type', 'application/json');
+          if (jobId.includes('fail')) {
+            res.end(
+              JSON.stringify({
+                status: 'failed',
+                progress: 0.44,
+                mode: 'mock',
+                category: 'conversion',
+                error: '개발용 mock 변환 실패입니다.',
+              }),
+            );
+            return;
+          }
+
+          if (jobId.includes('import')) {
+            res.end(
+              JSON.stringify({
+                status: 'complete',
+                progress: 1,
+                mode: 'mock',
+                document: mockConvertedDocument(),
+                warnings: ['개발용 mock 비동기 DWG import 완료입니다.'],
+              }),
+            );
+            return;
+          }
+
+          res.end(
+            JSON.stringify({
+              status: 'complete',
+              progress: 1,
+              mode: 'mock',
+              downloadUrl: `/api/cad/jobs/${jobId}/result`,
+              warnings: ['개발용 mock 비동기 DWG export 완료입니다.'],
+            }),
+          );
+        });
+
         server.middlewares.use('/api/cad/validate', async (req, res) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
             res.end('Method Not Allowed');
             return;
           }
+
+          const scenario = mockScenario(req);
+          if (writeScenarioError(res, scenario)) return;
 
           res.setHeader('Content-Type', 'application/json');
           res.end(
@@ -33,7 +93,24 @@ export default defineConfig({
           }
 
           await drainRequest(req);
+          const scenario = mockScenario(req);
+          if (writeScenarioError(res, scenario)) return;
+
           res.setHeader('Content-Type', 'application/json');
+          if (scenario === 'async-success' || scenario === 'async-failure') {
+            const jobId = scenario === 'async-failure' ? 'mock-import-fail' : 'mock-import-job';
+            res.end(
+              JSON.stringify({
+                jobId,
+                status: 'queued',
+                progress: 0,
+                mode: 'mock',
+                warnings: ['개발용 mock 비동기 DWG import job입니다.'],
+              }),
+            );
+            return;
+          }
+
           res.end(
             JSON.stringify({
               document: mockConvertedDocument(),
@@ -53,6 +130,23 @@ export default defineConfig({
           const body = await readRequestBody(req);
           const payload = safeJsonParse(body);
           const targetFormat = payload?.targetFormat ?? 'dwg';
+          const scenario = mockScenario(req, payload?.mockScenario);
+          if (writeScenarioError(res, scenario)) return;
+
+          if (scenario === 'async-success' || scenario === 'async-failure') {
+            const jobId = scenario === 'async-failure' ? 'mock-export-fail' : 'mock-export-job';
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                jobId,
+                status: 'queued',
+                progress: 0,
+                mode: 'mock',
+                warnings: ['개발용 mock 비동기 DWG export job입니다.'],
+              }),
+            );
+            return;
+          }
 
           res.setHeader('Content-Type', 'application/octet-stream');
           res.setHeader('Content-Disposition', `attachment; filename="mock-export.${targetFormat}"`);
@@ -63,6 +157,57 @@ export default defineConfig({
     },
   ],
 });
+
+function mockScenario(req: import('http').IncomingMessage, bodyScenario?: unknown): MockScenario {
+  if (typeof bodyScenario === 'string') return normalizeScenario(bodyScenario);
+
+  const header = req.headers['x-simplecad-mock-scenario'];
+  if (typeof header === 'string') return normalizeScenario(header);
+  if (Array.isArray(header) && header[0]) return normalizeScenario(header[0]);
+
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  return normalizeScenario(url.searchParams.get('scenario') ?? 'immediate');
+}
+
+function normalizeScenario(value: string): MockScenario {
+  if (
+    value === 'async-success' ||
+    value === 'async-failure' ||
+    value === 'unsupported' ||
+    value === 'server-error'
+  ) {
+    return value;
+  }
+  return 'immediate';
+}
+
+function writeScenarioError(res: import('http').ServerResponse, scenario: MockScenario): boolean {
+  if (scenario === 'unsupported') {
+    res.statusCode = 415;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        category: 'unsupported',
+        message: '개발용 mock 미지원 CAD 형식입니다.',
+      }),
+    );
+    return true;
+  }
+
+  if (scenario === 'server-error') {
+    res.statusCode = 503;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        category: 'server',
+        message: '개발용 mock 변환 서버 오류입니다.',
+      }),
+    );
+    return true;
+  }
+
+  return false;
+}
 
 function mockConvertedDocument() {
   return {
@@ -176,9 +321,9 @@ async function drainRequest(req: import('http').IncomingMessage): Promise<void> 
   await readRequestBody(req);
 }
 
-function safeJsonParse(value: string): { targetFormat?: string } | null {
+function safeJsonParse(value: string): { targetFormat?: string; mockScenario?: string } | null {
   try {
-    return JSON.parse(value) as { targetFormat?: string };
+    return JSON.parse(value) as { targetFormat?: string; mockScenario?: string };
   } catch {
     return null;
   }

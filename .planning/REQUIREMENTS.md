@@ -8,10 +8,10 @@
 
 ### Production DWG Conversion
 
-- [ ] **DWG-01**: 운영 환경에서 mock이 아닌 실제 DWG import/export 변환 서버 엔드포인트를 설정할 수 있다.
-- [ ] **DWG-02**: 사용자는 DWG import/export 실패 원인을 네트워크 오류, 서버 오류, 지원 불가 파일, 변환 실패로 구분해서 확인할 수 있다.
-- [ ] **DWG-03**: 대형 DWG/DXF 변환은 동기 응답 또는 job 기반 비동기 응답으로 처리되고, UI에서 진행/완료/실패 상태를 확인할 수 있다.
-- [ ] **DWG-04**: 변환 서버 설정, mock 모드, production 모드, 보안/파일 크기 제한이 문서화된다.
+- [x] **DWG-01**: 운영 환경에서 mock이 아닌 실제 DWG import/export 변환 서버 엔드포인트를 설정할 수 있다.
+- [x] **DWG-02**: 사용자는 DWG import/export 실패 원인을 네트워크 오류, 서버 오류, 지원 불가 파일, 변환 실패로 구분해서 확인할 수 있다.
+- [x] **DWG-03**: 대형 DWG/DXF 변환은 동기 응답 또는 job 기반 비동기 응답으로 처리되고, UI에서 진행/완료/실패 상태를 확인할 수 있다.
+- [x] **DWG-04**: 변환 서버 설정, mock 모드, production 모드, 보안/파일 크기 제한이 문서화된다.
 
 ### Advanced CAD Preservation
 
@@ -58,10 +58,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DWG-01 | Phase 12 | Pending |
-| DWG-02 | Phase 12 | Pending |
-| DWG-03 | Phase 12 | Pending |
-| DWG-04 | Phase 12 | Pending |
+| DWG-01 | Phase 12 | Complete |
+| DWG-02 | Phase 12 | Complete |
+| DWG-03 | Phase 12 | Complete |
+| DWG-04 | Phase 12 | Complete |
 | CAD-01 | Phase 13 | Pending |
 | CAD-02 | Phase 13 | Pending |
 | CAD-03 | Phase 13 | Pending |
@@ -81,4 +81,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after v1.2 roadmap creation*
+*Last updated: 2026-04-26 after Phase 12 execution*
