@@ -4,11 +4,11 @@ milestone: v1.2
 milestone_name: Production CAD Workflow and Collaboration
 status: active
 last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- v1.2 milestone started
+last_activity: 2026-04-26 -- Phase 12 planned
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -26,8 +26,8 @@ See: `.planning/PROJECT.md`
 
 Phase: 12 — Production DWG Conversion Backend
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-26 -- v1.2 milestone started
+Status: Ready to execute
+Last activity: 2026-04-26 -- Phase 12 planned
 
 ## Current Status
 
@@ -41,6 +41,7 @@ Last activity: 2026-04-26 -- v1.2 milestone started
 - Phase 11 completed: Playwright E2E harness, core workflow browser tests, large drawing performance baseline, and conversion failure/warning regression checks.
 - v1.1 archive created in `.planning/milestones/`.
 - v1.2 requirements and roadmap are defined in the requested order: DWG server, advanced CAD preservation, CI gates, sharing/review collaboration.
+- Phase 12 planning artifacts are ready: context, research, UI spec, patterns, and 4 execution plans.
 
 ## Accumulated Context
 
@@ -57,4 +58,4 @@ Last activity: 2026-04-26 -- v1.2 milestone started
 
 ## Next Action
 
-Run `$gsd-plan-phase 12` to plan Production DWG Conversion Backend.
+Run `$gsd-execute-phase 12` to execute Production DWG Conversion Backend.
