@@ -8,10 +8,10 @@ updated: 2026-04-26
 
 ## Current Test
 
-number: 4
-name: Reference copy/paste using another object's anchor
+number: 5
+name: Escape cancellation
 expected: |
-  `참조 복사` stores a clicked snapped point from another object, such as that object's center, and both `붙여넣기`/Ctrl/Cmd+V and `참조 붙여넣기` enter reference paste mode. The copied geometry shows as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
+  Escape while selecting a reference point cancels the mode and shows `참조 작업을 취소했습니다.`.
 awaiting: user response
 
 ## Tests
@@ -31,7 +31,7 @@ result: pass
 
 ### 4. Reference copy/paste using another object's anchor
 expected: `참조 복사` stores a clicked snapped point from another object, such as that object's center, and both `붙여넣기`/Ctrl/Cmd+V and `참조 붙여넣기` enter reference paste mode. The copied geometry shows as a dashed overlay while the mouse is on the destination anchor; clicking the corresponding center point places the copied entities while preserving the same relative offset.
-result: [pending]
+result: pass
 
 ### 5. Escape cancellation
 expected: Escape while selecting a reference point cancels the mode and shows `참조 작업을 취소했습니다.`.
@@ -44,9 +44,9 @@ result: [pending]
 ## Summary
 
 total: 6
-passed: 3
+passed: 4
 issues: 0
-pending: 3
+pending: 2
 skipped: 0
 blocked: 0
 
