@@ -32,10 +32,24 @@ requirements-completed: [SHARE-03, SHARE-04]
 ## Task Commits
 
 - `4fa9983 feat(15-04): add review comments and collaboration tests`
+- `7f23ee6 fix(15-04): share latest server revision`
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Share link could point at a stale server snapshot**
+- **Found during:** Code review gate after Task 15.4.2
+- **Issue:** If a user saved to server, edited the drawing again, and then clicked `공유`, the share link could reuse the older server document record.
+- **Fix:** `createShareLink` now saves first when the server saved revision differs from the active document revision.
+- **Files modified:** `src/ui/App.tsx`
+- **Verification:** `npm run verify`
+- **Committed in:** `7f23ee6`
+
+---
+
+**Total deviations:** 1 auto-fixed bug.
+**Impact on plan:** Corrects share-link fidelity without changing the planned UX.
 
 ## Issues Encountered
 
