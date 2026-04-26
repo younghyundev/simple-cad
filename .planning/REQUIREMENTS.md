@@ -24,10 +24,10 @@
 
 ### Save Workflow
 
-- [ ] **SAVE-01**: 사용자는 현재 탭의 저장 필요 여부를 탭 또는 상태바에서 확인할 수 있다.
-- [ ] **SAVE-02**: 사용자는 새 도면, JSON, DXF, DWG 소스 파일에 맞는 저장/다른 이름으로 저장 흐름을 사용할 수 있다.
-- [ ] **SAVE-03**: 브라우저가 File System Access API를 지원하면 기존 파일 핸들을 통한 저장을 사용할 수 있다.
-- [ ] **SAVE-04**: 탭 닫기나 브라우저 새로고침 전에 저장되지 않은 변경사항 경고를 받을 수 있다.
+- [x] **SAVE-01**: 사용자는 현재 탭의 저장 필요 여부를 탭 또는 상태바에서 확인할 수 있다.
+- [x] **SAVE-02**: 사용자는 새 도면, JSON, DXF, DWG 소스 파일에 맞는 저장/다른 이름으로 저장 흐름을 사용할 수 있다.
+- [x] **SAVE-03**: 브라우저가 File System Access API를 지원하면 기존 파일 핸들을 통한 저장을 사용할 수 있다.
+- [x] **SAVE-04**: 탭 닫기나 브라우저 새로고침 전에 저장되지 않은 변경사항 경고를 받을 수 있다.
 
 ### Verification and Performance
 
@@ -70,10 +70,10 @@
 | EDIT-13 | Phase 9 | Complete |
 | EDIT-14 | Phase 9 | Complete |
 | EDIT-15 | Phase 9 | Complete |
-| SAVE-01 | Phase 10 | Pending |
-| SAVE-02 | Phase 10 | Pending |
-| SAVE-03 | Phase 10 | Pending |
-| SAVE-04 | Phase 10 | Pending |
+| SAVE-01 | Phase 10 | Complete |
+| SAVE-02 | Phase 10 | Complete |
+| SAVE-03 | Phase 10 | Complete |
+| SAVE-04 | Phase 10 | Complete |
 | QA-01 | Phase 11 | Pending |
 | QA-02 | Phase 11 | Pending |
 | QA-03 | Phase 11 | Pending |
@@ -85,4 +85,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after Phase 9 completion*
+*Last updated: 2026-04-26 after Phase 10 completion*

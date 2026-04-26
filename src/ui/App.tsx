@@ -38,6 +38,12 @@ import {
 } from '../cad/entityTransform';
 import { summarizeConversionWarnings } from '../cad/io/conversionWarnings';
 import { FileManager } from '../cad/io/fileManager';
+import {
+  canUseFileSystemAccess,
+  pickSaveFile,
+  type SimpleFileHandle,
+  writeBlobToFileHandle,
+} from '../cad/io/fileSystemAccess';
 import { sampleDocument } from '../cad/sampleDocument';
 import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
 import { useDocumentHistory } from '../cad/useDocumentHistory';
@@ -65,9 +71,21 @@ type WorkspaceTab = {
   title: string;
   document: CadDocument;
   history: DocumentHistorySnapshot;
+  saveState: SaveState;
   viewport: Viewport;
   selectedEntityIds: string[];
   lastOpenedAt: string;
+};
+
+type SaveState = {
+  targetName: string;
+  targetType: CadFileType;
+  fileHandle?: SimpleFileHandle;
+  fileHandleAvailable: boolean;
+  revision: number;
+  savedRevision: number;
+  lastSavedAt?: string;
+  isSaving: boolean;
 };
 
 type RecentDocument = {
@@ -122,7 +140,7 @@ export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>('select');
   const {
     document,
-    updateDocument,
+    updateDocument: updateHistoryDocument,
     getSnapshot,
     loadSnapshot,
     beginHistoryBatch,
@@ -135,6 +153,7 @@ export function App() {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
+  const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['rect-1']);
@@ -171,10 +190,58 @@ export function App() {
     }).entities.map(toReferencePreviewEntity);
   }, [cadClipboard, document, referenceMode, referencePreviewPoint]);
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
+  const activeDirty = isSaveStateDirty(saveState);
+  const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
+
+  const markDirty = useCallback(() => {
+    setSaveState((current) => ({
+      ...current,
+      revision: current.revision + 1,
+    }));
+  }, []);
+
+  const updateDocument = useCallback(
+    (
+      updater: CadDocument | ((current: CadDocument) => CadDocument),
+      options: { trackHistory?: boolean } = {},
+    ) => {
+      updateHistoryDocument(updater, options);
+      markDirty();
+    },
+    [markDirty, updateHistoryDocument],
+  );
+
+  const undoDocument = useCallback(() => {
+    if (!canUndo) return;
+    undo();
+    markDirty();
+  }, [canUndo, markDirty, undo]);
+
+  const redoDocument = useCallback(() => {
+    if (!canRedo) return;
+    redo();
+    markDirty();
+  }, [canRedo, markDirty, redo]);
 
   const setCanvasApi = useCallback((api: { zoomBy: (factor: number) => void }) => {
     canvasApiRef.current = api;
   }, []);
+
+  const persistRecentDocument = useCallback((title: string, nextDocument = document) => {
+    if (nextDocument.entities.length > maxAutosaveEntities) return;
+
+    const recent: RecentDocument = {
+      id: `${Date.now()}`,
+      title,
+      document: stripRuntimeFileState(nextDocument),
+      lastOpenedAt: new Date().toISOString(),
+    };
+    setRecentDocuments((items) => {
+      const next = [recent, ...items.filter((item) => item.title !== title)].slice(0, 8);
+      localStorage.setItem(recentStorageKey, JSON.stringify(next));
+      return next;
+    });
+  }, [document]);
 
   const downloadBlob = useCallback((blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
@@ -185,39 +252,125 @@ export function App() {
     URL.revokeObjectURL(url);
   }, []);
 
+  const saveCurrentDocument = useCallback(async () => {
+    if (!activeTabId) return;
+
+    try {
+      setSaveState((current) => ({ ...current, isSaving: true }));
+      setFileMessage(`${saveState.targetType.toUpperCase()} 파일을 저장하는 중...`);
+      const blob = await fileManager.save(document, {
+        fileName: saveState.targetName,
+        type: saveState.targetType,
+      });
+      let wroteToHandle = false;
+      if (saveState.fileHandle) {
+        try {
+          await writeBlobToFileHandle(blob, saveState.fileHandle);
+          wroteToHandle = true;
+        } catch {
+          downloadBlob(blob, withExtension(saveState.targetName, saveState.targetType));
+        }
+      } else {
+        downloadBlob(blob, withExtension(saveState.targetName, saveState.targetType));
+      }
+
+      const savedAt = new Date().toISOString();
+      const savedDocument = withSourceFile(document, {
+        name: saveState.fileHandle?.name ?? withExtension(saveState.targetName, saveState.targetType),
+        type: saveState.targetType,
+        lastSavedAt: savedAt,
+        fileHandleAvailable: wroteToHandle,
+      });
+      updateHistoryDocument(savedDocument, { trackHistory: false });
+      setSaveState((current) => ({
+        ...current,
+        targetName: saveState.fileHandle?.name ?? current.targetName,
+        savedRevision: current.revision,
+        lastSavedAt: savedAt,
+        fileHandleAvailable: wroteToHandle,
+        isSaving: false,
+      }));
+      persistRecentDocument(savedDocument.name, savedDocument);
+      setFileMessage(
+        wroteToHandle
+          ? `${saveState.targetType.toUpperCase()} 파일에 저장했습니다.`
+          : `${saveState.targetType.toUpperCase()} 파일을 다운로드로 저장했습니다.`,
+      );
+    } catch (error) {
+      setSaveState((current) => ({ ...current, isSaving: false }));
+      setFileMessage(error instanceof Error ? error.message : '저장에 실패했습니다.');
+    }
+  }, [activeTabId, document, downloadBlob, persistRecentDocument, saveState, updateHistoryDocument]);
+
   const saveAs = useCallback(
-    async (type: 'json' | 'svg' | 'dxf' | 'dwg') => {
+    async (type: CadFileType) => {
       if (!activeTabId) return;
       try {
+        setSaveState((current) => ({ ...current, isSaving: true }));
         setFileMessage(`${type.toUpperCase()} 파일을 준비하는 중...`);
+        const suggestedName = withExtension(saveState.targetName || document.name, type);
         const blob = await fileManager.save(document, {
-          fileName: document.name,
+          fileName: suggestedName,
           type,
         });
-        downloadBlob(blob, `${document.name.replace(/\s+/g, '-')}.${type}`);
-        setFileMessage(`${type.toUpperCase()} 파일을 내보냈습니다.`);
+        let handle: SimpleFileHandle | undefined;
+        let wroteToHandle = false;
+        if (canUseFileSystemAccess()) {
+          try {
+            handle = await pickSaveFile({ suggestedName, type }) ?? undefined;
+          } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') {
+              setSaveState((current) => ({ ...current, isSaving: false }));
+              setFileMessage('저장을 취소했습니다.');
+              return;
+            }
+            throw error;
+          }
+        }
+
+        if (handle) {
+          await writeBlobToFileHandle(blob, handle);
+          wroteToHandle = true;
+        } else {
+          downloadBlob(blob, withExtension(suggestedName, type));
+        }
+
+        const savedAt = new Date().toISOString();
+        if (isDocumentSourceType(type)) {
+          const savedDocument = withSourceFile(document, {
+            name: handle?.name ?? withExtension(suggestedName, type),
+            type,
+            lastSavedAt: savedAt,
+            fileHandleAvailable: wroteToHandle,
+          });
+          updateHistoryDocument(savedDocument, { trackHistory: false });
+          setSaveState((current) => ({
+            ...current,
+            targetName: handle?.name ?? withExtension(suggestedName, type),
+            targetType: type,
+            fileHandle: handle,
+            fileHandleAvailable: wroteToHandle,
+            savedRevision: current.revision,
+            lastSavedAt: savedAt,
+            isSaving: false,
+          }));
+          persistRecentDocument(savedDocument.name, savedDocument);
+        } else {
+          setSaveState((current) => ({ ...current, isSaving: false }));
+        }
+
+        setFileMessage(
+          wroteToHandle
+            ? `${type.toUpperCase()} 파일에 저장했습니다.`
+            : `${type.toUpperCase()} 파일을 다운로드로 저장했습니다.`,
+        );
       } catch (error) {
+        setSaveState((current) => ({ ...current, isSaving: false }));
         setFileMessage(error instanceof Error ? error.message : `${type.toUpperCase()} 내보내기에 실패했습니다.`);
       }
     },
-    [activeTabId, document, downloadBlob],
+    [activeTabId, document, downloadBlob, persistRecentDocument, saveState.targetName, updateHistoryDocument],
   );
-
-  const persistRecentDocument = useCallback((title: string, nextDocument = document) => {
-    if (nextDocument.entities.length > maxAutosaveEntities) return;
-
-    const recent: RecentDocument = {
-      id: `${Date.now()}`,
-      title,
-      document: nextDocument,
-      lastOpenedAt: new Date().toISOString(),
-    };
-    setRecentDocuments((items) => {
-      const next = [recent, ...items.filter((item) => item.title !== title)].slice(0, 8);
-      localStorage.setItem(recentStorageKey, JSON.stringify(next));
-      return next;
-    });
-  }, [document]);
 
   const activateTab = useCallback((tabId: string) => {
     const nextTab = tabs.find((tab) => tab.id === tabId);
@@ -230,6 +383,7 @@ export function App() {
               ...tab,
               document: currentSnapshot.document,
               history: currentSnapshot,
+              saveState,
               viewport,
               selectedEntityIds,
               lastOpenedAt: new Date().toISOString(),
@@ -239,12 +393,13 @@ export function App() {
     );
     setActiveTabId(tabId);
     loadSnapshot(nextTab.history);
+    setSaveState(nextTab.saveState);
     setViewport(nextTab.viewport);
     setSelectedEntityIds(nextTab.selectedEntityIds);
     setFileMessage(`${nextTab.title} 탭을 열었습니다.`);
-  }, [activeTabId, getSnapshot, loadSnapshot, selectedEntityIds, tabs, viewport]);
+  }, [activeTabId, getSnapshot, loadSnapshot, saveState, selectedEntityIds, tabs, viewport]);
 
-  const createTab = useCallback((title: string, nextDocument: CadDocument) => {
+  const createTab = useCallback((title: string, nextDocument: CadDocument, nextSaveState = createSaveState(nextDocument, title)) => {
     const history: DocumentHistorySnapshot = {
       document: nextDocument,
       past: [],
@@ -255,6 +410,7 @@ export function App() {
       title,
       document: nextDocument,
       history,
+      saveState: nextSaveState,
       viewport: { offsetX: 480, offsetY: 320, scale: 1 },
       selectedEntityIds: [],
       lastOpenedAt: new Date().toISOString(),
@@ -262,6 +418,7 @@ export function App() {
     setTabs((items) => [...items, tab]);
     setActiveTabId(tab.id);
     loadSnapshot(history);
+    setSaveState(nextSaveState);
     setViewport(tab.viewport);
     setSelectedEntityIds([]);
     persistRecentDocument(title, nextDocument);
@@ -277,6 +434,13 @@ export function App() {
   }, [createTab, tabs.length]);
 
   const closeTab = useCallback((tabId: string) => {
+    const targetTab = tabs.find((tab) => tab.id === tabId);
+    const targetSaveState = tabId === activeTabId ? saveState : targetTab?.saveState;
+    if (targetSaveState && isSaveStateDirty(targetSaveState)) {
+      const ok = window.confirm(`${targetTab?.title ?? '도면'}에 저장하지 않은 변경사항이 있습니다. 닫을까요?`);
+      if (!ok) return;
+    }
+
     setTabs((items) => {
       const next = items.filter((tab) => tab.id !== tabId);
       if (tabId === activeTabId) {
@@ -284,15 +448,17 @@ export function App() {
         setActiveTabId(fallback?.id ?? null);
         if (fallback) {
           loadSnapshot(fallback.history);
+          setSaveState(fallback.saveState);
           setViewport(fallback.viewport);
           setSelectedEntityIds(fallback.selectedEntityIds);
         } else {
+          setSaveState(createSaveState(sampleDocument));
           setSelectedEntityIds([]);
         }
       }
       return next;
     });
-  }, [activeTabId, loadSnapshot]);
+  }, [activeTabId, loadSnapshot, saveState, tabs]);
 
   const openFile = useCallback(async (file: File) => {
     try {
@@ -324,6 +490,7 @@ export function App() {
               ...tab,
               document: snapshot.document,
               history: snapshot,
+              saveState,
               viewport,
               selectedEntityIds,
               lastOpenedAt: new Date().toISOString(),
@@ -331,7 +498,7 @@ export function App() {
           : tab,
       ),
     );
-  }, [activeTabId, getSnapshot, selectedEntityIds, viewport]);
+  }, [activeTabId, getSnapshot, saveState, selectedEntityIds, viewport]);
 
   const openRecentDocument = useCallback((recent: RecentDocument) => {
     createTab(recent.title, {
@@ -661,6 +828,18 @@ export function App() {
   }, [contextMenu]);
 
   useEffect(() => {
+    if (!anyDirty) return;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [anyDirty]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isEditingText =
@@ -685,19 +864,25 @@ export function App() {
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z' && event.shiftKey) {
         event.preventDefault();
-        redo();
+        redoDocument();
         return;
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
-        undo();
+        undoDocument();
         return;
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y') {
         event.preventDefault();
-        redo();
+        redoDocument();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void saveCurrentDocument();
         return;
       }
 
@@ -720,7 +905,16 @@ export function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [contextMenu, copySelectedEntities, deleteSelectedEntity, pasteEntities, redo, referenceMode, undo]);
+  }, [
+    contextMenu,
+    copySelectedEntities,
+    deleteSelectedEntity,
+    pasteEntities,
+    redoDocument,
+    referenceMode,
+    saveCurrentDocument,
+    undoDocument,
+  ]);
 
   return (
     <main className="app-shell">
@@ -755,12 +949,21 @@ export function App() {
           </button>
           <button
             className="tool-button wide"
-            title="JSON 저장"
+            title="저장"
             disabled={!activeTabId}
-            onClick={() => void saveAs('json')}
+            onClick={() => void saveCurrentDocument()}
           >
             <Save size={17} />
             저장
+          </button>
+          <button
+            className="tool-button wide"
+            title="JSON 다른 이름 저장"
+            disabled={!activeTabId}
+            onClick={() => void saveAs('json')}
+          >
+            <FileDown size={17} />
+            JSON
           </button>
           <button
             className="tool-button wide"
@@ -795,7 +998,7 @@ export function App() {
             className="tool-button icon"
             title="실행 취소"
             disabled={!canUndo}
-            onClick={undo}
+            onClick={undoDocument}
           >
             <Undo2 size={17} />
           </button>
@@ -803,7 +1006,7 @@ export function App() {
             className="tool-button icon"
             title="다시 실행"
             disabled={!canRedo}
-            onClick={redo}
+            onClick={redoDocument}
           >
             <Redo2 size={17} />
           </button>
@@ -842,7 +1045,9 @@ export function App() {
 
       <nav className="tabbar" aria-label="열린 도면">
         {tabs.length ? (
-          tabs.map((tab) => (
+          tabs.map((tab) => {
+            const tabDirty = tab.id === activeTabId ? activeDirty : isSaveStateDirty(tab.saveState);
+            return (
             <button
               key={tab.id}
               className={`tab-button ${tab.id === activeTabId ? 'active' : ''}`}
@@ -851,6 +1056,9 @@ export function App() {
             >
               <FileText size={14} />
               <span>{tab.title}</span>
+              {tabDirty ? (
+                <span className="tab-dirty" title="저장 안 됨">*</span>
+              ) : null}
               <span
                 className="tab-close"
                 role="button"
@@ -870,7 +1078,8 @@ export function App() {
                 <X size={13} />
               </span>
             </button>
-          ))
+            );
+          })
         ) : (
           <span className="tabbar-empty">열린 도면 없음</span>
         )}
@@ -1374,6 +1583,9 @@ export function App() {
               : '선택 없음'}
         </span>
         <span>도구: {tools.find((tool) => tool.id === activeTool)?.label}</span>
+        <span className={activeDirty ? 'save-state save-state-dirty' : 'save-state'}>
+          {formatSaveState(saveState)}
+        </span>
         <span>{fileMessage}</span>
       </footer>
     </main>
@@ -1389,6 +1601,68 @@ function readRecentDocuments(): RecentDocument[] {
   } catch {
     return [];
   }
+}
+
+function createSaveState(document: CadDocument, fallbackName = document.name): SaveState {
+  const source = document.sourceFile;
+  const targetType = source?.type ?? fileTypeFromName(source?.name ?? fallbackName);
+  const targetName = source?.name ?? withExtension(fallbackName, targetType);
+  return {
+    targetName,
+    targetType,
+    fileHandleAvailable: source?.fileHandleAvailable ?? false,
+    revision: 0,
+    savedRevision: 0,
+    lastSavedAt: source?.lastSavedAt,
+    isSaving: false,
+  };
+}
+
+function isSaveStateDirty(saveState: SaveState): boolean {
+  return saveState.revision !== saveState.savedRevision;
+}
+
+function formatSaveState(saveState: SaveState): string {
+  if (saveState.isSaving) return '저장 중...';
+  const dirtyLabel = isSaveStateDirty(saveState) ? '저장 안 됨' : '저장됨';
+  const handleLabel = saveState.fileHandleAvailable ? '파일 직접 저장' : '다운로드 저장';
+  if (!saveState.lastSavedAt) return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${handleLabel}`;
+  return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${new Date(saveState.lastSavedAt).toLocaleTimeString()}`;
+}
+
+function withSourceFile(
+  document: CadDocument,
+  sourceFile: NonNullable<CadDocument['sourceFile']>,
+): CadDocument {
+  return {
+    ...document,
+    name: sourceFile.name.replace(/\.[^.]+$/, '') || document.name,
+    sourceFile: {
+      ...document.sourceFile,
+      ...sourceFile,
+    },
+  };
+}
+
+function stripRuntimeFileState(document: CadDocument): CadDocument {
+  if (!document.sourceFile) return document;
+  return {
+    ...document,
+    sourceFile: {
+      ...document.sourceFile,
+      fileHandleAvailable: false,
+    },
+  };
+}
+
+function isDocumentSourceType(type: CadFileType): boolean {
+  return type === 'json' || type === 'dxf' || type === 'dwg';
+}
+
+function withExtension(fileName: string, type: CadFileType): string {
+  const trimmed = (fileName || `drawing.${type}`).trim();
+  const withoutCurrentExtension = trimmed.replace(/\.(json|svg|dxf|dwg)$/i, '');
+  return `${withoutCurrentExtension || 'drawing'}.${type}`;
 }
 
 function fileTypeFromName(fileName: string): CadFileType {

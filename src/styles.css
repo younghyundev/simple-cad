@@ -77,6 +77,12 @@ button {
   white-space: nowrap;
 }
 
+.tab-dirty {
+  flex: 0 0 auto;
+  color: #b45309;
+  font-weight: 700;
+}
+
 .tab-close {
   display: inline-grid;
   place-items: center;
@@ -693,6 +699,14 @@ button {
   background: #111827;
   color: #e5e7eb;
   font-size: 12px;
+}
+
+.save-state {
+  color: #bfdbfe;
+}
+
+.save-state-dirty {
+  color: #fbbf24;
 }
 
 @media (max-width: 1180px) {
