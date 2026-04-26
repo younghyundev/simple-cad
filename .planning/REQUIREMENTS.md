@@ -28,10 +28,10 @@
 
 ### Sharing and Review Collaboration
 
-- [ ] **SHARE-01**: 사용자는 도면을 서버 저장소에 저장하고 다시 열 수 있다.
-- [ ] **SHARE-02**: 사용자는 저장된 도면의 공유 링크를 만들고 읽기 전용으로 열 수 있다.
-- [ ] **SHARE-03**: 사용자는 도면 좌표 또는 객체에 주석/검토 메모를 남기고 확인할 수 있다.
-- [ ] **SHARE-04**: 공유/주석 데이터는 로컬 파일 저장 흐름과 충돌하지 않고 탭, dirty 상태, 최근 열기 흐름과 함께 동작한다.
+- [x] **SHARE-01**: 사용자는 도면을 서버 저장소에 저장하고 다시 열 수 있다.
+- [x] **SHARE-02**: 사용자는 저장된 도면의 공유 링크를 만들고 읽기 전용으로 열 수 있다.
+- [x] **SHARE-03**: 사용자는 도면 좌표 또는 객체에 주석/검토 메모를 남기고 확인할 수 있다.
+- [x] **SHARE-04**: 공유/주석 데이터는 로컬 파일 저장 흐름과 충돌하지 않고 탭, dirty 상태, 최근 열기 흐름과 함께 동작한다.
 
 ## Future Requirements
 
@@ -69,10 +69,10 @@
 | CI-01 | Phase 14 | Complete |
 | CI-02 | Phase 14 | Complete |
 | CI-03 | Phase 14 | Complete |
-| SHARE-01 | Phase 15 | Pending |
-| SHARE-02 | Phase 15 | Pending |
-| SHARE-03 | Phase 15 | Pending |
-| SHARE-04 | Phase 15 | Pending |
+| SHARE-01 | Phase 15 | Complete |
+| SHARE-02 | Phase 15 | Complete |
+| SHARE-03 | Phase 15 | Complete |
+| SHARE-04 | Phase 15 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 15 total

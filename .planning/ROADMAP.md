@@ -16,7 +16,7 @@
 | 12 | Production DWG Conversion Backend | Complete 2026-04-26: DWG 변환 서버 설정 계약, 비동기 job, 오류 분류, mock 시나리오, 문서화를 완료했다. | DWG-01, DWG-02, DWG-03, DWG-04 |
 | 13 | Advanced CAD Entity Preservation | Complete 2026-04-26: native SPLINE/ELLIPSE, HATCH, advanced fallback warnings, BLOCK/INSERT details, DXF metadata, fixtures를 완료했다. | CAD-01, CAD-02, CAD-03, CAD-04 |
 | 14 | CI Quality Gates | Complete 2026-04-26: GitHub Actions quality-gates job, Node 22/npm ci/Playwright install, logs, artifacts, job summary, local verify를 완료했다. | CI-01, CI-02, CI-03 |
-| 15 | Sharing and Review Collaboration | 서버 저장, 공유 링크, 좌표/객체 주석을 기존 파일/탭/dirty 흐름과 통합한다. | SHARE-01, SHARE-02, SHARE-03, SHARE-04 |
+| 15 | Sharing and Review Collaboration | Complete 2026-04-26: localStorage mock 서버 저장/열기, 공유 링크, 읽기 전용 공유 문서, 좌표/객체 주석, 검토 패널, E2E/문서화를 완료했다. | SHARE-01, SHARE-02, SHARE-03, SHARE-04 |
 
 ## Phase Details
 
@@ -67,7 +67,7 @@
 2. 완료: Playwright trace, 성능 측정치, 변환 회귀 결과를 CI artifact 또는 summary에서 확인할 수 있다.
 3. 완료: 로컬과 CI가 같은 Node/Playwright 설치 흐름을 사용한다.
 
-### Phase 15: Sharing and Review Collaboration
+### Phase 15: Sharing and Review Collaboration — Complete 2026-04-26
 
 **Goal:** 서버 저장, 공유 링크, 좌표/객체 주석을 기존 파일/탭/dirty 흐름과 통합한다.
 
@@ -78,10 +78,10 @@
 **Depends on:** Phase 10, Phase 14
 
 **Success criteria:**
-1. 사용자는 도면을 서버 저장소에 저장하고 다시 열 수 있다.
-2. 공유 링크로 읽기 전용 도면을 열 수 있다.
-3. 사용자는 도면 좌표 또는 객체에 주석을 남기고 확인할 수 있다.
-4. 서버 저장/공유/주석 상태가 탭, dirty 상태, 최근 열기와 충돌하지 않는다.
+1. 완료: 사용자는 도면을 서버 저장소에 저장하고 다시 열 수 있다.
+2. 완료: 공유 링크로 읽기 전용 도면을 열 수 있다.
+3. 완료: 사용자는 도면 좌표 또는 객체에 주석을 남기고 확인할 수 있다.
+4. 완료: 서버 저장/공유/주석 상태가 탭, dirty 상태, 최근 열기와 충돌하지 않는다.
 
 ## Coverage
 
