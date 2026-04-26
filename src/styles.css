@@ -389,7 +389,7 @@ button {
 }
 
 .snap-marker.grid {
-  border-color: #7c3aed;
+  display: none;
 }
 
 .snap-marker.center {

@@ -88,11 +88,12 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
   }
 
   if (entity.type === 'rect') {
+    const topLeft = { x: entity.x, y: entity.y };
+    const topRight = { x: entity.x + entity.width, y: entity.y };
+    const bottomRight = { x: entity.x + entity.width, y: entity.y + entity.height };
+    const bottomLeft = { x: entity.x, y: entity.y + entity.height };
     return [
-      { point: { x: entity.x, y: entity.y }, type: 'endpoint' },
-      { point: { x: entity.x + entity.width, y: entity.y }, type: 'endpoint' },
-      { point: { x: entity.x + entity.width, y: entity.y + entity.height }, type: 'endpoint' },
-      { point: { x: entity.x, y: entity.y + entity.height }, type: 'endpoint' },
+      ...closedPathSnapCandidates([topLeft, topRight, bottomRight, bottomLeft]),
       { point: { x: entity.x + entity.width / 2, y: entity.y + entity.height / 2 }, type: 'center' },
     ];
   }
@@ -109,13 +110,13 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
 
   if (entity.type === 'polyline') {
     if (entity.points.length <= maxPolylineSnapPoints) {
-      return entity.points.map((point) => ({ point, type: 'endpoint' }));
+      return pathSnapCandidates(entity.points);
     }
 
     const step = Math.ceil(entity.points.length / maxPolylineSnapPoints);
-    return entity.points
+    const sampledPoints = entity.points
       .filter((_, index) => index === 0 || index === entity.points.length - 1 || index % step === 0)
-      .map((point) => ({ point, type: 'endpoint' }));
+    return pathSnapCandidates(sampledPoints);
   }
 
   if (entity.type === 'ellipse') {
@@ -147,7 +148,7 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
 
   if (entity.type === 'hatch') {
     return entity.boundary.flatMap((path) =>
-      path.slice(0, maxPolylineSnapPoints).map((point) => ({ point, type: 'endpoint' as const })),
+      pathSnapCandidates(path.slice(0, maxPolylineSnapPoints)),
     );
   }
 
@@ -166,6 +167,38 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
       type: 'center',
     },
   ];
+}
+
+function pathSnapCandidates(points: CadPoint[]): SnapCandidate[] {
+  const candidates: SnapCandidate[] = points.map((point) => ({ point, type: 'endpoint' }));
+  for (let index = 0; index < points.length - 1; index += 1) {
+    candidates.push({
+      point: midpoint(points[index], points[index + 1]),
+      type: 'center',
+    });
+  }
+  return candidates;
+}
+
+function closedPathSnapCandidates(points: CadPoint[]): SnapCandidate[] {
+  if (!points.length) return [];
+  return pathSnapCandidates([...points, points[0]]).filter(
+    (candidate, index, candidates) =>
+      index === 0 ||
+      candidate.type !== 'endpoint' ||
+      !samePoint(candidate.point, candidates[0].point),
+  );
+}
+
+function midpoint(start: CadPoint, end: CadPoint): CadPoint {
+  return {
+    x: (start.x + end.x) / 2,
+    y: (start.y + end.y) / 2,
+  };
+}
+
+function samePoint(first: CadPoint, second: CadPoint): boolean {
+  return first.x === second.x && first.y === second.y;
 }
 
 function getIntersectionCandidates(entities: CadEntity[]): SnapCandidate[] {
