@@ -150,22 +150,26 @@ button {
   color: #ffffff;
 }
 
-.recent-panel {
+.recent-panel,
+.server-panel {
   display: grid;
   gap: 10px;
 }
 
-.recent-panel h2 {
+.recent-panel h2,
+.server-panel h2 {
   margin: 0;
   font-size: 14px;
 }
 
-.recent-list {
+.recent-list,
+.server-document-list {
   display: grid;
   gap: 8px;
 }
 
-.recent-item {
+.recent-item,
+.server-document {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
@@ -180,13 +184,15 @@ button {
   cursor: pointer;
 }
 
-.recent-item span {
+.recent-item span,
+.server-document span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.recent-item small {
+.recent-item small,
+.server-document small {
   color: #6b7280;
   font-size: 12px;
 }

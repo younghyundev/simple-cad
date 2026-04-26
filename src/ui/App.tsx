@@ -28,6 +28,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
 import type { CadClipboardPayload } from '../cad/clipboard';
+import { LocalCollaborationRepository } from '../cad/collaboration';
+import type { CollaborationState, ServerDocumentRecord } from '../cad/collaboration';
 import {
   alignEntities,
   type AlignMode,
@@ -64,6 +66,7 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 ];
 
 const fileManager = new FileManager();
+const collaborationRepository = new LocalCollaborationRepository();
 const maxAutosaveEntities = 4000;
 const recentStorageKey = 'simplecad.recentDocuments';
 
@@ -73,6 +76,7 @@ type WorkspaceTab = {
   document: CadDocument;
   history: DocumentHistorySnapshot;
   saveState: SaveState;
+  collaborationState: CollaborationState;
   viewport: Viewport;
   selectedEntityIds: string[];
   lastOpenedAt: string;
@@ -154,7 +158,11 @@ export function App() {
   const [tabs, setTabs] = useState<WorkspaceTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [recentDocuments, setRecentDocuments] = useState<RecentDocument[]>(() => readRecentDocuments());
+  const [serverDocuments, setServerDocuments] = useState<ServerDocumentRecord[]>(() =>
+    collaborationRepository.listDocuments(),
+  );
   const [saveState, setSaveState] = useState<SaveState>(() => createSaveState(sampleDocument));
+  const [collaborationState, setCollaborationState] = useState<CollaborationState>(() => createCollaborationState());
   const [viewport, setViewport] = useState<Viewport>({ offsetX: 480, offsetY: 320, scale: 1 });
   const [cursor, setCursor] = useState<CadPoint>({ x: 0, y: 0 });
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>(['rect-1']);
@@ -194,6 +202,7 @@ export function App() {
   const canvasApiRef = useRef<{ zoomBy: (factor: number) => void } | null>(null);
   const activeDirty = isSaveStateDirty(saveState);
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
+  const serverStatus = formatServerState(collaborationState, saveState.revision);
 
   const markDirty = useCallback(() => {
     setSaveState((current) => ({
@@ -403,6 +412,7 @@ export function App() {
               document: currentSnapshot.document,
               history: currentSnapshot,
               saveState,
+              collaborationState,
               viewport,
               selectedEntityIds,
               lastOpenedAt: new Date().toISOString(),
@@ -413,12 +423,18 @@ export function App() {
     setActiveTabId(tabId);
     loadSnapshot(nextTab.history);
     setSaveState(nextTab.saveState);
+    setCollaborationState(nextTab.collaborationState);
     setViewport(nextTab.viewport);
     setSelectedEntityIds(nextTab.selectedEntityIds);
     setFileMessage(`${nextTab.title} 탭을 열었습니다.`);
-  }, [activeTabId, getSnapshot, loadSnapshot, saveState, selectedEntityIds, tabs, viewport]);
+  }, [activeTabId, collaborationState, getSnapshot, loadSnapshot, saveState, selectedEntityIds, tabs, viewport]);
 
-  const createTab = useCallback((title: string, nextDocument: CadDocument, nextSaveState = createSaveState(nextDocument, title)) => {
+  const createTab = useCallback((
+    title: string,
+    nextDocument: CadDocument,
+    nextSaveState = createSaveState(nextDocument, title),
+    nextCollaborationState = createCollaborationState(),
+  ) => {
     const history: DocumentHistorySnapshot = {
       document: nextDocument,
       past: [],
@@ -430,6 +446,7 @@ export function App() {
       document: nextDocument,
       history,
       saveState: nextSaveState,
+      collaborationState: nextCollaborationState,
       viewport: { offsetX: 480, offsetY: 320, scale: 1 },
       selectedEntityIds: [],
       lastOpenedAt: new Date().toISOString(),
@@ -438,6 +455,7 @@ export function App() {
     setActiveTabId(tab.id);
     loadSnapshot(history);
     setSaveState(nextSaveState);
+    setCollaborationState(nextCollaborationState);
     setViewport(tab.viewport);
     setSelectedEntityIds([]);
     persistRecentDocument(title, nextDocument);
@@ -468,10 +486,12 @@ export function App() {
         if (fallback) {
           loadSnapshot(fallback.history);
           setSaveState(fallback.saveState);
+          setCollaborationState(fallback.collaborationState);
           setViewport(fallback.viewport);
           setSelectedEntityIds(fallback.selectedEntityIds);
         } else {
           setSaveState(createSaveState(sampleDocument));
+          setCollaborationState(createCollaborationState());
           setSelectedEntityIds([]);
         }
       }
@@ -516,6 +536,7 @@ export function App() {
               document: snapshot.document,
               history: snapshot,
               saveState,
+              collaborationState,
               viewport,
               selectedEntityIds,
               lastOpenedAt: new Date().toISOString(),
@@ -523,7 +544,7 @@ export function App() {
           : tab,
       ),
     );
-  }, [activeTabId, getSnapshot, saveState, selectedEntityIds, viewport]);
+  }, [activeTabId, collaborationState, getSnapshot, saveState, selectedEntityIds, viewport]);
 
   const openRecentDocument = useCallback((recent: RecentDocument) => {
     createTab(recent.title, {
@@ -534,6 +555,51 @@ export function App() {
         lastSavedAt: recent.lastOpenedAt,
       },
     });
+  }, [createTab]);
+
+  const saveToServer = useCallback(() => {
+    if (!activeTabId) return;
+    const record = collaborationRepository.saveDocument({
+      id: collaborationState.serverDocumentId,
+      title: document.name || saveState.targetName || 'Untitled',
+      document: stripRuntimeFileState(document),
+    });
+    const nextCollaborationState = createCollaborationState({
+      serverDocumentId: record.id,
+      shareToken: record.shareToken,
+      lastServerSavedAt: record.updatedAt,
+      serverSavedRevision: saveState.revision,
+    });
+    setCollaborationState(nextCollaborationState);
+    setServerDocuments(collaborationRepository.listDocuments());
+    persistRecentDocument(record.title, record.document);
+    setFileMessage(`${record.title} 서버 저장됨`);
+  }, [activeTabId, collaborationState.serverDocumentId, document, persistRecentDocument, saveState.revision, saveState.targetName]);
+
+  const openServerDocument = useCallback((record: ServerDocumentRecord) => {
+    const serverRecord = collaborationRepository.openDocument(record.id);
+    if (!serverRecord) {
+      setServerDocuments(collaborationRepository.listDocuments());
+      setFileMessage('서버 도면을 열 수 없습니다.');
+      return;
+    }
+    createTab(
+      serverRecord.title,
+      {
+        ...serverRecord.document,
+        id: `server-${Date.now()}`,
+        name: serverRecord.document.name || serverRecord.title,
+      },
+      createSaveState(serverRecord.document, serverRecord.title),
+      createCollaborationState({
+        serverDocumentId: serverRecord.id,
+        shareToken: serverRecord.shareToken,
+        lastServerSavedAt: serverRecord.updatedAt,
+        serverSavedRevision: 0,
+        readonly: serverRecord.readonly ?? false,
+      }),
+    );
+    setFileMessage(`${serverRecord.title} 서버 도면을 열었습니다.`);
   }, [createTab]);
 
   const closeContextMenu = useCallback(() => {
@@ -983,6 +1049,16 @@ export function App() {
           >
             <Save size={17} />
             저장
+          </button>
+          <button
+            className="tool-button wide"
+            title="서버 저장"
+            data-testid="server-save-button"
+            disabled={!activeTabId}
+            onClick={saveToServer}
+          >
+            <Save size={17} />
+            서버 저장
           </button>
           <button
             className="tool-button wide"
@@ -1599,6 +1675,27 @@ export function App() {
                 <p className="empty-state">최근에 연 도면이 없습니다.</p>
               )}
             </section>
+            <section className="server-panel">
+              <h2>서버 도면</h2>
+              {serverDocuments.length ? (
+                <div className="server-document-list">
+                  {serverDocuments.map((serverDocument) => (
+                    <button
+                      className="server-document"
+                      data-testid="server-document-item"
+                      key={serverDocument.id}
+                      onClick={() => openServerDocument(serverDocument)}
+                    >
+                      <FileText size={17} />
+                      <span>{serverDocument.title}</span>
+                      <small>{new Date(serverDocument.updatedAt).toLocaleString()}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">서버에 저장된 도면이 없습니다.</p>
+              )}
+            </section>
           </div>
         </section>
       )}
@@ -1616,6 +1713,9 @@ export function App() {
         <span>도구: {tools.find((tool) => tool.id === activeTool)?.label}</span>
         <span className={activeDirty ? 'save-state save-state-dirty' : 'save-state'}>
           {formatSaveState(saveState)}
+        </span>
+        <span className={serverStatus.dirty ? 'save-state save-state-dirty' : 'save-state'}>
+          {serverStatus.label}
         </span>
         {conversionProgress ? (
           <span className="conversion-status" data-testid="conversion-status">
@@ -1654,6 +1754,13 @@ function createSaveState(document: CadDocument, fallbackName = document.name): S
   };
 }
 
+function createCollaborationState(overrides: Partial<CollaborationState> = {}): CollaborationState {
+  return {
+    readonly: false,
+    ...overrides,
+  };
+}
+
 function isSaveStateDirty(saveState: SaveState): boolean {
   return saveState.revision !== saveState.savedRevision;
 }
@@ -1664,6 +1771,22 @@ function formatSaveState(saveState: SaveState): string {
   const handleLabel = saveState.fileHandleAvailable ? '파일 직접 저장' : '다운로드 저장';
   if (!saveState.lastSavedAt) return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${handleLabel}`;
   return `${dirtyLabel} · ${saveState.targetType.toUpperCase()} · ${new Date(saveState.lastSavedAt).toLocaleTimeString()}`;
+}
+
+function formatServerState(
+  collaborationState: CollaborationState,
+  revision: number,
+): { label: string; dirty: boolean } {
+  if (!collaborationState.serverDocumentId) {
+    return { label: '서버 미저장', dirty: false };
+  }
+  const dirty = collaborationState.serverSavedRevision !== revision;
+  if (dirty) return { label: '서버 변경 있음', dirty: true };
+  if (!collaborationState.lastServerSavedAt) return { label: '서버 저장됨', dirty: false };
+  return {
+    label: `서버 저장됨 · ${new Date(collaborationState.lastServerSavedAt).toLocaleTimeString()}`,
+    dirty: false,
+  };
 }
 
 function formatConversionProgress(progress: ConversionProgress): string {
