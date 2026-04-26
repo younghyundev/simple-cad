@@ -1,4 +1,5 @@
 import type { CadEntity, CadPoint, GroupEntity } from './types';
+import { sampleEllipsePoints, sampleSplinePoints } from './curveGeometry';
 
 export type EntityBounds = {
   x: number;
@@ -12,6 +13,21 @@ export type AlignMode = 'left' | 'center-x' | 'right' | 'top' | 'center-y' | 'bo
 export function cloneEntity(entity: CadEntity): CadEntity {
   if (entity.type === 'polyline') {
     return { ...entity, points: entity.points.map(clonePoint) };
+  }
+  if (entity.type === 'ellipse') {
+    return { ...entity, majorAxis: clonePoint(entity.majorAxis) };
+  }
+  if (entity.type === 'spline') {
+    return {
+      ...entity,
+      controlPoints: entity.controlPoints.map(clonePoint),
+      fitPoints: entity.fitPoints?.map(clonePoint),
+      knots: entity.knots ? [...entity.knots] : undefined,
+      weights: entity.weights ? [...entity.weights] : undefined,
+    };
+  }
+  if (entity.type === 'hatch') {
+    return { ...entity, boundary: entity.boundary.map((path) => path.map(clonePoint)) };
   }
   if (entity.type === 'dimension') {
     return { ...entity, startPoint: clonePoint(entity.startPoint), endPoint: clonePoint(entity.endPoint) };
@@ -77,6 +93,9 @@ export function getEntityBoundsPoints(entity: CadEntity): CadPoint[] {
     ];
   }
   if (entity.type === 'polyline') return entity.points;
+  if (entity.type === 'ellipse') return sampleEllipsePoints(entity);
+  if (entity.type === 'spline') return sampleSplinePoints(entity);
+  if (entity.type === 'hatch') return entity.boundary.flat();
   if (entity.type === 'text') {
     const lines = entity.content.split(/\r\n|\r|\n/);
     const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
@@ -124,6 +143,22 @@ export function translateEntity(entity: CadEntity, delta: CadPoint): CadEntity {
   if (entity.type === 'arc') return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
   if (entity.type === 'polyline') {
     return { ...entity, points: entity.points.map((point) => ({ x: point.x + delta.x, y: point.y + delta.y })) };
+  }
+  if (entity.type === 'ellipse') return { ...entity, cx: entity.cx + delta.x, cy: entity.cy + delta.y };
+  if (entity.type === 'spline') {
+    return {
+      ...entity,
+      controlPoints: entity.controlPoints.map((point) => ({ x: point.x + delta.x, y: point.y + delta.y })),
+      fitPoints: entity.fitPoints?.map((point) => ({ x: point.x + delta.x, y: point.y + delta.y })),
+    };
+  }
+  if (entity.type === 'hatch') {
+    return {
+      ...entity,
+      boundary: entity.boundary.map((path) =>
+        path.map((point) => ({ x: point.x + delta.x, y: point.y + delta.y })),
+      ),
+    };
   }
   if (entity.type === 'text') return { ...entity, x: entity.x + delta.x, y: entity.y + delta.y };
   if (entity.type === 'dimension') {
@@ -177,6 +212,36 @@ export function rotateEntity(entity: CadEntity, pivot: CadPoint, degrees: number
   }
   if (entity.type === 'polyline') {
     return { ...entity, points: entity.points.map((point) => rotatePoint(point, pivot, degrees)), rotation: normalizeRotation(entity.rotation + degrees) };
+  }
+  if (entity.type === 'ellipse') {
+    const center = rotatePoint({ x: entity.cx, y: entity.cy }, pivot, degrees);
+    const majorEnd = rotatePoint(
+      { x: entity.cx + entity.majorAxis.x, y: entity.cy + entity.majorAxis.y },
+      pivot,
+      degrees,
+    );
+    return {
+      ...entity,
+      cx: center.x,
+      cy: center.y,
+      majorAxis: { x: majorEnd.x - center.x, y: majorEnd.y - center.y },
+      rotation: normalizeRotation(entity.rotation + degrees),
+    };
+  }
+  if (entity.type === 'spline') {
+    return {
+      ...entity,
+      controlPoints: entity.controlPoints.map((point) => rotatePoint(point, pivot, degrees)),
+      fitPoints: entity.fitPoints?.map((point) => rotatePoint(point, pivot, degrees)),
+      rotation: normalizeRotation(entity.rotation + degrees),
+    };
+  }
+  if (entity.type === 'hatch') {
+    return {
+      ...entity,
+      boundary: entity.boundary.map((path) => path.map((point) => rotatePoint(point, pivot, degrees))),
+      rotation: normalizeRotation(entity.rotation + degrees),
+    };
   }
   if (entity.type === 'text') {
     const point = rotatePoint({ x: entity.x, y: entity.y }, pivot, degrees);

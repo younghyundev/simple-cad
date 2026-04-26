@@ -119,15 +119,21 @@ SimpleCAD 내부 도면 모델을 그대로 저장하고 다시 불러오는 기
 - ARC
 - TEXT / MTEXT
 - DIMENSION
-- ELLIPSE와 SPLINE의 폴리라인 근사
-- BLOCK / INSERT의 기본 폭발 처리
+- ELLIPSE와 지원 가능한 SPLINE의 편집 가능한 native 보존
+- HATCH 경계와 채움 정보의 가능한 범위 보존
+- LEADER / MLEADER 표시 선의 폴리라인 fallback
+- ATTRIB / ATTDEF 텍스트의 편집 가능한 텍스트 fallback
+- BLOCK / INSERT의 폭발 처리와 블록명, 중첩 깊이, 속성 개수 warning detail
 - 레이어, 색상, 선 스타일, 선 두께 일부 보존
+- 단위, 도면 범위, model/paper space 일부 메타데이터 추적
 
 ### DWG
 
 DWG는 브라우저에서 직접 안정적으로 파싱하기 어려운 포맷이므로 서버 변환 API를 전제로 합니다. 프로젝트에는 `/api/cad/import`, `/api/cad/export`, `/api/cad/validate` 형태의 변환 클라이언트와 개발용 mock API 구조가 포함되어 있습니다.
 
 개발 서버의 DWG 응답은 `mock` 모드로 표시됩니다. 실제 DWG 변환은 별도 서버가 `server` 모드 응답을 반환하도록 연결해야 하며, UI의 변환 상태 표시에서 요청, 대기, 진행, 완료, 실패 상태를 확인할 수 있습니다.
+
+서버가 DWG를 내부 `CadDocument`로 변환할 때도 DXF와 같은 warning 구조를 사용합니다. 고급 엔티티가 완전히 보존되지 않는 경우 `preserved`, `approximated`, `unsupported` 범주로 표시되어 사용자가 어떤 정보가 유지되었는지 확인할 수 있습니다.
 
 ## 프로젝트 구조
 

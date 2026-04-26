@@ -1,5 +1,6 @@
 import type {
   CadDocument,
+  CadDocumentMetadata,
   CadEntity,
   CadEntityBase,
   CadLayer,
@@ -7,6 +8,7 @@ import type {
   CadWarning,
   UnsupportedCadEntity,
 } from '../types';
+import { sampleEllipsePoints, sampleSplinePoints } from '../curveGeometry';
 import { dxfAciToHex } from './dxfColor';
 import { dxfLineTypeToStrokeStyle, dxfLineWeightToStrokeWidth } from './dxfStyle';
 import { decodeDxfText } from './dxfText';
@@ -18,6 +20,7 @@ export class ImportService {
 
   async fromDxf(text: string): Promise<CadDocument> {
     const pairs = parseDxfPairs(text);
+    const metadata = parseHeaderMetadata(pairs);
     const layerDefinitions = parseLayerDefinitions(pairs);
     const blockDefinitions = collectBlockDefinitions(pairs);
     const entityChunks = collectEntityChunks(pairs);
@@ -28,39 +31,11 @@ export class ImportService {
 
     for (const { entityType, chunk } of entityChunks) {
       if (entityType === 'INSERT') {
-        const blockName = valueFor(chunk, '2');
-        const block = blockName ? blockDefinitions.get(blockName) : undefined;
-        if (blockName && block) {
-          const transform = insertTransform(chunk, block.basePoint);
-          const insertedEntities = [];
-          for (const blockEntity of block.entities) {
-            const result = importDxfEntity(blockEntity.entityType, blockEntity.chunk, layerDefinitions, {
-              ...transform,
-              fallbackLayerId: valueFor(chunk, '8') || '0',
-            });
-            entities.push(...result.entities);
-            insertedEntities.push(...result.entities);
-            result.layerIds.forEach((layerId) => layerNames.add(layerId));
-            importWarnings.push(...result.importWarnings);
-            unsupportedEntities.push(...result.unsupportedEntities);
-          }
-          importWarnings.push({
-            code: 'DXF_INSERT_EXPLODED',
-            message: `INSERT ${blockName} 블록을 ${insertedEntities.length}개 편집 객체로 펼쳤습니다.`,
-            severity: 'info',
-            category: 'conversion',
-            sourceType: 'INSERT',
-            details: {
-              blockName,
-              entityCount: insertedEntities.length,
-            },
-          });
-        } else {
-          unsupportedEntities.push({
-            sourceType: entityType,
-            reason: blockName ? `Missing BLOCK definition: ${blockName}` : 'INSERT has no block name.',
-          });
-        }
+        const result = importInsertEntity(chunk, layerDefinitions, blockDefinitions, 0);
+        entities.push(...result.entities);
+        result.layerIds.forEach((layerId) => layerNames.add(layerId));
+        importWarnings.push(...result.importWarnings);
+        unsupportedEntities.push(...result.unsupportedEntities);
       } else if (entityType) {
         const result = importDxfEntity(entityType, chunk, layerDefinitions);
         entities.push(...result.entities);
@@ -81,7 +56,11 @@ export class ImportService {
     return {
       id: `dxf-${Date.now()}`,
       name: 'Imported DXF',
-      units: 'mm',
+      units: unitsFromInsUnits(metadata.insUnits),
+      metadata: {
+        ...metadata,
+        spaces: countDrawingSpaces(entityChunks),
+      },
       layers,
       entities,
       unsupportedEntities,
@@ -125,6 +104,11 @@ type DxfBlockDefinition = {
   entities: DxfEntityChunk[];
 };
 
+type DxfHeaderVariable = {
+  name: string;
+  values: DxfPair[];
+};
+
 type InsertTransform = {
   insertionPoint: CadPoint;
   basePoint: CadPoint;
@@ -141,6 +125,13 @@ type ImportEntityResult = {
   unsupportedEntities: UnsupportedCadEntity[];
 };
 
+function mergeImportResult(target: ImportEntityResult, source: ImportEntityResult): void {
+  target.entities.push(...source.entities);
+  source.layerIds.forEach((layerId) => target.layerIds.push(layerId));
+  target.importWarnings.push(...source.importWarnings);
+  target.unsupportedEntities.push(...source.unsupportedEntities);
+}
+
 function parseDxfPairs(text: string): DxfPair[] {
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   const pairs: DxfPair[] = [];
@@ -148,6 +139,91 @@ function parseDxfPairs(text: string): DxfPair[] {
     pairs.push({ code: lines[index].trim(), value: lines[index + 1].trim() });
   }
   return pairs;
+}
+
+function parseHeaderMetadata(pairs: DxfPair[]): CadDocumentMetadata {
+  const variables = collectHeaderVariables(pairs);
+  const insUnits = firstHeaderValue(variables, '$INSUNITS');
+  return {
+    dxfVersion: firstHeaderValue(variables, '$ACADVER'),
+    insUnits,
+    measurement: measurementFromHeader(firstHeaderValue(variables, '$MEASUREMENT')),
+    extents: extentsFromHeader(variables),
+  };
+}
+
+function collectHeaderVariables(pairs: DxfPair[]): DxfHeaderVariable[] {
+  const variables: DxfHeaderVariable[] = [];
+  let currentSection: string | null = null;
+  let currentVariable: DxfHeaderVariable | null = null;
+
+  for (let index = 0; index < pairs.length; index += 1) {
+    const pair = pairs[index];
+    if (pair.code === '0' && pair.value === 'SECTION') {
+      currentSection = pairs[index + 1]?.code === '2' ? pairs[index + 1].value : null;
+      currentVariable = null;
+      continue;
+    }
+    if (pair.code === '0' && pair.value === 'ENDSEC') {
+      currentSection = null;
+      currentVariable = null;
+      continue;
+    }
+    if (currentSection !== 'HEADER') continue;
+
+    if (pair.code === '9') {
+      currentVariable = { name: pair.value, values: [] };
+      variables.push(currentVariable);
+      continue;
+    }
+
+    currentVariable?.values.push(pair);
+  }
+
+  return variables;
+}
+
+function firstHeaderValue(variables: DxfHeaderVariable[], name: string): string | undefined {
+  return variables.find((variable) => variable.name === name)?.values[0]?.value;
+}
+
+function headerVariable(variables: DxfHeaderVariable[], name: string): DxfPair[] {
+  return variables.find((variable) => variable.name === name)?.values ?? [];
+}
+
+function extentsFromHeader(variables: DxfHeaderVariable[]): CadDocumentMetadata['extents'] {
+  const min = headerVariable(variables, '$EXTMIN');
+  const max = headerVariable(variables, '$EXTMAX');
+  if (!min.length || !max.length) return undefined;
+  return {
+    min: { x: numberFor(min, '10'), y: -numberFor(min, '20') },
+    max: { x: numberFor(max, '10'), y: -numberFor(max, '20') },
+  };
+}
+
+function measurementFromHeader(value: string | undefined): CadDocumentMetadata['measurement'] {
+  if (value === '1') return 'metric';
+  if (value === '0') return 'imperial';
+  return 'unknown';
+}
+
+function unitsFromInsUnits(value: string | undefined): CadDocument['units'] {
+  if (value === '4') return 'mm';
+  if (value === '5') return 'cm';
+  if (value === '6') return 'm';
+  if (value === '1') return 'inch';
+  return 'mm';
+}
+
+function countDrawingSpaces(chunks: DxfEntityChunk[]): { model: number; paper: number } {
+  return chunks.reduce(
+    (spaces, chunk) => {
+      if (valueFor(chunk.chunk, '67') === '1') spaces.paper += 1;
+      else spaces.model += 1;
+      return spaces;
+    },
+    { model: 0, paper: 0 },
+  );
 }
 
 function collectEntityChunks(pairs: DxfPair[]): DxfEntityChunk[] {
@@ -519,42 +595,49 @@ function importDxfEntity(
       });
     }
   } else if (entityType === 'ELLIPSE') {
+    const ellipse = ellipseFromDxf(chunk);
     const entity = transformEntity(
       {
         ...baseEntity(layerId, entityBase),
-        type: 'polyline' as const,
-        points: ellipseToPolyline(chunk),
+        type: 'ellipse' as const,
+        ...ellipse,
       },
       transform,
     );
     result.entities.push(entity);
     result.importWarnings.push({
-      code: 'DXF_ELLIPSE_APPROXIMATED',
-      message: 'ELLIPSE 엔티티를 편집 가능한 폴리라인으로 근사했습니다.',
+      code: 'DXF_ELLIPSE_PRESERVED',
+      message: 'ELLIPSE 엔티티를 편집 가능한 타원으로 보존했습니다.',
       entityId: entity.id,
-      severity: 'warning',
-      category: 'approximated',
+      severity: 'info',
+      category: 'preserved',
       sourceType: 'ELLIPSE',
     });
   } else if (entityType === 'SPLINE') {
-    const points = splineSamplePoints(chunk);
-    if (points.length >= 2) {
+    const spline = splineFromDxf(chunk);
+    const points = sampleSplinePoints(spline);
+    if (points.length >= 2 && spline.controlPoints.length + (spline.fitPoints?.length ?? 0) >= 2) {
       const entity = transformEntity(
         {
           ...baseEntity(layerId, entityBase),
-          type: 'polyline' as const,
-          points,
+          type: 'spline' as const,
+          ...spline,
         },
         transform,
       );
       result.entities.push(entity);
       result.importWarnings.push({
-        code: 'DXF_SPLINE_APPROXIMATED',
-        message: 'SPLINE 엔티티를 보간 샘플링한 폴리라인으로 근사했습니다.',
+        code: 'DXF_SPLINE_PRESERVED',
+        message: 'SPLINE 엔티티를 편집 가능한 곡선으로 보존했습니다.',
         entityId: entity.id,
-        severity: 'warning',
-        category: 'approximated',
+        severity: 'info',
+        category: 'preserved',
         sourceType: 'SPLINE',
+        details: {
+          controlPointCount: spline.controlPoints.length,
+          fitPointCount: spline.fitPoints?.length ?? 0,
+          knotCount: spline.knots?.length ?? 0,
+        },
       });
     } else {
       result.unsupportedEntities.push({
@@ -587,6 +670,118 @@ function importDxfEntity(
       category: 'conversion',
       sourceType: 'DIMENSION',
     });
+  } else if (entityType === 'HATCH') {
+    const boundary = hatchBoundaryFromDxf(chunk);
+    if (boundary.length) {
+      const fillKind = hatchFillKind(chunk);
+      const entity = transformEntity(
+        {
+          ...baseEntity(layerId, { ...entityBase, fillColor: 'rgba(15, 118, 110, 0.14)' }),
+          type: 'hatch' as const,
+          boundary,
+          fillKind,
+          patternName: valueFor(chunk, '2') ?? 'SOLID',
+          patternScale: Number(valueFor(chunk, '41') ?? 1) || 1,
+          patternAngle: Number(valueFor(chunk, '52') ?? 0) || 0,
+        },
+        transform,
+      );
+      result.entities.push(entity);
+      result.importWarnings.push({
+        code: 'DXF_HATCH_PRESERVED',
+        message: 'HATCH 경계를 편집 가능한 채움 객체로 보존했습니다.',
+        entityId: entity.id,
+        severity: 'info',
+        category: 'preserved',
+        sourceType: 'HATCH',
+        details: {
+          fillKind,
+          patternName: valueFor(chunk, '2') ?? 'SOLID',
+        },
+      });
+      if (fillKind !== 'solid') {
+        result.importWarnings.push({
+          code: 'DXF_HATCH_PATTERN_APPROXIMATED',
+          message: 'HATCH 패턴 정보를 보존했지만 화면에는 단순 채움으로 표시합니다.',
+          entityId: entity.id,
+          severity: 'warning',
+          category: 'approximated',
+          sourceType: 'HATCH',
+          details: {
+            fillKind,
+            patternName: valueFor(chunk, '2') ?? 'SOLID',
+          },
+        });
+      }
+    } else {
+      result.unsupportedEntities.push({
+        sourceType: 'HATCH',
+        reason: 'HATCH has no usable boundary.',
+      });
+      result.importWarnings.push({
+        code: 'DXF_HATCH_UNSUPPORTED',
+        message: 'HATCH 경계를 해석할 수 없어 가져오지 못했습니다.',
+        severity: 'warning',
+        category: 'unsupported',
+        sourceType: 'HATCH',
+      });
+    }
+  } else if (entityType === 'LEADER' || entityType === 'MLEADER') {
+    const points = repeatedPoints(chunk, '10', '20');
+    if (points.length >= 2) {
+      const entity = transformEntity(
+        {
+          ...baseEntity(layerId, entityBase),
+          type: 'polyline' as const,
+          points,
+        },
+        transform,
+      );
+      result.entities.push(entity);
+      result.importWarnings.push({
+        code: entityType === 'LEADER' ? 'DXF_LEADER_APPROXIMATED' : 'DXF_MLEADER_APPROXIMATED',
+        message: `${entityType} 엔티티의 표시 선을 편집 가능한 폴리라인으로 가져왔습니다.`,
+        entityId: entity.id,
+        severity: 'warning',
+        category: 'approximated',
+        sourceType: entityType,
+        details: {
+          pointCount: points.length,
+        },
+      });
+    } else {
+      result.unsupportedEntities.push({
+        sourceType: entityType,
+        reason: `${entityType} has fewer than two usable vertices.`,
+      });
+    }
+  } else if (entityType === 'ATTRIB' || entityType === 'ATTDEF') {
+    const content = decodeDxfText(valueFor(chunk, '1') || valueFor(chunk, '3') || valueFor(chunk, '2') || entityType);
+    const entity = transformEntity(
+      {
+        ...baseEntity(layerId, { ...entityBase, fillColor: strokeColor }),
+        type: 'text' as const,
+        x: numberFor(chunk, '10'),
+        y: -numberFor(chunk, '20'),
+        content,
+        fontSize: numberFor(chunk, '40') || 16,
+      },
+      transform,
+    );
+    result.entities.push(entity);
+    result.importWarnings.push({
+      code: entityType === 'ATTRIB' ? 'DXF_ATTRIB_PRESERVED' : 'DXF_ATTDEF_PRESERVED',
+      message: `${entityType} 텍스트를 편집 가능한 텍스트 객체로 가져왔습니다.`,
+      entityId: entity.id,
+      severity: 'info',
+      category: 'preserved',
+      sourceType: entityType,
+      details: {
+        tag: valueFor(chunk, '2') ?? null,
+        prompt: valueFor(chunk, '3') ?? null,
+        textLength: content.length,
+      },
+    });
   } else {
     result.unsupportedEntities.push({
       sourceType: entityType,
@@ -597,138 +792,147 @@ function importDxfEntity(
   return result;
 }
 
-function ellipseToPolyline(pairs: DxfPair[]) {
-  const center = { x: numberFor(pairs, '10'), y: -numberFor(pairs, '20') };
-  const majorAxis = { x: numberFor(pairs, '11'), y: -numberFor(pairs, '21') };
-  const ratio = Number(valueFor(pairs, '40') ?? 1) || 1;
-  const startParameter = Number(valueFor(pairs, '41') ?? 0);
-  const endParameter = Number(valueFor(pairs, '42') ?? Math.PI * 2);
-  const majorLength = Math.hypot(majorAxis.x, majorAxis.y) || 1;
-  const majorUnit = {
-    x: majorAxis.x / majorLength,
-    y: majorAxis.y / majorLength,
-  };
-  const minorAxis = {
-    x: -majorUnit.y * majorLength * ratio,
-    y: majorUnit.x * majorLength * ratio,
-  };
-  const sweep = normalizeSweep(startParameter, endParameter);
-  const segments = Math.max(24, Math.ceil((Math.abs(sweep) / (Math.PI * 2)) * 64));
-
-  return Array.from({ length: segments + 1 }, (_, index) => {
-    const parameter = startParameter + (sweep * index) / segments;
-    return {
-      x: center.x + Math.cos(parameter) * majorAxis.x + Math.sin(parameter) * minorAxis.x,
-      y: center.y + Math.cos(parameter) * majorAxis.y + Math.sin(parameter) * minorAxis.y,
-    };
-  });
+function repeatedPoints(pairs: DxfPair[], xCode: string, yCode: string): CadPoint[] {
+  const points: CadPoint[] = [];
+  let current: CadPoint | null = null;
+  for (const pair of pairs) {
+    if (pair.code === xCode) {
+      current = { x: Number(pair.value), y: 0 };
+      if (Number.isFinite(current.x)) points.push(current);
+    } else if (pair.code === yCode && current) {
+      const y = Number(pair.value);
+      current.y = Number.isFinite(y) ? -y : 0;
+      current = null;
+    }
+  }
+  return points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
 }
 
-function normalizeSweep(startParameter: number, endParameter: number): number {
-  let sweep = endParameter - startParameter;
-  if (sweep <= 0) sweep += Math.PI * 2;
-  return sweep;
+function hatchBoundaryFromDxf(pairs: DxfPair[]): CadPoint[][] {
+  const paths: CadPoint[][] = [];
+  for (let index = 0; index < pairs.length; index += 1) {
+    if (pairs[index].code !== '93') continue;
+    const count = Number(pairs[index].value);
+    if (!Number.isFinite(count) || count < 3) continue;
+    const points: CadPoint[] = [];
+    let cursor = index + 1;
+    while (cursor < pairs.length && points.length < count) {
+      if (pairs[cursor].code === '10') {
+        const x = Number(pairs[cursor].value);
+        const yPair = pairs.slice(cursor + 1).find((pair) => pair.code === '20');
+        const y = Number(yPair?.value ?? 0);
+        if (Number.isFinite(x) && Number.isFinite(y)) points.push({ x, y: -y });
+      }
+      cursor += 1;
+    }
+    if (points.length >= 3) paths.push(points);
+  }
+  return paths;
+}
+
+function hatchFillKind(pairs: DxfPair[]): 'solid' | 'pattern' | 'gradient' | 'unsupported' {
+  if (valuesFor(pairs, '450').length) return 'gradient';
+  const solidFlag = valueFor(pairs, '70');
+  if (solidFlag === '1' || (valueFor(pairs, '2') ?? '').toUpperCase() === 'SOLID') return 'solid';
+  return 'pattern';
+}
+
+function importInsertEntity(
+  chunk: DxfPair[],
+  layerDefinitions: Map<string, { color?: string; lineType?: string; lineWeight?: string }>,
+  blockDefinitions: Map<string, DxfBlockDefinition>,
+  nestedDepth: number,
+): ImportEntityResult {
+  const blockName = valueFor(chunk, '2');
+  const result: ImportEntityResult = {
+    entities: [],
+    layerIds: [valueFor(chunk, '8') || '0'],
+    importWarnings: [],
+    unsupportedEntities: [],
+  };
+
+  if (nestedDepth > 8) {
+    result.unsupportedEntities.push({
+      sourceType: 'INSERT',
+      reason: 'INSERT nesting depth exceeded 8',
+      raw: { blockName, nestedDepth },
+    });
+    return result;
+  }
+
+  const block = blockName ? blockDefinitions.get(blockName) : undefined;
+  if (!blockName || !block) {
+    result.unsupportedEntities.push({
+      sourceType: 'INSERT',
+      reason: blockName ? `Missing BLOCK definition: ${blockName}` : 'INSERT has no block name.',
+    });
+    return result;
+  }
+
+  const transform = insertTransform(chunk, block.basePoint);
+  const attributeCount = block.entities.filter((entity) => entity.entityType === 'ATTRIB' || entity.entityType === 'ATTDEF').length;
+  const unsupportedBefore = result.unsupportedEntities.length;
+
+  for (const blockEntity of block.entities) {
+    if (blockEntity.entityType === 'INSERT') {
+      mergeImportResult(result, importInsertEntity(blockEntity.chunk, layerDefinitions, blockDefinitions, nestedDepth + 1));
+      continue;
+    }
+
+    const child = importDxfEntity(blockEntity.entityType, blockEntity.chunk, layerDefinitions, {
+      ...transform,
+      fallbackLayerId: valueFor(chunk, '8') || '0',
+    });
+    mergeImportResult(result, child);
+  }
+
+  result.importWarnings.push({
+    code: 'DXF_INSERT_EXPLODED',
+    message: `INSERT ${blockName} 블록을 ${result.entities.length}개 편집 객체로 펼쳤습니다.`,
+    severity: 'info',
+    category: 'conversion',
+    sourceType: 'INSERT',
+    details: {
+      blockName,
+      entityCount: result.entities.length,
+      nestedDepth,
+      attributeCount,
+      unsupportedChildCount: result.unsupportedEntities.length - unsupportedBefore,
+    },
+  });
+
+  return result;
+}
+
+function ellipseToPolyline(pairs: DxfPair[]) {
+  return sampleEllipsePoints(ellipseFromDxf(pairs));
+}
+
+function ellipseFromDxf(pairs: DxfPair[]) {
+  return {
+    cx: numberFor(pairs, '10'),
+    cy: -numberFor(pairs, '20'),
+    majorAxis: { x: numberFor(pairs, '11'), y: -numberFor(pairs, '21') },
+    ratio: Number(valueFor(pairs, '40') ?? 1) || 1,
+    startParam: Number(valueFor(pairs, '41') ?? 0),
+    endParam: Number(valueFor(pairs, '42') ?? Math.PI * 2),
+  };
 }
 
 function splineSamplePoints(pairs: DxfPair[]) {
-  const nurbsPoints = splineNurbsPoints(pairs);
-  if (nurbsPoints.length >= 2) return nurbsPoints;
+  return sampleSplinePoints(splineFromDxf(pairs));
+}
 
-  const fitPoints = splineFitPoints(pairs);
+function splineFromDxf(pairs: DxfPair[]) {
   const controlPoints = splineControlPoints(pairs);
-  const sourcePoints = fitPoints.length >= 2 ? fitPoints : controlPoints;
-
-  if (sourcePoints.length < 3) return sourcePoints;
-  return catmullRomPoints(sourcePoints, 32);
-}
-
-function splineNurbsPoints(pairs: DxfPair[]) {
-  const controlPoints = splineControlPoints(pairs);
-  const degree = Number(valueFor(pairs, '71') ?? Math.min(3, controlPoints.length - 1));
-  const knots = valuesFor(pairs, '40').map(Number).filter(Number.isFinite);
-  const weights = valuesFor(pairs, '41').map(Number).filter(Number.isFinite);
-  const pointCount = controlPoints.length;
-
-  if (
-    pointCount < 2 ||
-    degree < 1 ||
-    knots.length < pointCount + degree + 1 ||
-    !Number.isFinite(knots[degree]) ||
-    !Number.isFinite(knots[pointCount])
-  ) {
-    return [];
-  }
-
-  const start = knots[degree];
-  const end = knots[pointCount];
-  if (start === end) return [];
-
-  const samples = Math.max(96, Math.min(480, pointCount * 48));
-  const result: CadPoint[] = [];
-
-  for (let sample = 0; sample <= samples; sample += 1) {
-    const u = start + ((end - start) * sample) / samples;
-    const point = evaluateRationalBSpline(controlPoints, knots, weights, degree, u, sample === samples);
-    if (point) result.push(point);
-  }
-
-  return dedupePoints(result);
-}
-
-function evaluateRationalBSpline(
-  controlPoints: CadPoint[],
-  knots: number[],
-  weights: number[],
-  degree: number,
-  u: number,
-  isLastSample: boolean,
-): CadPoint | null {
-  let weightedX = 0;
-  let weightedY = 0;
-  let denominator = 0;
-  const lastControlIndex = controlPoints.length - 1;
-
-  for (let index = 0; index < controlPoints.length; index += 1) {
-    const basis =
-      isLastSample && index === lastControlIndex ? 1 : bsplineBasis(index, degree, u, knots);
-    if (basis === 0) continue;
-
-    const weight = weights[index] ?? 1;
-    const weightedBasis = basis * weight;
-    weightedX += controlPoints[index].x * weightedBasis;
-    weightedY += controlPoints[index].y * weightedBasis;
-    denominator += weightedBasis;
-  }
-
-  if (!denominator) return null;
-  return { x: weightedX / denominator, y: weightedY / denominator };
-}
-
-function bsplineBasis(index: number, degree: number, u: number, knots: number[]): number {
-  if (degree === 0) {
-    return knots[index] <= u && u < knots[index + 1] ? 1 : 0;
-  }
-
-  const leftDenominator = knots[index + degree] - knots[index];
-  const rightDenominator = knots[index + degree + 1] - knots[index + 1];
-  const left =
-    leftDenominator === 0
-      ? 0
-      : ((u - knots[index]) / leftDenominator) * bsplineBasis(index, degree - 1, u, knots);
-  const right =
-    rightDenominator === 0
-      ? 0
-      : ((knots[index + degree + 1] - u) / rightDenominator) *
-        bsplineBasis(index + 1, degree - 1, u, knots);
-
-  return left + right;
-}
-
-function dedupePoints(points: CadPoint[]): CadPoint[] {
-  return points.filter((point, index) => {
-    const previous = points[index - 1];
-    return !previous || Math.hypot(point.x - previous.x, point.y - previous.y) > 0.001;
-  });
+  return {
+    degree: Number(valueFor(pairs, '71') ?? Math.min(3, splineControlPoints(pairs).length - 1)),
+    controlPoints,
+    fitPoints: splineFitPoints(pairs),
+    knots: valuesFor(pairs, '40').map(Number).filter(Number.isFinite),
+    weights: valuesFor(pairs, '41').map(Number).filter(Number.isFinite),
+    closed: (Number(valueFor(pairs, '70') ?? 0) & 1) === 1,
+  };
 }
 
 function splineControlPoints(pairs: DxfPair[]) {
@@ -741,41 +945,6 @@ function splineFitPoints(pairs: DxfPair[]) {
   const xs = valuesFor(pairs, '11').map(Number);
   const ys = valuesFor(pairs, '21').map((value) => -Number(value));
   return xs.map((x, index) => ({ x, y: ys[index] ?? 0 }));
-}
-
-function catmullRomPoints(points: CadPoint[], segmentsPerSpan: number): CadPoint[] {
-  const result: CadPoint[] = [points[0]];
-
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const p0 = points[Math.max(0, index - 1)];
-    const p1 = points[index];
-    const p2 = points[index + 1];
-    const p3 = points[Math.min(points.length - 1, index + 2)];
-    const spanLength = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const segments = Math.max(8, Math.min(32, Math.ceil(spanLength / 8), segmentsPerSpan));
-
-    for (let step = 1; step <= segments; step += 1) {
-      const t = step / segments;
-      result.push({
-        x: catmullRomValue(p0.x, p1.x, p2.x, p3.x, t),
-        y: catmullRomValue(p0.y, p1.y, p2.y, p3.y, t),
-      });
-    }
-  }
-
-  return result;
-}
-
-function catmullRomValue(p0: number, p1: number, p2: number, p3: number, t: number): number {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return (
-    0.5 *
-    (2 * p1 +
-      (-p0 + p2) * t +
-      (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-      (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
-  );
 }
 
 function insertTransform(pairs: DxfPair[], basePoint: CadPoint): InsertTransform {
@@ -824,6 +993,35 @@ function transformEntity(entity: CadEntity, transform?: InsertTransform): CadEnt
     return {
       ...entity,
       points: entity.points.map((point) => transformPoint(point, transform)),
+    };
+  }
+
+  if (entity.type === 'ellipse') {
+    const center = transformPoint({ x: entity.cx, y: entity.cy }, transform);
+    const majorEnd = transformPoint(
+      { x: entity.cx + entity.majorAxis.x, y: entity.cy + entity.majorAxis.y },
+      transform,
+    );
+    return {
+      ...entity,
+      cx: center.x,
+      cy: center.y,
+      majorAxis: { x: majorEnd.x - center.x, y: majorEnd.y - center.y },
+    };
+  }
+
+  if (entity.type === 'spline') {
+    return {
+      ...entity,
+      controlPoints: entity.controlPoints.map((point) => transformPoint(point, transform)),
+      fitPoints: entity.fitPoints?.map((point) => transformPoint(point, transform)),
+    };
+  }
+
+  if (entity.type === 'hatch') {
+    return {
+      ...entity,
+      boundary: entity.boundary.map((path) => path.map((point) => transformPoint(point, transform))),
     };
   }
 

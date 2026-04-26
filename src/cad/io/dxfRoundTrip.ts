@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, CadLayer, CadWarning } from '../types';
+import { sampleEllipsePoints, sampleSplinePoints } from '../curveGeometry';
 import { flattenEntities } from '../entityTransform';
 import { ExportService } from './exportService';
 import { ImportService } from './importService';
@@ -12,7 +13,14 @@ export type DxfRoundTripSummary = {
   dimensionLabels: string[];
   warningCodes: Record<string, number>;
   warningCategories: Record<string, number>;
+  warningDetailKeys: Record<string, number>;
   unsupportedEntityTypes: Record<string, number>;
+  metadata: {
+    insUnits?: string;
+    measurement?: string;
+    modelSpace?: number;
+    paperSpace?: number;
+  };
 };
 
 export type DxfRoundTripResult = {
@@ -31,6 +39,9 @@ const ENTITY_TYPES: FlatEntityType[] = [
   'circle',
   'arc',
   'polyline',
+  'ellipse',
+  'spline',
+  'hatch',
   'text',
   'dimension',
 ];
@@ -87,9 +98,18 @@ export function summarizeCadDocument(document: CadDocument): DxfRoundTripSummary
     warningCategories: countValues(
       (document.importWarnings ?? []).map((warning) => warning.category ?? inferWarningCategory(warning)),
     ),
+    warningDetailKeys: countValues(
+      (document.importWarnings ?? []).flatMap((warning) => Object.keys(warning.details ?? {})),
+    ),
     unsupportedEntityTypes: countValues(
       (document.unsupportedEntities ?? []).map((entity) => entity.sourceType),
     ),
+    metadata: {
+      insUnits: document.metadata?.insUnits,
+      measurement: document.metadata?.measurement === 'unknown' ? undefined : document.metadata?.measurement,
+      modelSpace: document.metadata?.dxfVersion || document.metadata?.insUnits ? document.metadata?.spaces?.model : undefined,
+      paperSpace: document.metadata?.dxfVersion || document.metadata?.insUnits ? document.metadata?.spaces?.paper : undefined,
+    },
   };
 }
 
@@ -105,6 +125,7 @@ export function compareRoundTripSummaries(
   compareJson('text', before.textContents, after.textContents, drift);
   compareJson('dimensions', before.dimensionLabels, after.dimensionLabels, drift);
   compareJson('unsupported-entities', before.unsupportedEntityTypes, after.unsupportedEntityTypes, drift);
+  compareJson('metadata', before.metadata, after.metadata, drift);
   return drift;
 }
 
@@ -144,6 +165,9 @@ function entityPoints(entity: CadEntity): Array<{ x: number; y: number }> {
   if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
   if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
   if (entity.type === 'polyline') return entity.points;
+  if (entity.type === 'ellipse') return sampleEllipsePoints(entity);
+  if (entity.type === 'spline') return sampleSplinePoints(entity);
+  if (entity.type === 'hatch') return entity.boundary.flat();
   if (entity.type === 'text') return [{ x: entity.x, y: entity.y }];
   if (entity.type === 'dimension') return [entity.startPoint, entity.endPoint];
   return [];

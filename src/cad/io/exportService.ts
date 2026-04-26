@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity } from '../types';
+import { sampleEllipsePoints, sampleSplinePoints } from '../curveGeometry';
 import { flattenEntities } from '../entityTransform';
 import { hexToDxfAci } from './dxfColor';
 import { strokeStyleToDxfLineType, strokeWidthToDxfLineWeight } from './dxfStyle';
@@ -40,6 +41,7 @@ export class ExportService {
       'SECTION',
       '2',
       'HEADER',
+      ...headerToDxf(document),
       '0',
       'ENDSEC',
       ...tablesToDxf(document),
@@ -87,6 +89,26 @@ function entityToSvg(entity: CadEntity): string {
   if (entity.type === 'polyline') {
     const points = entity.points.map((point) => `${point.x},${point.y}`).join(' ');
     return `<polyline points="${points}" ${common}/>`;
+  }
+
+  if (entity.type === 'ellipse') {
+    const points = sampleEllipsePoints(entity).map((point) => `${point.x},${point.y}`).join(' ');
+    return `<polyline points="${points}" ${common}/>`;
+  }
+
+  if (entity.type === 'spline') {
+    const points = sampleSplinePoints(entity).map((point) => `${point.x},${point.y}`).join(' ');
+    return `<polyline points="${points}" ${common}/>`;
+  }
+
+  if (entity.type === 'hatch') {
+    const paths = entity.boundary
+      .map((boundary) => {
+        const points = boundary.map((point) => `${point.x},${point.y}`).join(' ');
+        return `<polygon points="${points}" ${common}/>`;
+      })
+      .join('\n  ');
+    return paths;
   }
 
   if (entity.type === 'text') {
@@ -213,6 +235,91 @@ function entityToDxf(entity: CadEntity): string[] {
     ];
   }
 
+  if (entity.type === 'ellipse') {
+    return [
+      '0',
+      'ELLIPSE',
+      ...header,
+      '10',
+      `${entity.cx}`,
+      '20',
+      `${-entity.cy}`,
+      '11',
+      `${entity.majorAxis.x}`,
+      '21',
+      `${-entity.majorAxis.y}`,
+      '40',
+      `${entity.ratio}`,
+      '41',
+      `${entity.startParam}`,
+      '42',
+      `${entity.endParam}`,
+    ];
+  }
+
+  if (entity.type === 'spline') {
+    const degree = Math.max(1, Math.floor(entity.degree || Math.min(3, entity.controlPoints.length - 1)));
+    return [
+      '0',
+      'SPLINE',
+      ...header,
+      '70',
+      entity.closed ? '1' : '0',
+      '71',
+      `${degree}`,
+      '72',
+      `${entity.knots?.length ?? 0}`,
+      '73',
+      `${entity.controlPoints.length}`,
+      '74',
+      `${entity.fitPoints?.length ?? 0}`,
+      ...(entity.knots ?? []).flatMap((knot) => ['40', `${knot}`]),
+      ...(entity.weights ?? []).flatMap((weight) => ['41', `${weight}`]),
+      ...entity.controlPoints.flatMap((point) => ['10', `${point.x}`, '20', `${-point.y}`]),
+      ...(entity.fitPoints ?? []).flatMap((point) => ['11', `${point.x}`, '21', `${-point.y}`]),
+    ];
+  }
+
+  if (entity.type === 'hatch') {
+    const boundary = entity.boundary[0] ?? [];
+    return [
+      '0',
+      'HATCH',
+      ...header,
+      '10',
+      '0',
+      '20',
+      '0',
+      '30',
+      '0',
+      '2',
+      entity.patternName ?? 'SOLID',
+      '70',
+      entity.fillKind === 'solid' ? '1' : '0',
+      '71',
+      '0',
+      '91',
+      '1',
+      '92',
+      '2',
+      '72',
+      '0',
+      '73',
+      '1',
+      '93',
+      `${boundary.length}`,
+      ...boundary.flatMap((point) => ['10', `${point.x}`, '20', `${-point.y}`]),
+      '97',
+      '0',
+      '75',
+      '0',
+      '76',
+      '1',
+      '98',
+      '0',
+    ];
+  }
+
   if (entity.type === 'text') {
     if (getTextLines(entity.content).length > 1) {
       return [
@@ -282,6 +389,36 @@ function tablesToDxf(document: CadDocument): string[] {
     '0',
     'ENDSEC',
   ];
+}
+
+function headerToDxf(document: CadDocument): string[] {
+  const lines: string[] = [];
+  if (document.metadata?.dxfVersion) {
+    lines.push('9', '$ACADVER', '1', document.metadata.dxfVersion);
+  }
+  if (document.metadata?.insUnits) {
+    lines.push('9', '$INSUNITS', '70', document.metadata.insUnits);
+  }
+  if (document.metadata?.measurement === 'metric' || document.metadata?.measurement === 'imperial') {
+    lines.push('9', '$MEASUREMENT', '70', document.metadata.measurement === 'imperial' ? '0' : '1');
+  }
+  if (document.metadata?.extents) {
+    lines.push(
+      '9',
+      '$EXTMIN',
+      '10',
+      `${document.metadata.extents.min.x}`,
+      '20',
+      `${-document.metadata.extents.min.y}`,
+      '9',
+      '$EXTMAX',
+      '10',
+      `${document.metadata.extents.max.x}`,
+      '20',
+      `${-document.metadata.extents.max.y}`,
+    );
+  }
+  return lines;
 }
 
 function lineTypesToDxf(): string[] {
@@ -417,6 +554,9 @@ function getDocumentBounds(document: CadDocument) {
     if (entity.type === 'circle') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'arc') return [{ x: entity.cx - entity.radius, y: entity.cy - entity.radius }, { x: entity.cx + entity.radius, y: entity.cy + entity.radius }];
     if (entity.type === 'polyline') return entity.points;
+    if (entity.type === 'ellipse') return sampleEllipsePoints(entity);
+    if (entity.type === 'spline') return sampleSplinePoints(entity);
+    if (entity.type === 'hatch') return entity.boundary.flat();
     if (entity.type === 'text') {
       const lines = getTextLines(entity.content);
       const maxLineLength = Math.max(...lines.map((line) => line.length), 1);

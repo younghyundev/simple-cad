@@ -15,10 +15,10 @@
 
 ### Advanced CAD Preservation
 
-- [ ] **CAD-01**: SPLINE과 ELLIPSE는 가능한 경우 editable native entity로 보존되고, 불가능한 경우 근사 warning이 유지된다.
-- [ ] **CAD-02**: HATCH, LEADER/MLEADER, ATTRIB/ATTDEF 같은 추가 2D DXF 엔티티는 보존, 근사, 미지원 중 하나로 명확히 처리된다.
-- [ ] **CAD-03**: BLOCK/INSERT는 속성, 중첩, 변환 정보를 더 많이 보존하고 export 시 사용자가 예측 가능한 결과를 얻을 수 있다.
-- [ ] **CAD-04**: 단위, 도면 범위, model/paper space 같은 문서 메타데이터는 import/export 과정에서 추적된다.
+- [x] **CAD-01**: SPLINE과 ELLIPSE는 가능한 경우 editable native entity로 보존되고, 불가능한 경우 근사 warning이 유지된다.
+- [x] **CAD-02**: HATCH, LEADER/MLEADER, ATTRIB/ATTDEF 같은 추가 2D DXF 엔티티는 보존, 근사, 미지원 중 하나로 명확히 처리된다.
+- [x] **CAD-03**: BLOCK/INSERT는 속성, 중첩, 변환 정보를 더 많이 보존하고 export 시 사용자가 예측 가능한 결과를 얻을 수 있다.
+- [x] **CAD-04**: 단위, 도면 범위, model/paper space 같은 문서 메타데이터는 import/export 과정에서 추적된다.
 
 ### CI Quality Gates
 
@@ -62,10 +62,10 @@
 | DWG-02 | Phase 12 | Complete |
 | DWG-03 | Phase 12 | Complete |
 | DWG-04 | Phase 12 | Complete |
-| CAD-01 | Phase 13 | Pending |
-| CAD-02 | Phase 13 | Pending |
-| CAD-03 | Phase 13 | Pending |
-| CAD-04 | Phase 13 | Pending |
+| CAD-01 | Phase 13 | Complete |
+| CAD-02 | Phase 13 | Complete |
+| CAD-03 | Phase 13 | Complete |
+| CAD-04 | Phase 13 | Complete |
 | CI-01 | Phase 14 | Pending |
 | CI-02 | Phase 14 | Pending |
 | CI-03 | Phase 14 | Pending |
@@ -81,4 +81,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after Phase 12 execution*
+*Last updated: 2026-04-26 after Phase 13 execution*

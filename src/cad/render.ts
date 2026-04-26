@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, Viewport } from './types';
+import { sampleEllipsePoints, sampleSplinePoints } from './curveGeometry';
 import { getResizeHandles } from './entityGeometry';
 import { getDimensionGeometry, getEntityBounds } from './entityTransform';
 import { worldToScreen } from './viewport';
@@ -143,13 +144,28 @@ function drawEntity(
   }
 
   if (entity.type === 'polyline') {
-    context.beginPath();
-    entity.points.forEach((point, index) => {
-      const screenPoint = worldToScreen(point, viewport);
-      if (index === 0) context.moveTo(screenPoint.x, screenPoint.y);
-      else context.lineTo(screenPoint.x, screenPoint.y);
-    });
+    drawPolylinePath(context, entity.points, viewport);
     context.stroke();
+  }
+
+  if (entity.type === 'ellipse') {
+    drawPolylinePath(context, sampleEllipsePoints(entity), viewport);
+    if (entity.fillColor !== 'transparent') context.fill();
+    context.stroke();
+  }
+
+  if (entity.type === 'spline') {
+    drawPolylinePath(context, sampleSplinePoints(entity), viewport);
+    context.stroke();
+  }
+
+  if (entity.type === 'hatch') {
+    for (const boundary of entity.boundary) {
+      drawPolylinePath(context, boundary, viewport);
+      context.closePath();
+      if (entity.fillColor !== 'transparent') context.fill();
+      context.stroke();
+    }
   }
 
   if (entity.type === 'text') {
@@ -179,6 +195,19 @@ function drawEntity(
 
   if (selected) drawSelection(context, entity, viewport);
   context.restore();
+}
+
+function drawPolylinePath(
+  context: CanvasRenderingContext2D,
+  points: { x: number; y: number }[],
+  viewport: Viewport,
+): void {
+  context.beginPath();
+  points.forEach((point, index) => {
+    const screenPoint = worldToScreen(point, viewport);
+    if (index === 0) context.moveTo(screenPoint.x, screenPoint.y);
+    else context.lineTo(screenPoint.x, screenPoint.y);
+  });
 }
 
 function drawDimension(

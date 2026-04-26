@@ -19,8 +19,24 @@ async function main(): Promise<void> {
 
   const roundTrip = await runDxfRoundTrip(splineDxfFixture());
   assert(
-    (roundTrip.firstImport.importWarnings ?? []).some((warning) => warning.category === 'approximated'),
-    'SPLINE fixture should produce an approximated warning.',
+    (roundTrip.firstImport.importWarnings ?? []).some((warning) => warning.code === 'DXF_SPLINE_PRESERVED'),
+    'SPLINE fixture should produce a preserved warning.',
+  );
+
+  const malformedAdvancedDocument = await importer.fromDxf(malformedAdvancedDxfFixture());
+  assert(
+    (malformedAdvancedDocument.importWarnings ?? []).some((warning) => warning.code === 'DXF_HATCH_UNSUPPORTED'),
+    'Malformed HATCH should produce DXF_HATCH_UNSUPPORTED.',
+  );
+  assert(
+    (malformedAdvancedDocument.unsupportedEntities ?? []).some((entity) =>
+      entity.reason.includes('INSERT nesting depth exceeded 8'),
+    ),
+    'Nested INSERT depth overflow should be reported.',
+  );
+  assert(
+    (malformedAdvancedDocument.unsupportedEntities ?? []).some((entity) => entity.sourceType === 'SPLINE'),
+    'Malformed SPLINE should be reported as unsupported.',
   );
 
   const restoreFetch = installMockFetch();
@@ -71,7 +87,7 @@ async function main(): Promise<void> {
 
   console.log('Conversion regression check passed');
   console.log(`unsupported warnings: ${unsupportedWarnings.length}`);
-  console.log(`approximated warnings: ${roundTrip.firstImport.importWarnings?.length ?? 0}`);
+  console.log(`preserved spline warnings: ${roundTrip.firstImport.importWarnings?.length ?? 0}`);
   console.log('mock DWG import/export mode: passed');
   console.log('async job import/export: passed');
 }
@@ -280,6 +296,84 @@ function splineDxfFixture(): string {
     '30',
     '10',
     '120',
+    '20',
+    '0',
+    '0',
+    'ENDSEC',
+    '0',
+    'EOF',
+  ].join('\n');
+}
+
+function malformedAdvancedDxfFixture(): string {
+  const blockDefinitions = Array.from({ length: 10 }, (_, index) => {
+    const next = index === 9 ? 'B9' : `B${index + 1}`;
+    return [
+      '0',
+      'BLOCK',
+      '2',
+      `B${index}`,
+      '10',
+      '0',
+      '20',
+      '0',
+      '0',
+      'INSERT',
+      '2',
+      next,
+      '10',
+      '0',
+      '20',
+      '0',
+      '0',
+      'ENDBLK',
+    ].join('\n');
+  }).join('\n');
+
+  return [
+    '0',
+    'SECTION',
+    '2',
+    'BLOCKS',
+    blockDefinitions,
+    '0',
+    'ENDSEC',
+    '0',
+    'SECTION',
+    '2',
+    'ENTITIES',
+    '0',
+    'HATCH',
+    '8',
+    '0',
+    '2',
+    'SOLID',
+    '70',
+    '1',
+    '91',
+    '1',
+    '92',
+    '2',
+    '93',
+    '0',
+    '0',
+    'SPLINE',
+    '8',
+    '0',
+    '71',
+    '3',
+    '10',
+    '1',
+    '20',
+    '1',
+    '0',
+    'INSERT',
+    '8',
+    '0',
+    '2',
+    'B0',
+    '10',
+    '0',
     '20',
     '0',
     '0',

@@ -64,6 +64,35 @@ export type PolylineEntity = CadEntityBase & {
   points: CadPoint[];
 };
 
+export type EllipseEntity = CadEntityBase & {
+  type: 'ellipse';
+  cx: number;
+  cy: number;
+  majorAxis: CadPoint;
+  ratio: number;
+  startParam: number;
+  endParam: number;
+};
+
+export type SplineEntity = CadEntityBase & {
+  type: 'spline';
+  degree: number;
+  controlPoints: CadPoint[];
+  fitPoints?: CadPoint[];
+  knots?: number[];
+  weights?: number[];
+  closed?: boolean;
+};
+
+export type HatchEntity = CadEntityBase & {
+  type: 'hatch';
+  boundary: CadPoint[][];
+  fillKind: 'solid' | 'pattern' | 'gradient' | 'unsupported';
+  patternName?: string;
+  patternScale?: number;
+  patternAngle?: number;
+};
+
 export type TextEntity = CadEntityBase & {
   type: 'text';
   x: number;
@@ -93,6 +122,9 @@ export type CadEntity =
   | CircleEntity
   | ArcEntity
   | PolylineEntity
+  | EllipseEntity
+  | SplineEntity
+  | HatchEntity
   | TextEntity
   | DimensionEntity
   | GroupEntity;
@@ -113,6 +145,24 @@ export type CadWarning = {
   details?: Record<string, string | number | boolean | null>;
 };
 
+export type CadDocumentExtents = {
+  min: CadPoint;
+  max: CadPoint;
+};
+
+export type CadDrawingSpaceSummary = {
+  model: number;
+  paper: number;
+};
+
+export type CadDocumentMetadata = {
+  dxfVersion?: string;
+  insUnits?: string;
+  measurement?: 'metric' | 'imperial' | 'unknown';
+  extents?: CadDocumentExtents;
+  spaces?: CadDrawingSpaceSummary;
+};
+
 export type CadDocument = {
   id: string;
   name: string;
@@ -125,6 +175,7 @@ export type CadDocument = {
   };
   conversionMode?: CadConversionMode;
   units: 'mm' | 'cm' | 'm' | 'inch';
+  metadata?: CadDocumentMetadata;
   layers: CadLayer[];
   entities: CadEntity[];
   unsupportedEntities?: UnsupportedCadEntity[];

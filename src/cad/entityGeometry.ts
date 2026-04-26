@@ -1,4 +1,5 @@
 import type { CadEntity, CadEntityBase, CadPoint, ToolId } from './types';
+import { sampleEllipsePoints, sampleSplinePoints } from './curveGeometry';
 import { getDimensionGeometry, translateEntity } from './entityTransform';
 
 export { translateEntity } from './entityTransform';
@@ -155,6 +156,18 @@ export function getResizeHandles(entity: CadEntity): ResizeHandle[] {
     }));
   }
 
+  if (entity.type === 'ellipse') {
+    return [{ id: 'start', point: { x: entity.cx, y: entity.cy }, cursor: 'move' }];
+  }
+
+  if (entity.type === 'spline') {
+    return entity.controlPoints.map((point, index) => ({
+      id: `point-${index}` as const,
+      point,
+      cursor: 'move',
+    }));
+  }
+
   if (entity.type === 'dimension') {
     return [
       { id: 'start', point: entity.startPoint, cursor: 'nwse-resize' },
@@ -233,6 +246,16 @@ export function resizeEntity(
     return {
       ...entity,
       points: entity.points.map((currentPoint, pointIndex) =>
+        pointIndex === index ? point : currentPoint,
+      ),
+    };
+  }
+
+  if (entity.type === 'spline' && handleId.startsWith('point-')) {
+    const index = Number(handleId.replace('point-', ''));
+    return {
+      ...entity,
+      controlPoints: entity.controlPoints.map((currentPoint, pointIndex) =>
         pointIndex === index ? point : currentPoint,
       ),
     };
@@ -348,6 +371,18 @@ export function hitTestEntity(entity: CadEntity, point: CadPoint, scale: number)
     });
   }
 
+  if (entity.type === 'ellipse') {
+    return hitTestPointPath(point, sampleEllipsePoints(entity), tolerance, entity.fillColor !== 'transparent');
+  }
+
+  if (entity.type === 'spline') {
+    return hitTestPointPath(point, sampleSplinePoints(entity), tolerance, false);
+  }
+
+  if (entity.type === 'hatch') {
+    return entity.boundary.some((path) => hitTestPointPath(point, path, tolerance, entity.fillColor !== 'transparent'));
+  }
+
   if (entity.type === 'text') {
     const lines = getTextLines(entity.content);
     const maxLineLength = Math.max(...lines.map((line) => line.length), 1);
@@ -380,6 +415,9 @@ export function isMeaningfulEntity(entity: CadEntity): boolean {
   if (entity.type === 'rect') return entity.width > 2 && entity.height > 2;
   if (entity.type === 'circle') return entity.radius > 2;
   if (entity.type === 'arc') return entity.radius > 2;
+  if (entity.type === 'ellipse') return Math.hypot(entity.majorAxis.x, entity.majorAxis.y) > 2;
+  if (entity.type === 'spline') return sampleSplinePoints(entity).length > 1;
+  if (entity.type === 'hatch') return entity.boundary.some((path) => path.length > 2);
   if (entity.type === 'group') return entity.children.some(isMeaningfulEntity);
   return true;
 }
@@ -408,4 +446,31 @@ function pointToSegmentDistance(point: CadPoint, start: CadPoint, end: CadPoint)
     Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared),
   );
   return distance(point, { x: start.x + t * dx, y: start.y + t * dy });
+}
+
+function hitTestPointPath(point: CadPoint, points: CadPoint[], tolerance: number, allowFill: boolean): boolean {
+  if (
+    points.some((segmentStart, index) => {
+      const segmentEnd = points[index + 1];
+      return segmentEnd ? pointToSegmentDistance(point, segmentStart, segmentEnd) <= tolerance : false;
+    })
+  ) {
+    return true;
+  }
+
+  return allowFill && pointInPolygon(point, points);
+}
+
+function pointInPolygon(point: CadPoint, polygon: CadPoint[]): boolean {
+  if (polygon.length < 3) return false;
+  let inside = false;
+  for (let index = 0, previousIndex = polygon.length - 1; index < polygon.length; previousIndex = index++) {
+    const current = polygon[index];
+    const previous = polygon[previousIndex];
+    const intersects =
+      current.y > point.y !== previous.y > point.y &&
+      point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x;
+    if (intersects) inside = !inside;
+  }
+  return inside;
 }

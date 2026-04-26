@@ -1,4 +1,5 @@
 import type { CadDocument, CadEntity, CadPoint } from './types';
+import { sampleEllipsePoints, sampleSplinePoints } from './curveGeometry';
 import { getEntityBounds, getDimensionGeometry } from './entityTransform';
 
 export type SnapResult = {
@@ -117,6 +118,39 @@ function entitySnapCandidates(entity: CadEntity): SnapCandidate[] {
       .map((point) => ({ point, type: 'endpoint' }));
   }
 
+  if (entity.type === 'ellipse') {
+    const points = sampleEllipsePoints(entity);
+    return [
+      { point: { x: entity.cx, y: entity.cy }, type: 'center' },
+      ...(points.length
+        ? [
+            { point: points[0], type: 'endpoint' as const },
+            { point: points[points.length - 1], type: 'endpoint' as const },
+          ]
+        : []),
+    ];
+  }
+
+  if (entity.type === 'spline') {
+    const sampled = sampleSplinePoints(entity);
+    const endpoints = sampled.length
+      ? [
+          { point: sampled[0], type: 'endpoint' as const },
+          { point: sampled[sampled.length - 1], type: 'endpoint' as const },
+        ]
+      : [];
+    return [
+      ...endpoints,
+      ...entity.controlPoints.slice(0, maxPolylineSnapPoints).map((point) => ({ point, type: 'endpoint' as const })),
+    ];
+  }
+
+  if (entity.type === 'hatch') {
+    return entity.boundary.flatMap((path) =>
+      path.slice(0, maxPolylineSnapPoints).map((point) => ({ point, type: 'endpoint' as const })),
+    );
+  }
+
   if (entity.type === 'text') {
     return [{ point: { x: entity.x, y: entity.y }, type: 'endpoint' }];
   }
@@ -194,6 +228,18 @@ function entitySegments(entity: CadEntity): Segment[] {
     return segments;
   }
 
+  if (entity.type === 'ellipse') {
+    return pointsToSegments(entity.id, sampleEllipsePoints(entity));
+  }
+
+  if (entity.type === 'spline') {
+    return pointsToSegments(entity.id, sampleSplinePoints(entity));
+  }
+
+  if (entity.type === 'hatch') {
+    return entity.boundary.flatMap((path) => pointsToSegments(entity.id, path));
+  }
+
   if (entity.type === 'dimension') {
     const geometry = getDimensionGeometry(entity);
     return [
@@ -204,6 +250,14 @@ function entitySegments(entity: CadEntity): Segment[] {
   }
 
   return [];
+}
+
+function pointsToSegments(entityId: string, points: CadPoint[]): Segment[] {
+  const segments: Segment[] = [];
+  for (let index = 0; index < points.length - 1; index += 1) {
+    segments.push({ entityId, start: points[index], end: points[index + 1] });
+  }
+  return segments;
 }
 
 function segmentIntersection(
