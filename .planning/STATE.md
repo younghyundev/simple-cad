@@ -58,6 +58,7 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 - Phase 7 planned: 3 execution plans created for clipboard core, context menu/keyboard shortcuts, and reference-point paste workflow.
 - Phase 7 executed: CAD clipboard helpers, context menu, keyboard copy/paste, and reference-point copy/paste workflow are implemented.
 - Phase 7 reference copy corrected: reference copy now treats another object's center/endpoint/intersection as the anchor by excluding copied entities from source anchor snapping.
+- Phase 7 code review completed: fixed reference hover snap mismatch so visible snap markers and stored anchor points use the same external-anchor exclusion rules.
 
 ## Decisions
 

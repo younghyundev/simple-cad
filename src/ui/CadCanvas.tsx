@@ -383,7 +383,11 @@ export function CadCanvas({
         onPointerMove={(event) => {
           const localPoint = getLocalPoint(event);
           const rawWorldPoint = screenToWorld(localPoint, viewport);
-          const snap = resolveWorldPoint(rawWorldPoint, selectedEntityId);
+          const snap = resolveWorldPoint(
+            rawWorldPoint,
+            selectedEntityId,
+            referencePickMode ? referenceSnapExcludeEntityIds : [],
+          );
           const worldPoint = snap.point;
           setSnapMarker(snap.type === 'none' ? null : snap);
           onCursorChange(worldPoint);

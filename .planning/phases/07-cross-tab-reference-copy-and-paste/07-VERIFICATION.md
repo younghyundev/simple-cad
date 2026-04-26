@@ -24,6 +24,7 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 | Context menu implementation | PASS | `src/ui/App.tsx` renders `.cad-context-menu`; `src/styles.css` defines menu styles |
 | Canvas context menu event | PASS | `src/ui/CadCanvas.tsx` exposes `onCanvasContextMenu` |
 | Reference point pick path | PASS | `src/ui/CadCanvas.tsx` exposes `referencePickMode` and `onReferencePointPick` |
+| Reference hover/click snap consistency | PASS | Pointer move and pointer down both apply `referenceSnapExcludeEntityIds` while reference pick mode is active |
 
 ## Must-Haves
 
