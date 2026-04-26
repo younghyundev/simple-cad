@@ -70,6 +70,7 @@ const tools: Array<{ id: ToolId; label: string; icon: ComponentType<{ size?: num
 const fileManager = new FileManager();
 const collaborationRepository = new LocalCollaborationRepository();
 const maxAutosaveEntities = 4000;
+const maxShareUrlLength = 100000;
 const recentStorageKey = 'simplecad.recentDocuments';
 
 type WorkspaceTab = {
@@ -100,6 +101,13 @@ type RecentDocument = {
   title: string;
   document: CadDocument;
   lastOpenedAt: string;
+};
+
+type SharedDocumentPayload = {
+  version: 1;
+  title: string;
+  document: CadDocument;
+  comments?: ReviewComment[];
 };
 
 type ContextMenuState = {
@@ -180,7 +188,8 @@ export function App() {
   const [referencePreviewPoint, setReferencePreviewPoint] = useState<CadPoint | null>(null);
   const [rotationDegrees, setRotationDegrees] = useState('15');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const loadedShareTokenRef = useRef<string | null>(null);
+  const loadedShareRef = useRef<string | null>(null);
+  const reviewCommentsRef = useRef<ReviewComment[]>([]);
   const selectedEntities = useMemo(
     () => document.entities.filter((entity) => selectedEntityIds.includes(entity.id)),
     [document.entities, selectedEntityIds],
@@ -210,6 +219,10 @@ export function App() {
   const serverStatus = formatServerState(collaborationState, saveState.revision);
   const activeReadonly = collaborationState.readonly;
   const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
+
+  useEffect(() => {
+    reviewCommentsRef.current = reviewComments;
+  }, [reviewComments]);
 
   const markDirty = useCallback(() => {
     setSaveState((current) => ({
@@ -482,6 +495,11 @@ export function App() {
     loadSnapshot(history);
     setSaveState(nextSaveState);
     setCollaborationState(nextCollaborationState);
+    if (nextCollaborationState.serverDocumentId) {
+      setReviewComments(collaborationRepository.listComments(nextCollaborationState.serverDocumentId));
+    } else if (!nextCollaborationState.readonly) {
+      setReviewComments([]);
+    }
     setViewport(tab.viewport);
     setSelectedEntityIds([]);
     persistRecentDocument(title, nextDocument);
@@ -612,35 +630,32 @@ export function App() {
     saveState.targetName,
   ]);
 
-  const saveToServer = useCallback(() => {
-    saveDocumentToServer();
-  }, [saveDocumentToServer]);
-
   const createShareLink = useCallback(async () => {
     if (!activeTabId || collaborationState.readonly) return;
-    const needsServerSave =
-      !collaborationState.serverDocumentId ||
-      collaborationState.serverSavedRevision !== saveState.revision;
-    const savedRecord =
-      !needsServerSave && collaborationState.serverDocumentId
-        ? collaborationRepository.openDocument(collaborationState.serverDocumentId)
-        : saveDocumentToServer();
-    const record = savedRecord ?? saveDocumentToServer();
-    if (!record) {
-      setFileMessage('공유할 서버 도면을 저장할 수 없습니다.');
+    const latestComments = collaborationState.serverDocumentId
+      ? collaborationRepository.listComments(collaborationState.serverDocumentId)
+      : reviewCommentsRef.current;
+    const payload: SharedDocumentPayload = {
+      version: 1,
+      title: document.name || saveState.targetName || 'Untitled',
+      document: stripRuntimeFileState(document),
+      comments: latestComments,
+    };
+    const encoded = encodeSharedDocumentPayload(payload);
+    const shareUrl = new URL(window.location.href);
+    shareUrl.search = '';
+    shareUrl.hash = `share=${encoded}`;
+    if (shareUrl.toString().length > maxShareUrlLength) {
+      setFileMessage('도면이 커서 링크 공유를 만들 수 없습니다. JSON 저장을 사용하세요.');
       return;
     }
 
-    const shareLink = collaborationRepository.createShareLink(record.id);
-    const shareUrl = new URL(window.location.href);
-    shareUrl.searchParams.set('share', shareLink.token);
     setCollaborationState((current) => ({
       ...current,
-      serverDocumentId: record.id,
-      shareToken: shareLink.token,
+      shareToken: encoded,
       readonly: false,
     }));
-    setServerDocuments(collaborationRepository.listDocuments());
+    window.history.replaceState(null, '', shareUrl);
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(shareUrl.toString()).catch(() => undefined);
     }
@@ -649,9 +664,8 @@ export function App() {
     activeTabId,
     collaborationState.readonly,
     collaborationState.serverDocumentId,
-    collaborationState.serverSavedRevision,
-    saveDocumentToServer,
-    saveState.revision,
+    document,
+    saveState.targetName,
   ]);
 
   const openServerDocument = useCallback((record: ServerDocumentRecord) => {
@@ -682,11 +696,42 @@ export function App() {
   }, [createTab]);
 
   useEffect(() => {
-    const shareToken = new URLSearchParams(window.location.search).get('share');
-    if (!shareToken || loadedShareTokenRef.current === shareToken) return;
-    loadedShareTokenRef.current = shareToken;
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const embeddedShare = hashParams.get('share');
+    if (embeddedShare) {
+      if (loadedShareRef.current === embeddedShare) return;
+      loadedShareRef.current = embeddedShare;
+      const payload = decodeSharedDocumentPayload(embeddedShare);
+      if (!payload) {
+        setFileMessage('공유 링크 도면을 열 수 없습니다.');
+        return;
+      }
 
-    const sharedRecord = collaborationRepository.resolveShareLink(shareToken);
+      createTab(
+        payload.title,
+        {
+          ...payload.document,
+          id: `shared-${Date.now()}`,
+          name: payload.document.name || payload.title,
+        },
+        createSaveState(payload.document, payload.title),
+        createCollaborationState({
+          shareToken: embeddedShare,
+          serverSavedRevision: 0,
+          readonly: true,
+        }),
+      );
+      setReviewComments(payload.comments ?? []);
+      setActiveTool('select');
+      setFileMessage('읽기 전용 공유 문서를 열었습니다.');
+      return;
+    }
+
+    const legacyShareToken = new URLSearchParams(window.location.search).get('share');
+    if (!legacyShareToken || loadedShareRef.current === legacyShareToken) return;
+    loadedShareRef.current = legacyShareToken;
+
+    const sharedRecord = collaborationRepository.resolveShareLink(legacyShareToken);
     if (!sharedRecord) {
       setFileMessage('공유 링크 도면을 찾을 수 없습니다.');
       return;
@@ -702,7 +747,7 @@ export function App() {
       createSaveState(sharedRecord.document, sharedRecord.title),
       createCollaborationState({
         serverDocumentId: sharedRecord.id,
-        shareToken,
+        shareToken: legacyShareToken,
         lastServerSavedAt: sharedRecord.updatedAt,
         serverSavedRevision: 0,
         readonly: true,
@@ -722,6 +767,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!collaborationState.serverDocumentId) return;
     refreshReviewComments(collaborationState.serverDocumentId);
   }, [collaborationState.serverDocumentId, refreshReviewComments]);
 
@@ -1257,16 +1303,6 @@ export function App() {
           >
             <Save size={17} />
             저장
-          </button>
-          <button
-            className="tool-button wide"
-            title="서버 저장"
-            data-testid="server-save-button"
-            disabled={!activeTabId || activeReadonly}
-            onClick={saveToServer}
-          >
-            <Save size={17} />
-            서버 저장
           </button>
           <button
             className="tool-button wide"
@@ -2133,6 +2169,36 @@ function stripRuntimeFileState(document: CadDocument): CadDocument {
       fileHandleAvailable: false,
     },
   };
+}
+
+function encodeSharedDocumentPayload(payload: SharedDocumentPayload): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 0x8000) {
+    binary += String.fromCharCode(...bytes.slice(index, index + 0x8000));
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeSharedDocumentPayload(value: string): SharedDocumentPayload | null {
+  try {
+    const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(
+      Math.ceil(value.length / 4) * 4,
+      '=',
+    );
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Partial<SharedDocumentPayload>;
+    if (parsed.version !== 1 || !parsed.document || !parsed.title) return null;
+    return {
+      version: 1,
+      title: parsed.title,
+      document: parsed.document,
+      comments: Array.isArray(parsed.comments) ? parsed.comments : [],
+    };
+  } catch {
+    return null;
+  }
 }
 
 function isDocumentSourceType(type: CadFileType): boolean {
