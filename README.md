@@ -151,7 +151,8 @@ SimpleCAD 내부 도면 모델을 그대로 저장하고 다시 불러오는 기
 - ATTRIB / ATTDEF 텍스트의 편집 가능한 텍스트 fallback과 key/value warning detail
 - BLOCK / INSERT의 폭발 처리와 블록명, 중첩 깊이, scale/rotation, 속성 개수 warning detail
 - 레이어 이름/색상/표시/잠금, 선 스타일, 선 두께 일부 보존
-- 단위, 도면 범위, model/paper space 일부 메타데이터 추적
+- 단위, 도면 범위, model/paper space, layout, viewport 메타데이터 추적
+- IMAGE, XREF, PDF/DGN/DWF UNDERLAY 같은 외부 참조의 분류 warning
 
 ### DWG
 

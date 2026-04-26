@@ -44,11 +44,13 @@
 3. BLOCK/INSERT/ATTRIB의 중첩, scale, rotation, key/value 정보가 일관되게 보존/분류된다.
 4. fallback 결과가 사용자에게 과도한 중복 객체로 보이지 않는다.
 
-### Phase 22 — Layout and External Reference Classification
+### Phase 22 — Layout and External Reference Classification ✅
 
 **Goal:** model/paper space, layout, viewport, image/xref/underlay 같은 비편집 CAD 정보를 명확히 분류한다.
 
 **Requirements:** COMPAT-07, COMPAT-08
+
+**Status:** Complete — see [Phase 22 summary](phases/22-layout-and-external-reference-classification/22-SUMMARY.md).
 
 **Success criteria:**
 

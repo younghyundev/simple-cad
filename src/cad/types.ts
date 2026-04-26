@@ -158,12 +158,35 @@ export type CadDrawingSpaceSummary = {
   paper: number;
 };
 
+export type CadLayoutSummary = {
+  name: string;
+  paperSpace: boolean;
+  entityCount: number;
+  tabOrder?: number;
+};
+
+export type CadViewportSummary = {
+  count: number;
+  model: number;
+  paper: number;
+};
+
+export type CadExternalReferenceSummary = {
+  count: number;
+  image: number;
+  xref: number;
+  underlay: number;
+};
+
 export type CadDocumentMetadata = {
   dxfVersion?: string;
   insUnits?: string;
   measurement?: 'metric' | 'imperial' | 'unknown';
   extents?: CadDocumentExtents;
   spaces?: CadDrawingSpaceSummary;
+  layouts?: CadLayoutSummary[];
+  viewports?: CadViewportSummary;
+  externalReferences?: CadExternalReferenceSummary;
 };
 
 export type CadDocument = {

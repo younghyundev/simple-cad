@@ -55,6 +55,34 @@ async function main(): Promise<void> {
     'INSERT warning should include transform details.',
   );
 
+  const layoutReferenceDocument = await importer.fromDxf(layoutReferenceDxfFixture());
+  assert(layoutReferenceDocument.metadata?.spaces?.paper === 3, 'Paper space entity count should be classified.');
+  assert(!!layoutReferenceDocument.metadata?.layouts?.some((layout) => layout.name === 'Sheet A'), 'Layout names should be preserved in metadata.');
+  assert(layoutReferenceDocument.metadata?.viewports?.count === 1, 'VIEWPORT count should be classified in metadata.');
+  assert(layoutReferenceDocument.metadata?.externalReferences?.count === 3, 'External reference count should be classified in metadata.');
+  assert(
+    (layoutReferenceDocument.importWarnings ?? []).some((warning) => warning.code === 'DXF_VIEWPORT_CLASSIFIED'),
+    'VIEWPORT should produce a classified warning.',
+  );
+  assert(
+    (layoutReferenceDocument.importWarnings ?? []).some((warning) => warning.code === 'DXF_IMAGE_REFERENCE_CLASSIFIED'),
+    'IMAGE should produce an external reference warning.',
+  );
+  assert(
+    (layoutReferenceDocument.importWarnings ?? []).some((warning) => warning.code === 'DXF_UNDERLAY_CLASSIFIED'),
+    'UNDERLAY should produce an external reference warning.',
+  );
+  assert(
+    (layoutReferenceDocument.importWarnings ?? []).some((warning) => warning.code === 'DXF_XREF_CLASSIFIED'),
+    'XREF INSERT should produce an external reference warning.',
+  );
+  assert(
+    !(layoutReferenceDocument.unsupportedEntities ?? []).some((entity) =>
+      ['VIEWPORT', 'IMAGE', 'PDFUNDERLAY'].includes(entity.sourceType),
+    ),
+    'Classified non-editable references should not be reported as unsupported.',
+  );
+
   const roundTrip = await runDxfRoundTrip(splineDxfFixture());
   assert(
     (roundTrip.firstImport.importWarnings ?? []).some((warning) => warning.code === 'DXF_SPLINE_PRESERVED'),
@@ -128,6 +156,69 @@ async function main(): Promise<void> {
   console.log(`preserved spline warnings: ${roundTrip.firstImport.importWarnings?.length ?? 0}`);
   console.log('mock DWG import/export mode: passed');
   console.log('async job import/export: passed');
+}
+
+function layoutReferenceDxfFixture(): string {
+  return [
+    '0', 'SECTION',
+    '2', 'BLOCKS',
+    '0', 'BLOCK',
+    '2', 'xref-detail.dxf',
+    '70', '4',
+    '1', 'refs/xref-detail.dxf',
+    '10', '0',
+    '20', '0',
+    '0', 'ENDBLK',
+    '0', 'ENDSEC',
+    '0', 'SECTION',
+    '2', 'ENTITIES',
+    '0', 'LINE',
+    '8', '0',
+    '410', 'Model',
+    '10', '0',
+    '20', '0',
+    '11', '10',
+    '21', '0',
+    '0', 'VIEWPORT',
+    '8', '0',
+    '67', '1',
+    '410', 'Sheet A',
+    '10', '50',
+    '20', '50',
+    '40', '100',
+    '0', 'IMAGE',
+    '8', '0',
+    '67', '1',
+    '410', 'Sheet A',
+    '10', '10',
+    '20', '10',
+    '11', '50',
+    '22', '25',
+    '340', 'ABC',
+    '0', 'PDFUNDERLAY',
+    '8', '0',
+    '67', '1',
+    '410', 'Sheet A',
+    '10', '0',
+    '20', '0',
+    '340', 'DEF',
+    '0', 'INSERT',
+    '8', '0',
+    '2', 'xref-detail.dxf',
+    '10', '100',
+    '20', '100',
+    '0', 'ENDSEC',
+    '0', 'SECTION',
+    '2', 'OBJECTS',
+    '0', 'LAYOUT',
+    '1', 'Model',
+    '71', '0',
+    '0', 'LAYOUT',
+    '1', 'Sheet A',
+    '71', '1',
+    '0', 'ENDSEC',
+    '0', 'EOF',
+  ].join('\n');
 }
 
 function annotationBlockDxfFixture(): string {

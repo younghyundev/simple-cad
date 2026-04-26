@@ -31,11 +31,13 @@ export class ImportService {
     const metadata = parseHeaderMetadata(pairs);
     const layerDefinitions = parseLayerDefinitions(pairs);
     const blockDefinitions = collectBlockDefinitions(pairs);
+    const layoutDefinitions = collectLayoutDefinitions(pairs);
     const entityChunks = collectEntityChunks(pairs);
+    const classifiedInfo = classifyDxfInfo(entityChunks, blockDefinitions);
     const entities: CadEntity[] = [];
     const layerNames = new Set<string>(['0', ...layerDefinitions.keys()]);
     const unsupportedEntities = [];
-    const importWarnings: CadWarning[] = [];
+    const importWarnings: CadWarning[] = [...classifiedInfo.importWarnings];
 
     for (const { entityType, chunk } of entityChunks) {
       if (entityType === 'INSERT') {
@@ -70,6 +72,9 @@ export class ImportService {
       metadata: {
         ...metadata,
         spaces: countDrawingSpaces(entityChunks),
+        layouts: summarizeLayouts(entityChunks, layoutDefinitions),
+        viewports: summarizeViewports(entityChunks),
+        externalReferences: summarizeExternalReferences(entityChunks, blockDefinitions),
       },
       layers,
       entities,
@@ -112,11 +117,22 @@ type DxfBlockDefinition = {
   name: string;
   basePoint: CadPoint;
   entities: DxfEntityChunk[];
+  isExternalReference?: boolean;
+  externalReferencePath?: string;
 };
 
 type DxfHeaderVariable = {
   name: string;
   values: DxfPair[];
+};
+
+type DxfLayoutDefinition = {
+  name: string;
+  tabOrder?: number;
+};
+
+type ClassifiedDxfInfo = {
+  importWarnings: CadWarning[];
 };
 
 type InsertTransform = {
@@ -236,6 +252,147 @@ function countDrawingSpaces(chunks: DxfEntityChunk[]): { model: number; paper: n
   );
 }
 
+function summarizeLayouts(
+  chunks: DxfEntityChunk[],
+  layoutDefinitions: DxfLayoutDefinition[],
+): NonNullable<CadDocumentMetadata['layouts']> {
+  const entityCounts = chunks.reduce<Record<string, number>>((counts, chunk) => {
+    const layoutName = valueFor(chunk.chunk, '410') ?? (valueFor(chunk.chunk, '67') === '1' ? 'Layout1' : 'Model');
+    counts[layoutName] = (counts[layoutName] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  const definitionsByName = new Map(layoutDefinitions.map((layout) => [layout.name, layout]));
+  const names = new Set<string>(['Model', ...layoutDefinitions.map((layout) => layout.name), ...Object.keys(entityCounts)]);
+
+  return [...names]
+    .map((name) => ({
+      name,
+      paperSpace: name.toLowerCase() !== 'model',
+      entityCount: entityCounts[name] ?? 0,
+      tabOrder: definitionsByName.get(name)?.tabOrder,
+    }))
+    .sort((a, b) => (a.tabOrder ?? Number.MAX_SAFE_INTEGER) - (b.tabOrder ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name));
+}
+
+function summarizeViewports(chunks: DxfEntityChunk[]): NonNullable<CadDocumentMetadata['viewports']> {
+  const viewportChunks = chunks.filter((chunk) => chunk.entityType === 'VIEWPORT');
+  return {
+    count: viewportChunks.length,
+    model: viewportChunks.filter((chunk) => valueFor(chunk.chunk, '67') !== '1').length,
+    paper: viewportChunks.filter((chunk) => valueFor(chunk.chunk, '67') === '1').length,
+  };
+}
+
+function summarizeExternalReferences(
+  chunks: DxfEntityChunk[],
+  blockDefinitions: Map<string, DxfBlockDefinition>,
+): NonNullable<CadDocumentMetadata['externalReferences']> {
+  const image = chunks.filter((chunk) => isImageReferenceType(chunk.entityType)).length;
+  const underlay = chunks.filter((chunk) => isUnderlayReferenceType(chunk.entityType)).length;
+  const insertedXrefs = chunks.filter(
+    (chunk) => chunk.entityType === 'INSERT' && blockDefinitions.get(valueFor(chunk.chunk, '2') ?? '')?.isExternalReference,
+  ).length;
+  const uninsertedXrefs = [...blockDefinitions.values()].filter((block) => block.isExternalReference).length - insertedXrefs;
+  const xref = Math.max(insertedXrefs, 0) + Math.max(uninsertedXrefs, 0);
+
+  return {
+    count: image + xref + underlay,
+    image,
+    xref,
+    underlay,
+  };
+}
+
+function collectLayoutDefinitions(pairs: DxfPair[]): DxfLayoutDefinition[] {
+  const layouts: DxfLayoutDefinition[] = [];
+  for (let index = 0; index < pairs.length; index += 1) {
+    if (pairs[index].code !== '0' || pairs[index].value !== 'LAYOUT') continue;
+    const chunk = readChunk(pairs, index + 1);
+    const name = valueFor(chunk, '1');
+    if (!name) continue;
+    const tabOrder = Number(valueFor(chunk, '71'));
+    layouts.push({
+      name,
+      tabOrder: Number.isFinite(tabOrder) ? tabOrder : undefined,
+    });
+  }
+  return layouts;
+}
+
+function classifyDxfInfo(
+  chunks: DxfEntityChunk[],
+  blockDefinitions: Map<string, DxfBlockDefinition>,
+): ClassifiedDxfInfo {
+  const importWarnings: CadWarning[] = [];
+  const layouts = countBy(chunks, (chunk) => valueFor(chunk.chunk, '410') ?? (valueFor(chunk.chunk, '67') === '1' ? 'Layout1' : 'Model'));
+  const paperCount = chunks.filter((chunk) => valueFor(chunk.chunk, '67') === '1').length;
+
+  if (Object.keys(layouts).length > 1 || paperCount > 0) {
+    importWarnings.push({
+      code: 'DXF_LAYOUTS_CLASSIFIED',
+      message: 'DXF model/paper space와 layout 정보를 편집 객체와 분리해 메타데이터로 분류했습니다.',
+      severity: 'info',
+      category: 'preserved',
+      sourceType: 'LAYOUT',
+      details: {
+        modelEntityCount: layouts.Model ?? 0,
+        paperEntityCount: paperCount,
+        layoutCount: Object.keys(layouts).length,
+      },
+    });
+  }
+
+  for (const chunk of chunks.filter((item) => item.entityType === 'VIEWPORT')) {
+    importWarnings.push({
+      code: 'DXF_VIEWPORT_CLASSIFIED',
+      message: 'VIEWPORT 정보를 편집 객체로 만들지 않고 layout metadata로 분류했습니다.',
+      severity: 'info',
+      category: 'preserved',
+      sourceType: 'VIEWPORT',
+      details: {
+        layoutName: valueFor(chunk.chunk, '410') ?? null,
+        paperSpace: valueFor(chunk.chunk, '67') === '1',
+        centerX: numberFor(chunk.chunk, '10'),
+        centerY: -numberFor(chunk.chunk, '20'),
+        height: numberFor(chunk.chunk, '40'),
+      },
+    });
+  }
+
+  for (const chunk of chunks.filter((item) => isExternalReferenceType(item.entityType))) {
+    importWarnings.push(externalReferenceWarning(chunk.entityType, chunk.chunk));
+  }
+
+  for (const chunk of chunks.filter((item) => item.entityType === 'INSERT')) {
+    const block = blockDefinitions.get(valueFor(chunk.chunk, '2') ?? '');
+    if (!block?.isExternalReference) continue;
+    importWarnings.push({
+      code: 'DXF_XREF_CLASSIFIED',
+      message: 'XREF 블록 참조를 외부 참조 metadata/warning으로 분류했습니다.',
+      severity: 'warning',
+      category: 'preserved',
+      sourceType: 'XREF',
+      details: {
+        blockName: block.name,
+        path: block.externalReferencePath ?? null,
+        insertionX: numberFor(chunk.chunk, '10'),
+        insertionY: -numberFor(chunk.chunk, '20'),
+      },
+    });
+  }
+
+  return { importWarnings };
+}
+
+function countBy<T>(items: T[], keyFor: (item: T) => string): Record<string, number> {
+  return items.reduce<Record<string, number>>((counts, item) => {
+    const key = keyFor(item);
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
 function collectEntityChunks(pairs: DxfPair[]): DxfEntityChunk[] {
   const chunks: DxfEntityChunk[] = [];
   let currentSection: string | null = null;
@@ -301,6 +458,8 @@ function collectBlockDefinitions(pairs: DxfPair[]): Map<string, DxfBlockDefiniti
         name,
         basePoint: { x: numberFor(chunk, '10'), y: -numberFor(chunk, '20') },
         entities: [],
+        isExternalReference: isExternalReferenceBlock(chunk),
+        externalReferencePath: valueFor(chunk, '1') ?? valueFor(chunk, '3'),
       };
       blocks.set(name, currentBlock);
       continue;
@@ -320,6 +479,42 @@ function collectBlockDefinitions(pairs: DxfPair[]): Map<string, DxfBlockDefiniti
   }
 
   return blocks;
+}
+
+function isExternalReferenceBlock(chunk: DxfPair[]): boolean {
+  const flags = Number(valueFor(chunk, '70') ?? 0);
+  return Number.isFinite(flags) && (flags & 4 || flags & 8 || flags & 16 || flags & 32) !== 0;
+}
+
+function isImageReferenceType(entityType: string): boolean {
+  return entityType === 'IMAGE';
+}
+
+function isUnderlayReferenceType(entityType: string): boolean {
+  return entityType === 'PDFUNDERLAY' || entityType === 'DGNUNDERLAY' || entityType === 'DWFUNDERLAY';
+}
+
+function isExternalReferenceType(entityType: string): boolean {
+  return isImageReferenceType(entityType) || isUnderlayReferenceType(entityType);
+}
+
+function externalReferenceWarning(entityType: string, chunk: DxfPair[]): CadWarning {
+  const isUnderlay = isUnderlayReferenceType(entityType);
+  return {
+    code: isUnderlay ? 'DXF_UNDERLAY_CLASSIFIED' : 'DXF_IMAGE_REFERENCE_CLASSIFIED',
+    message: `${entityType} 외부 참조를 편집 객체로 만들지 않고 metadata/warning으로 분류했습니다.`,
+    severity: 'warning',
+    category: 'preserved',
+    sourceType: entityType,
+    details: {
+      layoutName: valueFor(chunk, '410') ?? null,
+      referenceHandle: valueFor(chunk, '340') ?? valueFor(chunk, '360') ?? null,
+      insertionX: numberFor(chunk, '10'),
+      insertionY: -numberFor(chunk, '20'),
+      width: numberFor(chunk, '11'),
+      height: Math.abs(numberFor(chunk, '22')),
+    },
+  };
 }
 
 function parseLayerDefinitions(
@@ -565,6 +760,10 @@ function importDxfEntity(
     importWarnings: [],
     unsupportedEntities: [],
   };
+
+  if (entityType === 'VIEWPORT' || isExternalReferenceType(entityType)) {
+    return result;
+  }
 
   if (entityType === 'LINE') {
     result.entities.push(
@@ -950,6 +1149,10 @@ function importInsertEntity(
       sourceType: 'INSERT',
       reason: blockName ? `Missing BLOCK definition: ${blockName}` : 'INSERT has no block name.',
     });
+    return result;
+  }
+
+  if (block.isExternalReference) {
     return result;
   }
 

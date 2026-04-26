@@ -18,8 +18,8 @@
 
 ## Layout and External Reference Classification
 
-- [ ] **COMPAT-07**: model space, paper space, layout, viewport 관련 메타데이터를 import metadata와 warning summary에서 구분한다.
-- [ ] **COMPAT-08**: IMAGE, XREF, UNDERLAY처럼 브라우저 편집 대상이 아닌 외부 참조는 손실 없이 분류 warning으로 표시한다.
+- [x] **COMPAT-07**: model space, paper space, layout, viewport 관련 메타데이터를 import metadata와 warning summary에서 구분한다.
+- [x] **COMPAT-08**: IMAGE, XREF, UNDERLAY처럼 브라우저 편집 대상이 아닌 외부 참조는 손실 없이 분류 warning으로 표시한다.
 
 ## Regression and Documentation
 
@@ -49,7 +49,7 @@
 | COMPAT-04 | Phase 21 | Complete |
 | COMPAT-05 | Phase 21 | Complete |
 | COMPAT-06 | Phase 21 | Complete |
-| COMPAT-07 | Phase 22 | Planned |
-| COMPAT-08 | Phase 22 | Planned |
+| COMPAT-07 | Phase 22 | Complete |
+| COMPAT-08 | Phase 22 | Complete |
 | COMPAT-09 | Phase 23 | Planned |
 | COMPAT-10 | Phase 23 | Planned |
