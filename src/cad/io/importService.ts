@@ -47,6 +47,13 @@ export class ImportService {
           importWarnings.push({
             code: 'DXF_INSERT_EXPLODED',
             message: `INSERT ${blockName} 블록을 ${insertedEntities.length}개 편집 객체로 펼쳤습니다.`,
+            severity: 'info',
+            category: 'conversion',
+            sourceType: 'INSERT',
+            details: {
+              blockName,
+              entityCount: insertedEntities.length,
+            },
           });
         } else {
           unsupportedEntities.push({
@@ -84,7 +91,12 @@ export class ImportService {
           ? [
               {
                 code: 'UNSUPPORTED_DXF_ENTITIES',
-                message: `${unsupportedEntities.length} unsupported DXF entities were skipped.`,
+                message: `지원하지 않는 DXF 객체 ${unsupportedEntities.length}개를 건너뛰었습니다.`,
+                severity: 'warning' as const,
+                category: 'unsupported' as const,
+                details: {
+                  count: unsupportedEntities.length,
+                },
               },
             ]
           : []),
@@ -501,6 +513,9 @@ function importDxfEntity(
         code: 'DXF_POLYLINE_BULGE_APPROXIMATED',
         message: 'LWPOLYLINE bulge 곡선을 편집 가능한 폴리라인으로 근사했습니다.',
         entityId: entity.id,
+        severity: 'warning',
+        category: 'approximated',
+        sourceType: 'LWPOLYLINE',
       });
     }
   } else if (entityType === 'ELLIPSE') {
@@ -517,6 +532,9 @@ function importDxfEntity(
       code: 'DXF_ELLIPSE_APPROXIMATED',
       message: 'ELLIPSE 엔티티를 편집 가능한 폴리라인으로 근사했습니다.',
       entityId: entity.id,
+      severity: 'warning',
+      category: 'approximated',
+      sourceType: 'ELLIPSE',
     });
   } else if (entityType === 'SPLINE') {
     const points = splineSamplePoints(chunk);
@@ -534,6 +552,9 @@ function importDxfEntity(
         code: 'DXF_SPLINE_APPROXIMATED',
         message: 'SPLINE 엔티티를 보간 샘플링한 폴리라인으로 근사했습니다.',
         entityId: entity.id,
+        severity: 'warning',
+        category: 'approximated',
+        sourceType: 'SPLINE',
       });
     } else {
       result.unsupportedEntities.push({
@@ -562,6 +583,9 @@ function importDxfEntity(
       code: 'DXF_DIMENSION_IMPORTED',
       message: 'DIMENSION 엔티티를 편집 가능한 SimpleCAD 치수 객체로 가져왔습니다.',
       entityId: entity.id,
+      severity: 'info',
+      category: 'conversion',
+      sourceType: 'DIMENSION',
     });
   } else {
     result.unsupportedEntities.push({

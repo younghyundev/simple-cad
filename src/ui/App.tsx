@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { createClipboardPayload, pasteClipboardPayload } from '../cad/clipboard';
 import type { CadClipboardPayload } from '../cad/clipboard';
+import { summarizeConversionWarnings } from '../cad/io/conversionWarnings';
 import { FileManager } from '../cad/io/fileManager';
 import { sampleDocument } from '../cad/sampleDocument';
 import type { CadDocument, CadEntity, CadFileType, CadLayer, CadPoint, ToolId, Viewport } from '../cad/types';
@@ -134,16 +135,7 @@ export function App() {
         : null,
     [document.entities, selectedEntityIds],
   );
-  const groupedImportWarnings = useMemo(() => {
-    const groups = new Map<string, { code: string; message: string; count: number }>();
-    for (const warning of document.importWarnings ?? []) {
-      const key = `${warning.code}:${warning.message}`;
-      const current = groups.get(key);
-      if (current) current.count += 1;
-      else groups.set(key, { code: warning.code, message: warning.message, count: 1 });
-    }
-    return [...groups.values()];
-  }, [document.importWarnings]);
+  const conversionWarnings = useMemo(() => summarizeConversionWarnings(document), [document]);
   const referencePreviewEntities = useMemo(() => {
     if (referenceMode !== 'paste-base' || !cadClipboard?.sourceBasePoint || !referencePreviewPoint) {
       return [];
@@ -1049,25 +1041,44 @@ export function App() {
           <div className="panel-section">
             <h2>변환 상태</h2>
             <div className="warning-list">
-              {groupedImportWarnings.length ? (
-                groupedImportWarnings.map((warning, index) => (
-                  <div className="warning-item" key={`${warning.code}-${index}`}>
+              <div className="conversion-summary">
+                <span>전체 {conversionWarnings.total}</span>
+                <span>근사 {conversionWarnings.approximated}</span>
+                <span>미지원 {conversionWarnings.unsupported}</span>
+                <span>변환 {conversionWarnings.conversion}</span>
+                {conversionWarnings.mock ? <span>mock {conversionWarnings.mock}</span> : null}
+              </div>
+              {conversionWarnings.modeLabel ? (
+                <div className={`conversion-mode conversion-mode-${conversionWarnings.mode}`}>
+                  {conversionWarnings.modeLabel}
+                </div>
+              ) : null}
+              {conversionWarnings.groups.length ? (
+                conversionWarnings.groups.map((warning, index) => (
+                  <div
+                    className={`warning-item warning-item-${warning.category}`}
+                    key={`${warning.code}-${index}`}
+                  >
                     <strong>{warning.code}</strong>
                     <span>
                       {warning.message}
                       {warning.count > 1 ? ` (${warning.count}개)` : ''}
                     </span>
+                    <small>
+                      {warning.sourceType ? `${warning.sourceType} · ` : ''}
+                      {warning.category === 'approximated'
+                        ? '근사됨'
+                        : warning.category === 'unsupported'
+                          ? '미지원 객체'
+                          : warning.category === 'mock'
+                            ? '개발용 mock 변환'
+                            : '변환'}
+                    </small>
                   </div>
                 ))
               ) : (
                 <p className="empty-state">변환 경고가 없습니다.</p>
               )}
-              {document.unsupportedEntities?.length ? (
-                <div className="warning-item">
-                  <strong>미지원 객체</strong>
-                  <span>{document.unsupportedEntities.length}개 객체가 변환되지 않았습니다.</span>
-                </div>
-              ) : null}
             </div>
           </div>
         </aside>

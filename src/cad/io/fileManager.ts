@@ -28,8 +28,18 @@ export class FileManager {
           ...result.warnings.map((message) => ({
             code: 'CONVERSION_API_WARNING',
             message,
+            severity: 'warning' as const,
+            category: result.mode === 'mock' ? ('mock' as const) : ('conversion' as const),
+            sourceType: 'DWG',
           })),
         ],
+        conversionMode: result.mode,
+        sourceFile: {
+          ...result.document.sourceFile,
+          name: result.document.sourceFile?.name ?? file.name,
+          type: 'dwg',
+          conversionMode: result.mode,
+        },
       };
     }
 

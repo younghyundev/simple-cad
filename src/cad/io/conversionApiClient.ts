@@ -1,15 +1,17 @@
-import type { CadDocument, CadFileType } from '../types';
+import type { CadConversionMode, CadDocument, CadFileType } from '../types';
 
 export type ConversionResult = {
   blob?: Blob;
   document?: CadDocument;
   warnings: string[];
+  mode: CadConversionMode;
 };
 
 export type CadValidationResult = {
   supported: boolean;
   entityTypes: string[];
   warnings: string[];
+  mode?: CadConversionMode;
 };
 
 export class ConversionApiClient {
@@ -31,6 +33,7 @@ export class ConversionApiClient {
     const payload = (await response.json()) as {
       document?: CadDocument;
       warnings?: string[];
+      mode?: CadConversionMode;
     };
 
     if (!payload.document) {
@@ -38,8 +41,9 @@ export class ConversionApiClient {
     }
 
     return {
-      document: payload.document,
+      document: annotateDocumentMode(payload.document, payload.mode ?? 'server'),
       warnings: payload.warnings ?? [],
+      mode: payload.mode ?? 'server',
     };
   }
 
@@ -67,6 +71,7 @@ export class ConversionApiClient {
       const payload = (await response.json()) as {
         downloadUrl?: string;
         warnings?: string[];
+        mode?: CadConversionMode;
       };
 
       if (payload.downloadUrl) {
@@ -74,6 +79,7 @@ export class ConversionApiClient {
         return {
           blob: await fileResponse.blob(),
           warnings: payload.warnings ?? [],
+          mode: payload.mode ?? 'server',
         };
       }
 
@@ -83,6 +89,7 @@ export class ConversionApiClient {
     return {
       blob: await response.blob(),
       warnings: [],
+      mode: response.headers.get('X-CAD-Conversion-Mode') === 'mock' ? 'mock' : 'server',
     };
   }
 
@@ -110,4 +117,31 @@ export class ConversionApiClient {
       return `${fallback} (${response.status})`;
     }
   }
+}
+
+function annotateDocumentMode(document: CadDocument, mode: CadConversionMode): CadDocument {
+  return {
+    ...document,
+    conversionMode: mode,
+    sourceFile: document.sourceFile
+      ? {
+          ...document.sourceFile,
+          conversionMode: mode,
+        }
+      : document.sourceFile,
+    importWarnings: (document.importWarnings ?? []).map((warning) =>
+      warning.code.includes('MOCK')
+        ? {
+            ...warning,
+            severity: warning.severity ?? 'info',
+            category: warning.category ?? 'mock',
+            sourceType: warning.sourceType ?? 'DWG',
+          }
+        : {
+            ...warning,
+            severity: warning.severity ?? 'warning',
+            category: warning.category ?? 'conversion',
+          },
+    ),
+  };
 }

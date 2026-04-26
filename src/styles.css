@@ -567,6 +567,36 @@ button {
   gap: 8px;
 }
 
+.conversion-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.conversion-summary span,
+.conversion-mode {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.conversion-mode {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #115e59;
+}
+
+.conversion-mode-mock {
+  border-color: #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .warning-item {
   display: grid;
   gap: 3px;
@@ -580,6 +610,38 @@ button {
 
 .warning-item strong {
   color: #9a3412;
+}
+
+.warning-item small {
+  color: #92400e;
+  font-size: 11px;
+}
+
+.warning-item-unsupported {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+.warning-item-unsupported strong,
+.warning-item-unsupported small {
+  color: #991b1b;
+}
+
+.warning-item-mock {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.warning-item-conversion {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #075985;
+}
+
+.warning-item-conversion strong,
+.warning-item-conversion small {
+  color: #0369a1;
 }
 
 .statusbar {

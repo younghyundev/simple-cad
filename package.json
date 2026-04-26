@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:cad-fidelity": "vite build --ssr src/cad/io/roundTripCheck.ts --outDir .cad-fidelity --emptyOutDir && node .cad-fidelity/roundTripCheck.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",

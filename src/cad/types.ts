@@ -1,5 +1,7 @@
 export type CadFileType = 'json' | 'dxf' | 'dwg' | 'svg';
 
+export type CadConversionMode = 'client' | 'server' | 'mock';
+
 export type CadPoint = {
   x: number;
   y: number;
@@ -98,6 +100,10 @@ export type CadWarning = {
   code: string;
   message: string;
   entityId?: string;
+  severity?: 'info' | 'warning' | 'error';
+  category?: 'preserved' | 'approximated' | 'unsupported' | 'conversion' | 'mock';
+  sourceType?: string;
+  details?: Record<string, string | number | boolean | null>;
 };
 
 export type CadDocument = {
@@ -108,7 +114,9 @@ export type CadDocument = {
     type: CadFileType;
     lastSavedAt?: string;
     fileHandleAvailable?: boolean;
+    conversionMode?: CadConversionMode;
   };
+  conversionMode?: CadConversionMode;
   units: 'mm' | 'cm' | 'm' | 'inch';
   layers: CadLayer[];
   entities: CadEntity[];

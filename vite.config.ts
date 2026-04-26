@@ -19,6 +19,7 @@ export default defineConfig({
             JSON.stringify({
               supported: true,
               entityTypes: ['LINE', 'CIRCLE', 'TEXT', 'LWPOLYLINE'],
+              mode: 'mock',
               warnings: ['개발용 mock 검증 응답입니다. 실제 DWG 호환성은 서버 변환 엔진에서 확인해야 합니다.'],
             }),
           );
@@ -36,6 +37,7 @@ export default defineConfig({
           res.end(
             JSON.stringify({
               document: mockConvertedDocument(),
+              mode: 'mock',
               warnings: ['개발용 mock DWG import입니다. 업로드 파일 내용은 아직 실제 변환하지 않습니다.'],
             }),
           );
@@ -54,6 +56,7 @@ export default defineConfig({
 
           res.setHeader('Content-Type', 'application/octet-stream');
           res.setHeader('Content-Disposition', `attachment; filename="mock-export.${targetFormat}"`);
+          res.setHeader('X-CAD-Conversion-Mode', 'mock');
           res.end(`Mock ${String(targetFormat).toUpperCase()} export\n\nThis file is produced by the Vite development mock API.\nConnect a real CAD conversion engine for production DWG output.\n`);
         });
       },
@@ -70,7 +73,9 @@ function mockConvertedDocument() {
       type: 'dwg',
       lastSavedAt: new Date().toISOString(),
       fileHandleAvailable: false,
+      conversionMode: 'mock',
     },
+    conversionMode: 'mock',
     units: 'mm',
     layers: [
       {
@@ -147,6 +152,9 @@ function mockConvertedDocument() {
       {
         code: 'MOCK_CONVERSION',
         message: '개발용 mock 변환 결과입니다. 실제 DWG 파일 내용은 아직 반영하지 않습니다.',
+        severity: 'info',
+        category: 'mock',
+        sourceType: 'DWG',
       },
     ],
   };

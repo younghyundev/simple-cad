@@ -45,6 +45,16 @@ npm run build
 
 현재 Vite 버전은 Node.js `20.19+` 또는 `22.12+`를 권장합니다. Node `20.18.1`에서도 빌드는 통과하지만 경고가 표시될 수 있습니다.
 
+## 파일 Fidelity 검증
+
+DXF 입출력 회귀 확인은 다음 명령으로 실행합니다.
+
+```bash
+npm run test:cad-fidelity
+```
+
+이 검증은 `src/cad/io/fixtures/fidelity-basic.dxf`를 가져온 뒤 DXF로 다시 내보내고 재가져와서 객체 수, 레이어, 경계, 선 스타일, 텍스트, 치수, 경고 요약의 드리프트를 확인합니다.
+
 ## 파일 지원 범위
 
 ### JSON
@@ -74,6 +84,8 @@ SimpleCAD 내부 도면 모델을 그대로 저장하고 다시 불러오는 기
 ### DWG
 
 DWG는 브라우저에서 직접 안정적으로 파싱하기 어려운 포맷이므로 서버 변환 API를 전제로 합니다. 프로젝트에는 `/api/cad/import`, `/api/cad/export`, `/api/cad/validate` 형태의 변환 클라이언트와 개발용 mock API 구조가 포함되어 있습니다.
+
+개발 서버의 DWG 응답은 `mock` 모드로 표시됩니다. 실제 DWG 변환은 별도 서버가 `server` 모드 응답을 반환하도록 연결해야 하며, UI의 변환 상태 패널에서 mock/server 여부와 근사/미지원/변환 경고 개수를 확인할 수 있습니다.
 
 ## 프로젝트 구조
 
