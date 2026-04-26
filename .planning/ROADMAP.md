@@ -58,11 +58,13 @@
 3. 주석을 클릭하면 캔버스에서 해당 위치나 객체가 명확히 표시된다.
 4. 읽기 전용 공유 문서에서는 기존처럼 편집성 주석 변경이 막힌다.
 
-### Phase 19 — Collaboration Regression Coverage and Docs
+### Phase 19 — Collaboration Regression Coverage and Docs ✅
 
 **Goal:** 공유 링크 관리와 검토 워크플로우를 테스트와 문서로 고정한다.
 
 **Requirements:** QA-01, QA-02, QA-03
+
+**Status:** Complete — see [Phase 19 summary](phases/19-collaboration-regression-coverage-and-docs/19-SUMMARY.md).
 
 **Success criteria:**
 

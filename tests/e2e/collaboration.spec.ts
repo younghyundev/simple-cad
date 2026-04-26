@@ -83,6 +83,34 @@ test('deletes a locally registered embedded share link', async ({ page }) => {
   }, shareHash)).resolves.toBe(true);
 });
 
+test('blocks expired embedded share links', async ({ page }) => {
+  const expiredShare = await page.evaluate(() => {
+    const payload = {
+      version: 1,
+      title: '만료 테스트',
+      expiresAt: '2000-01-01T23:59:59.999Z',
+      document: {
+        id: 'expired-doc',
+        name: 'Expired',
+        units: 'mm',
+        layers: [{ id: 'default', name: 'Default', color: '#111827', visible: true, locked: false }],
+        entities: [],
+      },
+      comments: [],
+    };
+    const bytes = new TextEncoder().encode(JSON.stringify(payload));
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) {
+      binary += String.fromCharCode(...bytes.slice(index, index + 0x8000));
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  });
+
+  await page.goto(`/?expired=${Date.now()}#share=${expiredShare}`);
+  await expect(page.getByTestId('statusbar')).toContainText('만료된 공유 링크입니다.');
+  await expect(page.getByTestId('readonly-banner')).toHaveCount(0);
+});
+
 async function dragOnCanvas(
   canvas: Locator,
   start: { x: number; y: number },

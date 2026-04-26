@@ -32,7 +32,7 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 - GitHub Actions quality-gates job, `npm run verify`, CI logs/artifacts/job summary
 - localStorage mock 서버 저장/다시 열기, 공유 링크, 읽기 전용 공유 문서, 좌표/객체 검토 주석
 
-## Current Milestone: v1.3 Share Link Management and Review Workflow
+## Current Milestone: v1.3 Share Link Management and Review Workflow — Complete
 
 **Goal:** 백엔드 저장소 도입 없이도 공유 링크를 만들고, 관리하고, 검토 상태를 추적할 수 있는 브라우저 기반 협업 흐름을 완성합니다.
 
@@ -80,10 +80,15 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 
 ### Active
 
-- [ ] 공유 링크를 목록으로 관리하고 복사/삭제/만료 상태를 확인할 수 있다.
-- [ ] 공유 링크 생성 시 제목, 설명, 만료일 같은 기본 옵션을 지정할 수 있다.
-- [ ] 검토 주석을 미해결/해결/선택 객체 기준으로 필터링하고 캔버스 위치와 연동할 수 있다.
-- [ ] 공유 링크와 검토 상태가 브라우저 저장소에서 안정적으로 보존되고 회귀 테스트로 검증된다.
+없음. v1.3 범위는 완료되었습니다.
+
+### Recently Validated
+
+- ✓ 공유 링크를 목록으로 관리하고 복사/삭제/만료 상태를 확인할 수 있다. — v1.3 Phase 16
+- ✓ 공유 링크 생성 시 제목, 설명, 만료일 같은 기본 옵션을 지정할 수 있다. — v1.3 Phase 17
+- ✓ 검토 주석을 미해결/해결/선택 객체 기준으로 필터링하고 캔버스 위치와 연동할 수 있다. — v1.3 Phase 18
+- ✓ 공유 링크와 검토 상태가 브라우저 저장소에서 안정적으로 보존되고 회귀 테스트로 검증된다. — v1.3 Phase 19
+
 
 ### Out of Scope
 
@@ -138,4 +143,4 @@ v1.1이 2026-04-26에 shipped 상태로 완료되었습니다. v1.2도 2026-04-2
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0/v1.1의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 starting v1.3 milestone*
+*Last updated: 2026-04-26 after Phase 19 execution*

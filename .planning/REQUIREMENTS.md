@@ -19,9 +19,9 @@
 
 ## Quality and Documentation
 
-- [ ] **QA-01**: 공유 링크 생성, 목록 복사, 삭제, 만료, 읽기 전용 열기 흐름이 회귀 테스트로 검증된다.
-- [ ] **QA-02**: 검토 주석 필터와 캔버스 연동이 회귀 테스트로 검증된다.
-- [ ] **QA-03**: README는 백엔드 서버 없이 동작하는 링크 공유 범위, 제한, 만료/삭제 동작을 설명한다.
+- [x] **QA-01**: 공유 링크 생성, 목록 복사, 삭제, 만료, 읽기 전용 열기 흐름이 회귀 테스트로 검증된다.
+- [x] **QA-02**: 검토 주석 필터와 캔버스 연동이 회귀 테스트로 검증된다.
+- [x] **QA-03**: README는 백엔드 서버 없이 동작하는 링크 공유 범위, 제한, 만료/삭제 동작을 설명한다.
 
 ## Future Requirements
 
@@ -48,6 +48,6 @@
 | REVIEW-01 | Phase 18 | Complete |
 | REVIEW-02 | Phase 18 | Complete |
 | REVIEW-03 | Phase 18 | Complete |
-| QA-01 | Phase 19 | Planned |
-| QA-02 | Phase 19 | Planned |
-| QA-03 | Phase 19 | Planned |
+| QA-01 | Phase 19 | Complete |
+| QA-02 | Phase 19 | Complete |
+| QA-03 | Phase 19 | Complete |
