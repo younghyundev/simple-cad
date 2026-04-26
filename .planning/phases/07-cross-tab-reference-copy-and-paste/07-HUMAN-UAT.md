@@ -8,10 +8,10 @@ updated: 2026-04-26
 
 ## Current Test
 
-number: 5
-name: Escape cancellation
+number: 6
+name: Text editing copy/paste safety
 expected: |
-  Escape while selecting a reference point cancels the mode and shows `참조 작업을 취소했습니다.`.
+  While inline text editing is active, Ctrl/Cmd+C and Ctrl/Cmd+V affect text content instead of the CAD clipboard.
 awaiting: user response
 
 ## Tests
@@ -35,7 +35,8 @@ result: pass
 
 ### 5. Escape cancellation
 expected: Escape while selecting a reference point cancels the mode and shows `참조 작업을 취소했습니다.`.
-result: [pending]
+result: pass
+note: "사용자 응답 `ass`를 `pass` 오타로 해석함."
 
 ### 6. Text editing copy/paste safety
 expected: While inline text editing is active, Ctrl/Cmd+C and Ctrl/Cmd+V affect text content instead of the CAD clipboard.
@@ -44,9 +45,9 @@ result: [pending]
 ## Summary
 
 total: 6
-passed: 4
+passed: 5
 issues: 0
-pending: 2
+pending: 1
 skipped: 0
 blocked: 0
 
