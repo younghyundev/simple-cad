@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: File Fidelity and Editing Productivity
-status: complete
+milestone: v1.2
+milestone_name: Production CAD Workflow and Collaboration
+status: active
 last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26 -- v1.1 milestone archived
+last_activity: 2026-04-26 -- v1.2 milestone started
 progress:
   total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SimpleCAD
@@ -20,14 +20,14 @@ progress:
 See: `.planning/PROJECT.md`
 
 **Core value:** 사용자가 브라우저에서 2D 도면을 정확하게 보고, 선택하고, 수정하고, DXF/DWG를 포함한 실무 파일 형식으로 다시 저장할 수 있어야 합니다.
-**Current focus:** Ready for next milestone
+**Current focus:** v1.2 — Production CAD Workflow and Collaboration
 
 ## Current Position
 
-Phase: none
-Plan: none
-Status: v1.1 archived
-Last activity: 2026-04-26 -- v1.1 milestone archived
+Phase: 12 — Production DWG Conversion Backend
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-26 -- v1.2 milestone started
 
 ## Current Status
 
@@ -40,6 +40,7 @@ Last activity: 2026-04-26 -- v1.1 milestone archived
 - Phase 10 completed: dirty tracking, Save/Save As semantics, File System Access API helper/fallback, unsaved-change guards, and README updates.
 - Phase 11 completed: Playwright E2E harness, core workflow browser tests, large drawing performance baseline, and conversion failure/warning regression checks.
 - v1.1 archive created in `.planning/milestones/`.
+- v1.2 requirements and roadmap are defined in the requested order: DWG server, advanced CAD preservation, CI gates, sharing/review collaboration.
 
 ## Accumulated Context
 
@@ -56,4 +57,4 @@ Last activity: 2026-04-26 -- v1.1 milestone archived
 
 ## Next Action
 
-Run `$gsd-new-milestone` to define the next milestone.
+Run `$gsd-plan-phase 12` to plan Production DWG Conversion Backend.
