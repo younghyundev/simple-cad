@@ -13,9 +13,9 @@
 
 ## Review Workflow
 
-- [ ] **REVIEW-01**: 사용자는 검토 패널에서 전체, 미해결, 해결됨 주석을 필터링할 수 있다.
-- [ ] **REVIEW-02**: 사용자는 선택된 객체와 연결된 주석만 필터링해서 볼 수 있다.
-- [ ] **REVIEW-03**: 사용자는 주석을 클릭해 해당 캔버스 위치나 객체를 빠르게 찾을 수 있다.
+- [x] **REVIEW-01**: 사용자는 검토 패널에서 전체, 미해결, 해결됨 주석을 필터링할 수 있다.
+- [x] **REVIEW-02**: 사용자는 선택된 객체와 연결된 주석만 필터링해서 볼 수 있다.
+- [x] **REVIEW-03**: 사용자는 주석을 클릭해 해당 캔버스 위치나 객체를 빠르게 찾을 수 있다.
 
 ## Quality and Documentation
 
@@ -45,9 +45,9 @@
 | SHARE-02 | Phase 16 | Complete |
 | SHARE-03 | Phase 17 | Complete |
 | SHARE-04 | Phase 17 | Complete |
-| REVIEW-01 | Phase 18 | Planned |
-| REVIEW-02 | Phase 18 | Planned |
-| REVIEW-03 | Phase 18 | Planned |
+| REVIEW-01 | Phase 18 | Complete |
+| REVIEW-02 | Phase 18 | Complete |
+| REVIEW-03 | Phase 18 | Complete |
 | QA-01 | Phase 19 | Planned |
 | QA-02 | Phase 19 | Planned |
 | QA-03 | Phase 19 | Planned |

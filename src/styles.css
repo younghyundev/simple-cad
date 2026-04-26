@@ -531,6 +531,17 @@ button {
   gap: 8px;
 }
 
+.review-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.review-filters .mini-button {
+  width: 100%;
+}
+
 .review-comment {
   display: grid;
   gap: 6px;
@@ -538,11 +549,18 @@ button {
   border: 1px solid #fed7aa;
   border-radius: 6px;
   background: #fff7ed;
+  text-align: left;
+  cursor: pointer;
 }
 
 .review-comment.resolved {
   border-color: #cbd5e1;
   background: #f8fafc;
+}
+
+.review-comment.active {
+  outline: 2px solid #0f766e;
+  outline-offset: 1px;
 }
 
 .review-comment p {

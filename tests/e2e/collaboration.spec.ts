@@ -28,6 +28,14 @@ test('creates an embedded share link, opens it read-only, and preserves comments
   await page.getByTestId('add-comment-button').click();
   await expect(page.getByTestId('comment-marker')).toBeVisible();
   await expect(page.getByText('검토 메모')).toBeVisible();
+  await page.getByRole('button', { name: /미해결/ }).click();
+  await expect(page.getByTestId('review-comment')).toContainText('검토 메모');
+  await page.getByTestId('review-comment').click();
+  await expect(page.getByTestId('statusbar')).toContainText('주석 위치로 이동했습니다.');
+  await page.getByTestId('review-comment').getByRole('button', { name: '해결됨' }).click();
+  await page.getByTestId('review-filters').getByRole('button', { name: '해결됨' }).click();
+  await expect(page.getByTestId('review-comment')).toContainText('검토 메모');
+  await page.getByRole('button', { name: '전체' }).click();
 
   await page.getByTestId('share-link-button').click();
   await expect(page.getByTestId('share-dialog')).toBeVisible();

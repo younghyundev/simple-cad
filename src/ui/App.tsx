@@ -36,6 +36,7 @@ import {
   alignEntities,
   type AlignMode,
   createGroupEntity,
+  getEntityBounds,
   getBoundsCenter,
   getSelectionBounds,
   rotateEntity,
@@ -128,6 +129,7 @@ type ContextMenuState = {
 };
 
 type ReferenceMode = 'copy-base' | 'paste-base' | null;
+type ReviewFilter = 'all' | 'open' | 'resolved' | 'selection';
 
 type DimensionEntity = Extract<CadEntity, { type: 'dimension' }>;
 type GroupEntity = Extract<CadEntity, { type: 'group' }>;
@@ -195,6 +197,8 @@ export function App() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [referenceMode, setReferenceMode] = useState<ReferenceMode>(null);
   const [referencePreviewPoint, setReferencePreviewPoint] = useState<CadPoint | null>(null);
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
+  const [activeReviewCommentId, setActiveReviewCommentId] = useState<string | null>(null);
   const [rotationDegrees, setRotationDegrees] = useState('15');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadedShareRef = useRef<string | null>(null);
@@ -227,6 +231,15 @@ export function App() {
   const anyDirty = activeDirty || tabs.some((tab) => tab.id !== activeTabId && isSaveStateDirty(tab.saveState));
   const activeReadonly = collaborationState.readonly;
   const unresolvedComments = reviewComments.filter((comment) => !comment.resolved);
+  const filteredReviewComments = useMemo(() => {
+    if (reviewFilter === 'open') return reviewComments.filter((comment) => !comment.resolved);
+    if (reviewFilter === 'resolved') return reviewComments.filter((comment) => comment.resolved);
+    if (reviewFilter === 'selection') {
+      const selectedIds = new Set(selectedEntityIds);
+      return reviewComments.filter((comment) => comment.entityId && selectedIds.has(comment.entityId));
+    }
+    return reviewComments;
+  }, [reviewComments, reviewFilter, selectedEntityIds]);
   const activeShareLinks = shareLinks.filter((link) => !link.deletedAt);
   const activeShareExpired = collaborationState.shareExpiresAt
     ? Date.parse(collaborationState.shareExpiresAt) <= Date.now()
@@ -876,6 +889,26 @@ export function App() {
     collaborationRepository.toggleCommentResolved(collaborationState.serverDocumentId, commentId);
     refreshReviewComments(collaborationState.serverDocumentId);
   }, [collaborationState.readonly, collaborationState.serverDocumentId, refreshReviewComments]);
+
+  const focusReviewComment = useCallback((comment: ReviewComment) => {
+    const entity = comment.entityId
+      ? document.entities.find((item) => item.id === comment.entityId)
+      : null;
+    const target = comment.point ?? (entity ? getBoundsCenter(getEntityBounds(entity)) : null);
+    if (entity) {
+      setSelectedEntityIds([entity.id]);
+      setActiveTool('select');
+    }
+    if (target) {
+      setViewport((current) => ({
+        ...current,
+        offsetX: 480 - target.x * current.scale,
+        offsetY: 320 - target.y * current.scale,
+      }));
+    }
+    setActiveReviewCommentId(comment.id);
+    setFileMessage('주석 위치로 이동했습니다.');
+  }, [document.entities]);
 
   const selectTool = useCallback((toolId: ToolId) => {
     setActiveTool(toolId);
@@ -1916,12 +1949,43 @@ export function App() {
           <div className="panel-section">
             <div className="panel-heading">
               <h2>검토</h2>
-              <span className="review-count">{unresolvedComments.length}개 미해결</span>
+              <span className="review-count">{filteredReviewComments.length}/{reviewComments.length}</span>
             </div>
-            {reviewComments.length ? (
+            <div className="review-filters" data-testid="review-filters">
+              <button className={`mini-button ${reviewFilter === 'all' ? 'active' : ''}`} onClick={() => setReviewFilter('all')}>
+                전체
+              </button>
+              <button className={`mini-button ${reviewFilter === 'open' ? 'active' : ''}`} onClick={() => setReviewFilter('open')}>
+                미해결 {unresolvedComments.length}
+              </button>
+              <button className={`mini-button ${reviewFilter === 'resolved' ? 'active' : ''}`} onClick={() => setReviewFilter('resolved')}>
+                해결됨
+              </button>
+              <button
+                className={`mini-button ${reviewFilter === 'selection' ? 'active' : ''}`}
+                disabled={!selectedEntityIds.length}
+                onClick={() => setReviewFilter('selection')}
+              >
+                선택 객체
+              </button>
+            </div>
+            {filteredReviewComments.length ? (
               <div className="review-list">
-                {reviewComments.map((comment) => (
-                  <div className={`review-comment ${comment.resolved ? 'resolved' : ''}`} key={comment.id}>
+                {filteredReviewComments.map((comment) => (
+                  <div
+                    className={`review-comment ${comment.resolved ? 'resolved' : ''} ${activeReviewCommentId === comment.id ? 'active' : ''}`}
+                    data-testid="review-comment"
+                    key={comment.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => focusReviewComment(comment)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        focusReviewComment(comment);
+                      }
+                    }}
+                  >
                     <p>{comment.message}</p>
                     <small>
                       {comment.entityId ? `${comment.entityId} · ` : ''}
@@ -1930,7 +1994,10 @@ export function App() {
                     <button
                       className="mini-button"
                       disabled={activeReadonly}
-                      onClick={() => toggleReviewCommentResolved(comment.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleReviewCommentResolved(comment.id);
+                      }}
                     >
                       {comment.resolved ? '미해결' : '해결됨'}
                     </button>
@@ -1938,7 +2005,7 @@ export function App() {
                 ))}
               </div>
             ) : (
-              <p className="empty-state">등록된 주석이 없습니다.</p>
+              <p className="empty-state">{reviewComments.length ? '필터에 맞는 주석이 없습니다.' : '등록된 주석이 없습니다.'}</p>
             )}
           </div>
 

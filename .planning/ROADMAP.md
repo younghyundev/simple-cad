@@ -43,11 +43,13 @@
 3. 읽기 전용 공유 문서는 공유 메타데이터를 상단 배너나 검토 영역에서 확인할 수 있다.
 4. 너무 큰 링크나 잘못된 옵션은 한국어 오류로 안내된다.
 
-### Phase 18 — Review Comment Workflow Polish
+### Phase 18 — Review Comment Workflow Polish ✅
 
 **Goal:** 검토 주석을 필터링하고 선택 객체/캔버스 위치와 연결해 실제 검토 작업을 빠르게 만든다.
 
 **Requirements:** REVIEW-01, REVIEW-02, REVIEW-03
+
+**Status:** Complete — see [Phase 18 summary](phases/18-review-comment-workflow-polish/18-SUMMARY.md).
 
 **Success criteria:**
 

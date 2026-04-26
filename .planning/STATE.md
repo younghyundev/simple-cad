@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Share Link Management and Review Workflow
 status: planning
-last_updated: "2026-04-26T11:35:00Z"
-last_activity: 2026-04-26 -- Phase 17 completed
+last_updated: "2026-04-26T12:00:00Z"
+last_activity: 2026-04-26 -- Phase 18 completed
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # State: SimpleCAD
@@ -24,10 +24,10 @@ See: `.planning/PROJECT.md`
 
 ## Current Position
 
-Phase: 18 — Review Comment Workflow Polish
+Phase: 19 — Collaboration Regression Coverage and Docs
 Plan: Not started
-Status: Phase 17 complete
-Last activity: 2026-04-26 -- Phase 17 completed
+Status: Phase 18 complete
+Last activity: 2026-04-26 -- Phase 18 completed
 
 ## Current Status
 
@@ -53,6 +53,7 @@ Last activity: 2026-04-26 -- Phase 17 completed
 - v1.3 started with a browser-only collaboration scope: share link management, share options, review comment workflow polish, and regression documentation.
 - Phase 16 completed: local share link registry, right-panel link list, copy/delete actions, local deleted/expired guards, README limitation note, and collaboration E2E coverage.
 - Phase 17 completed: share creation dialog, title/description/expiry metadata, read-only metadata banner, past-date validation, README update, and collaboration E2E coverage.
+- Phase 18 completed: review filters for all/unresolved/resolved/selected entity, comment focus navigation, active comment styling, and collaboration E2E coverage.
 
 ## Accumulated Context
 
@@ -69,8 +70,8 @@ Last activity: 2026-04-26 -- Phase 17 completed
 
 ## Next Action
 
-Run `$gsd-plan-phase 18` to plan review comment workflow polish.
+Run `$gsd-plan-phase 19` to plan collaboration regression coverage and docs.
 
-**Completed Phase:** 17 (Share Creation Options)
-**Next Phase:** 18 (Review Comment Workflow Polish)
+**Completed Phase:** 18 (Review Comment Workflow Polish)
+**Next Phase:** 19 (Collaboration Regression Coverage and Docs)
 **Current Milestone:** v1.3 (Share Link Management and Review Workflow)
