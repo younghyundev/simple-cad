@@ -8,11 +8,11 @@
 
 ### File Fidelity
 
-- [ ] **FID-01**: 사용자는 DXF import/export 후 주요 객체의 위치, 레이어, 색상, 선 두께, 선 스타일이 눈에 띄게 변하지 않는지 확인할 수 있다.
-- [ ] **FID-02**: 앱은 SPLINE, ELLIPSE, ARC, bulge polyline, DIMENSION, MTEXT, INSERT 변환 결과를 더 명확한 warning과 함께 보존 또는 근사한다.
-- [ ] **FID-03**: 사용자는 변환 경고를 객체/유형별로 그룹화해서 확인하고, 어떤 정보가 손실되었는지 이해할 수 있다.
-- [ ] **FID-04**: 앱은 DXF round-trip 검증용 fixture와 회귀 체크를 제공한다.
-- [ ] **FID-05**: DWG import/export는 실제 서버 엔드포인트 설정을 지원하고, mock/production 모드를 명확히 구분한다.
+- [x] **FID-01**: 사용자는 DXF import/export 후 주요 객체의 위치, 레이어, 색상, 선 두께, 선 스타일이 눈에 띄게 변하지 않는지 확인할 수 있다.
+- [x] **FID-02**: 앱은 SPLINE, ELLIPSE, ARC, bulge polyline, DIMENSION, MTEXT, INSERT 변환 결과를 더 명확한 warning과 함께 보존 또는 근사한다.
+- [x] **FID-03**: 사용자는 변환 경고를 객체/유형별로 그룹화해서 확인하고, 어떤 정보가 손실되었는지 이해할 수 있다.
+- [x] **FID-04**: 앱은 DXF round-trip 검증용 fixture와 회귀 체크를 제공한다.
+- [x] **FID-05**: DWG import/export는 실제 서버 엔드포인트 설정을 지원하고, mock/production 모드를 명확히 구분한다.
 
 ### Editing Productivity
 
@@ -60,11 +60,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FID-01 | Phase 8 | Pending |
-| FID-02 | Phase 8 | Pending |
-| FID-03 | Phase 8 | Pending |
-| FID-04 | Phase 8 | Pending |
-| FID-05 | Phase 8 | Pending |
+| FID-01 | Phase 8 | Complete |
+| FID-02 | Phase 8 | Complete |
+| FID-03 | Phase 8 | Complete |
+| FID-04 | Phase 8 | Complete |
+| FID-05 | Phase 8 | Complete |
 | EDIT-11 | Phase 9 | Pending |
 | EDIT-12 | Phase 9 | Pending |
 | EDIT-13 | Phase 9 | Pending |
@@ -85,4 +85,4 @@
 
 ---
 *Requirements defined: 2026-04-26*
-*Last updated: 2026-04-26 after v1.1 milestone start*
+*Last updated: 2026-04-26 after Phase 8 completion*

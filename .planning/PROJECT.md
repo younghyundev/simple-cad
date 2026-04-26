@@ -8,7 +8,7 @@ SimpleCAD는 웹에서 간단한 2D 도면을 열고 수정하고 저장할 수 
 
 ## Current State
 
-v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
+v1.0이 2026-04-26에 shipped 상태로 완료되었습니다. v1.1 Phase 8도 완료되어 DXF round-trip 검증, 구조화된 변환 경고, DWG mock/server 모드 구분이 추가되었습니다.
 
 현재 구현된 핵심 범위:
 
@@ -22,6 +22,8 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
 - DWG 변환 API 클라이언트와 개발 mock route
 - 시작 페이지, 최근 열기, 다중 도면 탭
 - 탭 간 복사/붙여넣기와 참조점 기반 복사/붙여넣기
+- DXF round-trip fidelity fixture와 `npm run test:cad-fidelity`
+- 변환 경고 카테고리 요약과 DWG mock/server 모드 표시
 
 ## Current Milestone: v1.1 File Fidelity and Editing Productivity
 
@@ -51,11 +53,13 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
 - ✓ DWG Import/Export/Save는 서버 변환 API와 교체 가능한 어댑터 구조로 설계한다. — v1.0
 - ✓ 변환 과정에서 손실되거나 지원하지 않는 엔티티를 사용자에게 경고한다. — v1.0
 - ✓ 탭 간 객체 복사/붙여넣기와 참조점 기반 복사/붙여넣기를 지원한다. — v1.0
+- ✓ DXF import/export round-trip fixture와 회귀 체크를 제공한다. — v1.1 Phase 8
+- ✓ 변환 경고를 근사/미지원/변환/mock 범주로 그룹화해서 표시한다. — v1.1 Phase 8
+- ✓ DWG mock/production 모드를 코드, API 응답, UI, 문서에서 구분한다. — v1.1 Phase 8
 
 ### Active
 
 - [ ] 실제 DWG 변환 서버를 연결한다.
-- [ ] DXF/DWG 곡선, 치수, 블록, 주석 호환성을 더 높인다.
 - [ ] 객체 그룹화, 회전, 정렬, transform 도구를 추가한다.
 - [ ] 저장 UX를 개선하고 File System Access API 지원을 검토한다.
 - [ ] 주요 CAD 워크플로우에 자동 브라우저 테스트를 추가한다.
@@ -95,6 +99,8 @@ v1.0이 2026-04-26에 shipped 상태로 완료되었습니다.
 | Canvas를 편집 표면으로 사용 | CAD식 좌표 변환, 직접 렌더링, 대량 객체 렌더 제어가 필요함 | ✓ Good |
 | 시작 페이지와 다중 탭을 도입 | 파일 열기/최근 열기/탭 간 작업이 실무 흐름에 필요함 | ✓ Good |
 | 참조 복사는 외부 객체의 스냅점을 기준으로 함 | 복사 객체 자체가 아니라 주변 기준점과의 상대 위치를 보존해야 함 | ✓ Good |
+| DXF fidelity는 정규화된 CadDocument 요약으로 검증 | raw DXF 텍스트 비교는 생성 ID와 포맷 차이로 오탐이 많음 | ✓ Good |
+| DWG 개발 mock과 실제 서버 변환을 명시적으로 구분 | 사용자가 mock 결과를 실제 DWG 변환으로 오해하지 않게 해야 함 | ✓ Good |
 
 ## Next Milestone Goals
 
@@ -110,4 +116,4 @@ v1.1 목표:
 이 문서는 마일스톤 경계에서 갱신합니다. 완료된 v1.0의 상세 내용은 `.planning/milestones/` 아카이브와 `.planning/MILESTONES.md`를 참고합니다.
 
 ---
-*Last updated: 2026-04-26 after starting v1.1 milestone*
+*Last updated: 2026-04-26 after Phase 8 completion*

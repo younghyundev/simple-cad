@@ -12,14 +12,14 @@
 
 | Phase | Name | Goal | Requirements |
 |-------|------|------|--------------|
-| 8 | File Fidelity Hardening | DXF/DWG import/export 품질, 변환 경고, fixture 기반 round-trip 검증을 강화한다. | FID-01, FID-02, FID-03, FID-04, FID-05 |
+| 8 | File Fidelity Hardening | 완료: DXF/DWG import/export 품질, 변환 경고, fixture 기반 round-trip 검증을 강화했다. | FID-01, FID-02, FID-03, FID-04, FID-05 |
 | 9 | Transform Productivity Tools | 그룹/해제, 회전, 정렬, 그룹/회전 객체의 선택/스냅/undo 동작을 구현한다. | EDIT-11, EDIT-12, EDIT-13, EDIT-14, EDIT-15 |
 | 10 | Save Workflow and File State | dirty 상태, 탭별 저장 상태, Save/Save As, File System Access API 지원을 구현한다. | SAVE-01, SAVE-02, SAVE-03, SAVE-04 |
 | 11 | Workflow QA and Performance Baseline | 핵심 CAD 흐름의 자동 브라우저 테스트와 큰 도면 성능 기준을 만든다. | QA-01, QA-02, QA-03 |
 
 ## Phase Details
 
-### Phase 8: File Fidelity Hardening
+### Phase 8: File Fidelity Hardening — Complete 2026-04-26
 
 **Goal:** 실무 DXF/DWG 파일을 열고 다시 내보낼 때 사용자가 신뢰할 수 있는 수준의 보존성, 경고, 검증 기반을 만든다.
 
@@ -28,10 +28,10 @@
 **Requirements:** FID-01, FID-02, FID-03, FID-04, FID-05
 
 **Success criteria:**
-1. DXF round-trip fixture가 추가되고 주요 객체 속성 보존을 검증할 수 있다.
-2. SPLINE/ELLIPSE/ARC/bulge/DIMENSION/MTEXT/INSERT 변환 경고가 더 명확히 그룹화된다.
-3. 사용자는 변환 과정에서 무엇이 보존/근사/손실되었는지 UI에서 이해할 수 있다.
-4. DWG mock/production API 모드가 설정과 메시지에서 구분된다.
+1. 완료: DXF round-trip fixture가 추가되고 주요 객체 속성 보존을 검증할 수 있다.
+2. 완료: SPLINE/ELLIPSE/ARC/bulge/DIMENSION/MTEXT/INSERT 변환 경고가 더 명확히 그룹화된다.
+3. 완료: 사용자는 변환 과정에서 무엇이 보존/근사/손실되었는지 UI에서 이해할 수 있다.
+4. 완료: DWG mock/production API 모드가 설정과 메시지에서 구분된다.
 
 ### Phase 9: Transform Productivity Tools
 
