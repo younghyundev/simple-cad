@@ -159,18 +159,18 @@ function drawEntity(
     context.fillStyle = entity.fillColor;
     context.font = `${fontSize}px Inter, system-ui, sans-serif`;
     if (entity.rotation) {
+      context.save();
       context.translate(point.x, point.y);
       context.rotate(degreesToRadians(entity.rotation));
       getTextLines(entity.content).forEach((line, index) => {
         context.fillText(line, 0, index * lineHeight);
       });
-      if (selected) drawSelection(context, entity, viewport);
       context.restore();
-      return;
+    } else {
+      getTextLines(entity.content).forEach((line, index) => {
+        context.fillText(line, point.x, point.y + index * lineHeight);
+      });
     }
-    getTextLines(entity.content).forEach((line, index) => {
-      context.fillText(line, point.x, point.y + index * lineHeight);
-    });
   }
 
   if (entity.type === 'dimension') {
