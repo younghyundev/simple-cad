@@ -1,6 +1,6 @@
 ---
 phase: 07-cross-tab-reference-copy-and-paste
-status: human_needed
+status: passed
 created: 2026-04-26
 updated: 2026-04-26
 automated_checks:
@@ -31,15 +31,16 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 
 | Requirement | Status | Evidence |
 |-------------|--------|----------|
-| Standard copy/paste creates new entities with new IDs | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload` assigns `copy-` IDs; browser UAT should confirm selection/rendering |
-| Cross-tab paste preserves editable properties | HUMAN NEEDED | Requires browser tabs and visual confirmation |
-| Right-click context menu shows copy/paste/reference/delete commands | HUMAN NEEDED | Requires pointer interaction |
-| Reference copy stores an external anchor point | AUTOMATED PASS + HUMAN NEEDED | `createClipboardPayload(selectedEntities, point)` used in `App.tsx`; `referenceSnapExcludeEntityIds` excludes copied entities so another object's center/endpoint/intersection can be used as the anchor |
-| Reference paste applies destination-source anchor delta | AUTOMATED PASS + HUMAN NEEDED | `pasteClipboardPayload(... destinationBasePoint: point)` used in `App.tsx`; visual placement against another file's corresponding center/endpoint/intersection needs browser UAT |
-| Reference paste previews copied geometry at cursor anchor | AUTOMATED PASS + HUMAN NEEDED | `referencePreviewEntities` uses `destinationBasePoint: referencePreviewPoint`; visual overlay movement needs browser UAT |
-| Reference clipboard forces reference paste | AUTOMATED PASS + HUMAN NEEDED | `pasteEntities` checks `cadClipboard.sourceBasePoint` and enters `paste-base` mode, so Ctrl/Cmd+V and regular context-menu paste use reference placement |
-| Text input copy/paste safety | HUMAN NEEDED | Requires inline canvas text editor interaction |
-| Undo/redo scoped to active tab | HUMAN NEEDED | Requires browser tab workflow confirmation |
+| Standard copy/paste creates new entities with new IDs | PASS | `pasteClipboardPayload` assigns `copy-` IDs; user confirmed pasted entities appear selected in cross-tab UAT |
+| Standard copy/paste creates new entities with new IDs | PASS | `pasteClipboardPayload` assigns `copy-` IDs; user confirmed pasted entities appear selected in cross-tab UAT |
+| Cross-tab paste preserves editable properties | PASS | User confirmed cross-tab paste workflow in UAT |
+| Right-click context menu shows copy/paste/reference/delete commands | PASS | User confirmed context menu behavior in UAT |
+| Reference copy stores an external anchor point | PASS | `createClipboardPayload(selectedEntities, point)` used in `App.tsx`; user confirmed reference copy/paste workflow |
+| Reference paste applies destination-source anchor delta | PASS | `pasteClipboardPayload(... destinationBasePoint: point)` used in `App.tsx`; user confirmed relative placement |
+| Reference paste previews copied geometry at cursor anchor | PASS | `referencePreviewEntities` uses `destinationBasePoint: referencePreviewPoint`; user confirmed overlay workflow |
+| Reference clipboard forces reference paste | PASS | `pasteEntities` checks `cadClipboard.sourceBasePoint` and enters `paste-base` mode; user confirmed Ctrl/Cmd+V reference flow |
+| Text input copy/paste safety | PASS | User confirmed inline text editing copy/paste does not trigger CAD paste |
+| Undo/redo scoped to active tab | PASS | User confirmed undo in destination tab removes pasted batch while source remains unchanged |
 
 ## Human Verification Items
 
@@ -52,8 +53,8 @@ Verify that users can copy/paste selected entities within the same drawing or ac
 
 ## Gaps
 
-None found by automated checks. Human UAT remains pending for pointer and keyboard interaction behavior.
+None found. Human UAT completed with all 6 checks passed.
 
 ## Verdict
 
-`human_needed` - implementation and automated build checks pass, but CAD interaction workflows need browser confirmation before marking the phase fully complete.
+`passed` - implementation, automated build checks, and human UAT all pass.

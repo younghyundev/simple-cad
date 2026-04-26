@@ -1,5 +1,5 @@
 ---
-status: testing
+status: complete
 phase: 07-cross-tab-reference-copy-and-paste
 source: [07-VERIFICATION.md]
 started: 2026-04-26
@@ -8,11 +8,7 @@ updated: 2026-04-26
 
 ## Current Test
 
-number: 6
-name: Text editing copy/paste safety
-expected: |
-  While inline text editing is active, Ctrl/Cmd+C and Ctrl/Cmd+V affect text content instead of the CAD clipboard.
-awaiting: user response
+[testing complete]
 
 ## Tests
 
@@ -40,14 +36,14 @@ note: "사용자 응답 `ass`를 `pass` 오타로 해석함."
 
 ### 6. Text editing copy/paste safety
 expected: While inline text editing is active, Ctrl/Cmd+C and Ctrl/Cmd+V affect text content instead of the CAD clipboard.
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 6
-passed: 5
+passed: 6
 issues: 0
-pending: 1
+pending: 0
 skipped: 0
 blocked: 0
 
